@@ -5,6 +5,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from dual2pose.eval import eval_unity_image_occlusion as image_occlusion_eval
+
 from dual2pose.eval.eval_unity_image_occlusion import (
     ImageOcclusionManifest,
     build_argument_parser,
@@ -101,6 +103,34 @@ class ImageOcclusionStudyTest(unittest.TestCase):
         self.assertEqual(len(cells), 18)
         self.assertEqual({cell.view_mode for cell in cells}, {"left", "right", "both"})
         self.assertEqual({cell.ratio for cell in cells}, {0.5, 1.0})
+
+    def test_cli_accepts_named_reproducibility_cell(self):
+        parser = build_argument_parser()
+        try:
+            args = parser.parse_args(
+                [
+                    "--manifest-root",
+                    "/tmp/in",
+                    "--output-root",
+                    "/tmp/out",
+                    "--cell",
+                    "both_random_r1p00",
+                ]
+            )
+        except SystemExit as error:
+            self.fail(f"--cell must select one reproducibility cell: {error}")
+
+        self.assertEqual(args.cell, ["both_random_r1p00"])
+
+    def test_named_reproducibility_cell_is_the_only_selected_cell(self):
+        try:
+            selected = image_occlusion_eval.select_image_occlusion_cells(
+                build_image_occlusion_study(), ["both_random_r1p00"]
+            )
+        except AttributeError as error:
+            self.fail(f"cell selection helper is required: {error}")
+
+        self.assertEqual([cell.name for cell in selected], ["both_random_r1p00"])
 
     def test_summary_keeps_negative_gain_and_failure_rate(self):
         ground_truth = torch.zeros((1, 2, 15, 3), dtype=torch.float32)

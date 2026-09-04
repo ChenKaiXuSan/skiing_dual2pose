@@ -75,6 +75,19 @@ def build_image_occlusion_study(
     return cells
 
 
+def select_image_occlusion_cells(
+    cells: Iterable[ImageOcclusionCell], names: Sequence[str] | None
+) -> list[ImageOcclusionCell]:
+    available = list(cells)
+    if not names:
+        return available
+    by_name = {cell.name: cell for cell in available}
+    missing = [name for name in names if name not in by_name]
+    if missing:
+        raise ValueError(f"Unknown image-occlusion cells: {missing}")
+    return [by_name[name] for name in names]
+
+
 @lru_cache(maxsize=2048)
 def _load_occlusion_archive(path_string: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load and validate one condition stream once per data-loader process."""
@@ -424,7 +437,14 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--num-workers", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--failure-threshold", type=float, default=0.15)
-    parser.add_argument("--limit-cells", type=int)
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--limit-cells", type=int)
+    selection.add_argument(
+        "--cell",
+        action="append",
+        choices=tuple(cell.name for cell in build_image_occlusion_study()),
+        help="Evaluate only the named cell; repeat the option to select multiple cells.",
+    )
     return parser
 
 
@@ -460,7 +480,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     from dual2pose.eval import eval_unity_masking as helpers
 
-    cells = build_image_occlusion_study()
+    cells = select_image_occlusion_cells(
+        build_image_occlusion_study(), args.cell
+    )
     if args.limit_cells is not None:
         cells = cells[: args.limit_cells]
     output_root = args.output_root.resolve()
@@ -526,7 +548,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         details.append({"cell": row, "metrics_available": list(test_outputs[0]) if test_outputs else []})
         print(f"Completed {cell.name}: fused MPJPE={row['fused_mpjpe']:.6f}", flush=True)
 
-    expected_rows = 18 if args.limit_cells is None else args.limit_cells
+    expected_rows = len(cells)
     if len(rows) != expected_rows:
         raise ValueError(f"Expected {expected_rows} E5 rows, got {len(rows)}")
     _atomic_csv(output_root / "image_occlusion_summary_last.csv", rows)
