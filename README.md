@@ -252,6 +252,35 @@ Skiing_Canonical_DualView_3D_Pose_PyTorch/
 
 ## Paper Writing Guide
 
+The local `paper/` manuscript, figures, and evidence are intentionally excluded
+from Git. Experiment code and tests can be used without that directory. Run the
+test suite from the repository root:
+
+```bash
+python -m unittest discover -s tests -q
+```
+
+Tests that require the private manuscript report a skip when
+`paper/ivc_draft_20260821/` is absent. When it is present, those tests run normally
+and missing manuscript files still fail. E4/E5 rendering uses the tracked style
+module `dual2pose/eval/journal_figure_style.py`.
+
+The IVC baseline implementation includes pose-only and calibrated geometry
+baselines, full-index MPJPE and acceleration evaluation, and per-frame
+PA-MPJPE evaluation. Entry points are:
+
+```bash
+python -m dual2pose.eval.main_baseline_data --help
+python -m dual2pose.eval.main_baseline_geometry --help
+python -m dual2pose.experiments.run_main_baselines --help
+python -m dual2pose.experiments.run_geometry_baselines --help
+python -m dual2pose.eval.evaluate_main_baseline_pa --help
+python -m dual2pose.eval.render_main_baseline_tables --help
+```
+
+Datasets, selected checkpoints, and generated experiment outputs are supplied
+separately; run plans under `docs/superpowers/plans/` record the local protocols.
+
 A paper based on this codebase can be structured around the following method pipeline:
 
 1. **Problem formulation**: calibration-free dual-view 3D pose fusion for skiing.

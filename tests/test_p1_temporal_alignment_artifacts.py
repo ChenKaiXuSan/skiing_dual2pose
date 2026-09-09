@@ -1,5 +1,9 @@
 import unittest
 
+from tests.paper_support import require_local_paper
+
+require_local_paper()
+
 from paper.ivc_draft_20260821.scripts.generate_p1_temporal_alignment_artifacts import (
     INJECTED_OFFSETS,
     render_table,

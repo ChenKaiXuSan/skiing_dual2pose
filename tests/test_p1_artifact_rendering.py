@@ -2,6 +2,10 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from tests.paper_support import require_local_paper
+
+require_local_paper()
+
 from paper.ivc_draft_20260821.scripts.generate_p1_frontend_adaptation_artifacts import (
     render_figure as render_frontend_figure,
     validate_matrix_rows,

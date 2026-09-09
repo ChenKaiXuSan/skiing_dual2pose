@@ -3,6 +3,10 @@ import subprocess
 import sys
 import unittest
 
+from tests.paper_support import require_local_paper
+
+require_local_paper()
+
 from dual2pose.experiments.run_frontend_adaptation_matrix import build_evaluation_cells
 from paper.ivc_draft_20260821.scripts.generate_p1_frontend_adaptation_artifacts import (
     render_table,

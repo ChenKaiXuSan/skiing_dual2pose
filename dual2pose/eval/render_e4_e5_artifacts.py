@@ -12,6 +12,12 @@ from typing import Any, Mapping, Sequence
 
 import matplotlib.pyplot as plt
 
+from dual2pose.eval.journal_figure_style import (
+    JOURNAL_COLORS,
+    apply_journal_style,
+    style_axes,
+)
+
 
 EXPECTED_CHECKPOINT_SHA256 = (
     "869a2217f8676c0ada75ed3c9a3c82a9b8efbb105749f6ffb8bef71e9172f50f"
@@ -169,13 +175,13 @@ def _render_e5_table(rows: Sequence[Mapping[str, Any]]) -> str:
             r"\setlength{\tabcolsep}{5pt}",
             r"\begin{tabular}{lllrrrr}",
             r"\toprule",
-            r"View & Pattern & Ratio & Fused & Canonical avg. & Gain (\%) & SAM3D fail (\%) \\",
+            r"View & Pattern & Ratio & Fused & Canonical avg. & Gain (\%) & Detection fail (\%) \\",
             r"\midrule",
             *body,
             r"\bottomrule",
             r"\end{tabular}",
             r"\vspace{0.3em}",
-            r"\parbox{0.96\textwidth}{\footnotesize \textit{Note.} Image-level masks are placed from Unity 2D annotations, which are not passed to SAM3D or fusion. Each row evaluates all 64,440 pairs; negative gains are retained.}",
+            r"\parbox{0.96\textwidth}{\footnotesize \textit{Note.} Each row evaluates all 64,440 test sequences and 15 joints. Fused and canonical-average MPJPE use dataset coordinate units. Gain is $100(A-F)/A$, where $A$ and $F$ are canonical-average and fused MPJPE. Detection failure is the SAM3D failure fraction over pair-aligned sequence frames in affected views; both-view rows pool both views. Failed detections remain zero poses. Ratios are protocol parameters, not occluded pixel fractions. Unity 2D annotations place masks only and are not passed to SAM3D or fusion.}",
             r"\end{table*}",
             "",
         ]
@@ -183,8 +189,14 @@ def _render_e5_table(rows: Sequence[Mapping[str, Any]]) -> str:
 
 
 def _render_comparison_figure(rows: Sequence[Mapping[str, Any]], path: Path) -> None:
-    colors = {"random": "#D1495B", "distal": "#00798C", "temporal": "#5B8E7D"}
-    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.3), sharey=True)
+    apply_journal_style()
+    colors = {
+        "random": JOURNAL_COLORS["red"],
+        "distal": JOURNAL_COLORS["blue"],
+        "temporal": JOURNAL_COLORS["teal"],
+    }
+    markers = {"random": "o", "distal": "s", "temporal": "^"}
+    fig, axes = plt.subplots(1, 3, figsize=(6.8, 2.9), sharey=True)
     for axis, view in zip(axes, VIEWS):
         for pattern in PATTERNS:
             selected = sorted(
@@ -196,7 +208,7 @@ def _render_comparison_figure(rows: Sequence[Mapping[str, Any]], path: Path) -> 
                 x,
                 [float(row["image_fused_mpjpe"]) for row in selected],
                 color=colors[pattern],
-                marker="o",
+                marker=markers[pattern],
                 linewidth=1.8,
                 label=f"{pattern.capitalize()} / image",
             )
@@ -204,18 +216,19 @@ def _render_comparison_figure(rows: Sequence[Mapping[str, Any]], path: Path) -> 
                 x,
                 [float(row["pose_fused_mpjpe"]) for row in selected],
                 color=colors[pattern],
-                marker="s",
+                marker=markers[pattern],
+                markerfacecolor="none",
                 linestyle="--",
                 linewidth=1.4,
                 label=f"{pattern.capitalize()} / pose",
             )
         axis.set_title(view.capitalize())
-        axis.set_xlabel("Severity ratio")
+        axis.set_xlabel("Protocol ratio")
         axis.set_xticks(RATIOS)
-        axis.grid(True, alpha=0.25)
-    axes[0].set_ylabel("Fused MPJPE")
+        style_axes(axis)
+    axes[0].set_ylabel("Fused MPJPE (dataset units)")
     handles, labels = axes[-1].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=3, fontsize=8, frameon=False)
+    fig.legend(handles, labels, loc="upper center", ncol=3, fontsize=9, frameon=False)
     fig.tight_layout(rect=(0, 0, 1, 0.82))
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, bbox_inches="tight")

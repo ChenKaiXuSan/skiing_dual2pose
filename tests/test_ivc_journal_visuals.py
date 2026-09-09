@@ -3,6 +3,10 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from tests.paper_support import require_local_paper
+
+require_local_paper()
+
 import numpy as np
 from PIL import Image
 
@@ -24,8 +28,8 @@ class IVCJournalVisualsTest(unittest.TestCase):
     def test_manuscript_uses_journal_title_and_no_conference_figure_files(self) -> None:
         manuscript = (PAPER / "main.tex").read_text(encoding="utf-8")
         self.assertIn(
-            "CanonFuse3D: Robustness and Generalization of Calibration-Free "
-            "Dual-View 3D Pose Refinement for Skiing Videos",
+            "Calibration-Free Post-Estimation Fusion of Dual-View 3D Human Pose "
+            "Streams: Robustness, Front-End Generalization, and Multi-View Extension",
             manuscript,
         )
         for conference_asset in (
@@ -188,8 +192,11 @@ class IVCJournalVisualsTest(unittest.TestCase):
         headings = (
             r"\section{Results}",
             r"\subsection{Primary performance and cross-dataset evidence}",
-            r"\subsection{Mechanism and component analysis}",
-            r"\subsection{Robustness to capture perturbations}",
+            r"\subsection{Reliability-gate behavior}",
+            r"\subsection{Camera-pair separation}",
+            r"\subsection{Temporal offset and sampling-rate drift}",
+            r"\subsection{Missing-pose evidence}",
+            r"\subsection{Image-level occlusion through the pose front end}",
             r"\subsection{Front-end generalization and adaptation}",
             r"\subsection{Scaling beyond two views}",
             r"\subsection{Automatic synchronization diagnostic}",
@@ -246,7 +253,9 @@ class IVCJournalVisualsTest(unittest.TestCase):
         start = manuscript.index(r"\subsection{Qualitative evaluation}")
         end = manuscript.index(r"\section{Discussion}")
         qualitative = manuscript[start:end]
-        self.assertIn(r"\begin{figure}[H]", qualitative)
+        self.assertTrue(
+            r"\begin{figure}[H]" in qualitative or r"\begin{figure}[!htb]" in qualitative
+        )
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@ OUT_DIR = REPO_ROOT / "logs" / "alpha_vs_mask_plots"
 PAPER_FIG_DIR = (
     REPO_ROOT / "6a33ba78cba883c26fb3823f" / "figure" / "experiment2"
 )
-OUT_DIR.mkdir(exist_ok=True)
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 PAPER_FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── constants ────────────────────────────────────────────────────────────────
