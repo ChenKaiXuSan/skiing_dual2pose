@@ -11,11 +11,12 @@ DIRECT = ['left_canonical','right_canonical','canonical_avg','aligned_average',
           'quality_weighted','mlp','tcn','smoothnet','canonfuse3d']
 GEOMETRY = ['dlt','robust_dlt','dlt_mlp']
 LABELS = {'left_canonical':'Left canonical','right_canonical':'Right canonical',
-          'canonical_avg':'Canonical average','aligned_average':'Aligned average',
+          'canonical_avg':'Canonical average','aligned_average':r'Aligned average~\cite{umeyama1991least}',
           'quality_weighted':'3D quality-weighted fusion','mlp':'Cross-view MLP',
-          'tcn':'Temporal fusion (TCN)','smoothnet':r'Avg. + SmoothNet~\cite{zeng2022smoothnet}',
-          'canonfuse3d':'CanonFuse3D','dlt':'Calibrated DLT',
-          'robust_dlt':'Reprojection-gated DLT','dlt_mlp':'DLT-residual MLP'}
+          'tcn':r'Temporal fusion (local TCN)~\cite{bai2018empirical}','smoothnet':r'Avg. + SmoothNet~\cite{zeng2022smoothnet}',
+          'canonfuse3d':'CanonFuse3D','dlt':r'Calibrated DLT~\cite{hartley2004multiple}',
+          'robust_dlt':r'Reprojection-gated DLT~\cite{hartley2004multiple}',
+          'dlt_mlp':r'DLT-residual MLP~\cite{hartley2004multiple}'}
 METRICS = ['mpjpe', 'pa_mpjpe', 'acceleration_error']
 END=r' \\'
 
@@ -53,6 +54,8 @@ def render_table(dataset,records):
     caption=(r'Expanded Unity comparison on all 64,440 held-out camera-pair sequences. '
              if dataset=='unity' else r'Expanded Ski-PTZ-Pose comparison on all 30 fixed test camera-pair sequences. ')
     caption+=r'Lower values are better for all errors. Bold identifies the lowest value within each input group.'
+    caption+=(r' Citations for aligned averaging, DLT variants, and the local TCN identify technical components or background; '
+              r'these study-specific combinations are not reproductions of published fusion systems.')
     label='native_reference' if dataset=='unity' else 'ski_poseptz_reference'
     lines=[r'\begin{table}[t]',r'\centering',r'\caption{'+caption+'}',r'\label{tab:'+label+'}',
            (r'\footnotesize' if dataset=='unity' else r'\small'),r'\setlength{\tabcolsep}{3pt}',r'\begin{tabular}{@{}l'+'rrr'*len(subsets)+'@{}}',r'\toprule']

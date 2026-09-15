@@ -225,17 +225,24 @@ class IVCJournalVisualsTest(unittest.TestCase):
         self.assertLessEqual(manuscript.count("MMSports"), 2)
         self.assertLessEqual(manuscript.count("preliminary"), 4)
 
-    def test_native_reference_and_frontend_transfer_have_distinct_tables(self) -> None:
-        native = (PAPER / "tables" / "native_reference.tex").read_text(
+    def test_canonical_native_and_frontend_transfer_have_distinct_tables(self) -> None:
+        canonical = (PAPER / "tables" / "native_reference.tex").read_text(
+            encoding="utf-8"
+        )
+        native = (PAPER / "tables" / "native_output_comparison.tex").read_text(
             encoding="utf-8"
         )
         transfer = (PAPER / "tables" / "frontend_generalization.tex").read_text(
             encoding="utf-8"
         )
-        self.assertIn(r"\label{tab:native_reference}", native)
-        self.assertIn("native SAM3D", native)
-        self.assertIn("0.2792", native)
-        self.assertIn("0.1551", native)
+        self.assertIn(r"\label{tab:native_reference}", canonical)
+        self.assertIn("after the shared body-coordinate normalization", canonical)
+        self.assertIn("0.2792", canonical)
+        self.assertIn("0.1551", canonical)
+        self.assertIn("CanonFuse3D (ours)", canonical)
+        self.assertIn(r"\label{tab:native_output_comparison}", native)
+        self.assertIn("before the shared body-coordinate normalization", native)
+        self.assertNotIn("CanonFuse3D (ours)", native)
         self.assertNotIn("SAM3D (native)", transfer)
         for front_end in ("MotionBERT", "PoseFormer", "VideoPose3D"):
             self.assertIn(front_end, transfer)

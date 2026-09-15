@@ -56,5 +56,20 @@ class PATableTests(unittest.TestCase):
             row = next(x for x in text.splitlines() if x.startswith('Cross-view MLP &'))
             self.assertEqual(row.count(' & '), count)
 
+    def test_method_citations_preserve_attribution_boundaries(self):
+        text = render_table('unity', load_records(self.root))
+        expected = {
+            'Aligned average': 'umeyama1991least',
+            'Temporal fusion (local TCN)': 'bai2018empirical',
+            'Avg. + SmoothNet': 'zeng2022smoothnet',
+            'Calibrated DLT': 'hartley2004multiple',
+            'Reprojection-gated DLT': 'hartley2004multiple',
+            'DLT-residual MLP': 'hartley2004multiple',
+        }
+        for label, key in expected.items():
+            self.assertIn(label + r'~\cite{' + key + '}', text)
+        self.assertIn('technical components or background', text)
+        self.assertIn('not reproductions', text)
+
 
 if __name__ == '__main__': unittest.main()

@@ -1,5 +1,15 @@
 # IVC P1 Multi-Seed Cross-Fold Implementation Plan
 
+**Status:** Retired from the current IVC submission scope on 2026-09-13. Two fold-1/seed-13 launch-smoke logs are retained; neither entered training, and the six full training cells were not launched.
+
+## Scope decision
+
+The proposed matrix was two legacy action folds times seeds 13, 42, and 73, giving six independent 100-epoch CanonFuse3D trainings. Its purpose was to estimate training-run and fold sensitivity; it was not a new baseline, corruption condition, or external-method comparison.
+
+The current manuscript instead uses the predeclared dataset-specific checkpoints and explicitly describes the added learned comparisons as single-run results. On 2026-09-13 the author confirmed that the six-cell matrix is outside the current submission scope. It is therefore retired rather than failed or partially reported. No smoke value is eligible for the manuscript, and no mean, standard deviation, confidence interval, or cross-fold claim is made from this plan.
+
+Existing launch-smoke logs are preserved at `logs/ivc_p1/multiseed_smoke/` and `logs/ivc_p1/multiseed_smoke_retry/`. Both stop during data loading on the same first fold-1 sample because the required SAM3D frame files are unavailable; neither log contains a training epoch, checkpoint, or result. The unchecked implementation steps below are retained as historical design documentation only and must not be read as pending submission work.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Run six controlled native-SAM3D trainings across seeds 13/42/73 and the two real legacy action folds, then report training-run uncertainty.

@@ -52,3 +52,9 @@
 ## Completion evidence
 
 All five tasks are complete. Results and verification are in `logs/ivc_mmsports_extension/main_baselines/20260906/verification.json`; final independent review is in `final_review.md`. The main paper contains 12 methods per dataset, with 37 focused tests passing and all 72 displayed metric cells verified. PDF Tables 2 and 3 are on pages 25 and 26. Single-seed and constructed-reference limitations are stated in the manuscript.
+
+## 2026-09-10 follow-on: published external methods
+
+The completion evidence above describes the September 6 artifact, before the author's subsequent table consolidation. It does not establish STRIDE or MetaPose results. The current main comparison is merged Table 3; citations now identify the sources of alignment, DLT, temporal-convolution background and SmoothNet without relabeling local combinations as published systems.
+
+See [the external-baseline plan](2026-09-10-ivc-external-baselines.md) for the initial integration design. As of September 13, STRIDE, MetaPose, and the corrected official-protocol DeciWatch adaptation have completed full Unity and Ski evaluations; final status and protocol details are in [the execution record](../../ivc_external_baselines_20260911.md). All previous result files are preserved.
