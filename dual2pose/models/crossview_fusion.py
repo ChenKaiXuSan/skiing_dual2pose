@@ -255,6 +255,8 @@ class CrossViewCanonicalFusion(nn.Module):
         disable_residual: bool = False,
         disable_velocity: bool = False,
         disable_rotvec: bool = False,
+        gate_mode: str = "dynamic",
+        disable_output_residual: bool = False,
     ):
         super().__init__()
 
@@ -308,11 +310,25 @@ class CrossViewCanonicalFusion(nn.Module):
         self.disable_residual = bool(disable_residual)
         self.disable_velocity = bool(disable_velocity)
         self.disable_rotvec = bool(disable_rotvec)
+        if gate_mode not in {"dynamic", "mean", "left", "right"}:
+            raise ValueError(f"Unknown gate_mode: {gate_mode}")
+        self.gate_mode = gate_mode
+        self.disable_output_residual = bool(disable_output_residual)
+        # Keep state-dict keys compatible with archived checkpoints.
+        if gate_mode != "dynamic":
+            self.gate_head.requires_grad_(False)
+        if self.disable_output_residual:
+            self.residual_head.requires_grad_(False)
+            if gate_mode != "dynamic":
+                # Fixed candidate blending has no learned output path.
+                self.requires_grad_(False)
 
     def forward(
         self,
         left_canon,
         right_canon,
+        *,
+        return_components: bool = False,
     ):
 
         # =====================================================
@@ -448,7 +464,11 @@ class CrossViewCanonicalFusion(nn.Module):
             dim=-1,
         )
 
-        alpha = torch.sigmoid(self.gate_head(fusion_feat))
+        if self.gate_mode == "dynamic":
+            alpha = torch.sigmoid(self.gate_head(fusion_feat))
+        else:
+            value = {"mean": 0.5, "left": 1.0, "right": 0.0}[self.gate_mode]
+            alpha = fusion_feat.new_full((*fusion_feat.shape[:-1], 1), value)
 
         base_l = 0.5 * (left_canon + right_to_left_canon)
 
@@ -456,7 +476,11 @@ class CrossViewCanonicalFusion(nn.Module):
 
         fused = alpha * base_l + (1.0 - alpha) * base_r
 
-        residual = self.residual_head(fusion_feat)
+        residual = (
+            torch.zeros_like(fused)
+            if self.disable_output_residual
+            else self.residual_head(fusion_feat)
+        )
 
         fused = fused + residual
 
@@ -465,6 +489,9 @@ class CrossViewCanonicalFusion(nn.Module):
             "attn_l": attn_l,
             "attn_r": attn_r,
         }
+
+        if return_components:
+            aux.update(base_l=base_l, base_r=base_r, output_residual=residual)
 
         return fused, aux
 

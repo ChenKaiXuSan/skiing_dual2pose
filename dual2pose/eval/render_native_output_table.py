@@ -34,7 +34,7 @@ def _cell(row: dict[str, Any] | None, metric: str) -> str:
     return f"{float(row[metric]):.4f}"
 
 
-def render_native_output_table(report: dict[str, Any]) -> str:
+def render_native_output_table(report: dict[str, Any], *, unity_only: bool = False) -> str:
     unity = report.get("unity", {}).get("methods", {})
     ski = report.get("ski", {}).get("methods", {})
     lines = [
@@ -52,20 +52,32 @@ def render_native_output_table(report: dict[str, Any]) -> str:
         r"Method & Canon & MPJPE $\downarrow$ & PA-MPJPE $\downarrow$ & Accel. $\downarrow$ & MPJPE $\downarrow$ & PA-MPJPE $\downarrow$ & Accel. $\downarrow$ \\",
         r"\midrule",
     ]
+    if unity_only:
+        lines[2] = lines[2].replace("Independent comparison before", "Independent Unity comparison before")
+        lines = [line.replace("llrrrrrr", "lrrr") for line in lines]
+        lines[9:12] = [
+            r"Method & MPJPE $\downarrow$ & PA-MPJPE $\downarrow$ & Accel. $\downarrow$ \\"
+        ]
+        lines[4] = r"\footnotesize"
+        lines[5] = r"\setlength{\tabcolsep}{4pt}"
+        del lines[6]  # Do not enlarge a narrower table to the full text width.
     previous_group = None
     for group, method, label, canon in ROWS:
         if group != previous_group:
             if previous_group is not None:
                 lines.append(r"\addlinespace[2pt]")
-            lines.append(rf"\multicolumn{{8}}{{@{{}}l}}{{\textit{{{group}}}}} \\")
+            columns = 4 if unity_only else 8
+            lines.append(rf"\multicolumn{{{columns}}}{{@{{}}l}}{{\textit{{{group}}}}} \\")
             previous_group = group
         urow, srow = unity.get(method), ski.get(method)
         values = [_cell(urow, name) for name in ("mpjpe", "pa_mpjpe", "acceleration_error")]
-        values += [_cell(srow, name) for name in ("mpjpe", "pa_mpjpe", "acceleration_error")]
-        lines.append(f"{label} & {canon} & " + " & ".join(values) + r" \\")
+        if not unity_only:
+            values += [_cell(srow, name) for name in ("mpjpe", "pa_mpjpe", "acceleration_error")]
+        prefix = f"{label} & " if unity_only else f"{label} & {canon} & "
+        lines.append(prefix + " & ".join(values) + r" \\")
     lines += [
         r"\bottomrule",
-        r"\end{tabular}}",
+        r"\end{tabular}" if unity_only else r"\end{tabular}}",
         r"\end{table*}",
         "",
     ]
@@ -77,12 +89,13 @@ def main() -> None:
     parser.add_argument("--unity", type=Path, required=True)
     parser.add_argument("--ski", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--unity-only", action="store_true", help="Omit Ski columns from the rendered table.")
     args = parser.parse_args()
     report = {
         "unity": json.loads(args.unity.read_text(encoding="utf-8")),
         "ski": json.loads(args.ski.read_text(encoding="utf-8")),
     }
-    text = render_native_output_table(report)
+    text = render_native_output_table(report, unity_only=args.unity_only)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("x", encoding="utf-8") as handle:
         handle.write(text)

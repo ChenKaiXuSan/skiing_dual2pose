@@ -10,7 +10,7 @@ from dual2pose.eval.render_native_output_table import EXPECTED_ROW_LABELS, rende
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_NATIVE_REFERENCE_SHA256 = "b07555843db7c5a1f6aa68f6e2332591b6998011a0caf4724ea4b4c365034915"
+EXPECTED_NATIVE_REFERENCE_SHA256 = "af44bb8ac6adc0b5e5b2ab2e74cf7a65bbf1442b4a16f0082c8643195a5eaa44"
 
 
 def fixture_report(unavailable: str | None = None):
@@ -116,7 +116,8 @@ class NativeOutputManuscriptTest(unittest.TestCase):
             r"MetaPose (adapted)~\cite{usman2022metapose} & No & 0.2171 & 0.1088 & 0.0382 & -- & -- & --",
         )
         for row in expected_rows:
-            self.assertIn(row, native)
+            self.assertIn(row.removesuffix(" & -- & -- & --").replace(" & No & ", " & "), native)
+        self.assertNotIn("Ski-PTZ-Pose", native)
 
     def test_results_text_cites_and_distinguishes_external_adaptations(self) -> None:
         main = (ROOT / "paper/ivc_draft_20260821/main.tex").read_text(

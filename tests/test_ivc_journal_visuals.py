@@ -28,8 +28,8 @@ class IVCJournalVisualsTest(unittest.TestCase):
     def test_manuscript_uses_journal_title_and_no_conference_figure_files(self) -> None:
         manuscript = (PAPER / "main.tex").read_text(encoding="utf-8")
         self.assertIn(
-            "Calibration-Free Post-Estimation Fusion of Dual-View 3D Human Pose "
-            "Streams: Robustness, Front-End Generalization, and Multi-View Extension",
+            "CanonFuse3D: Reliability-Gated Fusion of Uncalibrated Dual-View 3D "
+            "Human Pose Streams for Fast-Moving Athletes",
             manuscript,
         )
         for conference_asset in (
@@ -41,10 +41,10 @@ class IVCJournalVisualsTest(unittest.TestCase):
         ):
             self.assertNotIn(conference_asset, manuscript)
         for journal_asset in (
-            "figures/journal/study_overview.pdf",
-            "figures/journal/method_pipeline.pdf",
+            "figures/journal/study_overview_visio.pdf",
+            "figures/journal/method_pipeline_visio.pdf",
             "figures/journal/dataset_examples.pdf",
-            "figures/journal/realworld_qualitative.pdf",
+            "figures/journal/realworld_qualitative_refresh.pdf",
         ):
             self.assertIn(journal_asset, manuscript)
 
@@ -63,23 +63,11 @@ class IVCJournalVisualsTest(unittest.TestCase):
             output = Path(directory)
             module.render_study_overview(output / "study_overview.pdf")
             module.render_method_pipeline(output / "method_pipeline.pdf")
-            module.render_realworld_qualitative(
-                PAPER
-                / "figures"
-                / "original"
-                / "experiment3"
-                / "pro_1_frame0000_real_compare.png",
-                PAPER
-                / "figures"
-                / "original"
-                / "experiment3"
-                / "run_3_frame0000_real_compare.png",
-                output / "realworld_qualitative.pdf",
-            )
+            # The legacy conference qualitative panels are archived; the
+            # manuscript uses realworld_qualitative_refresh.pdf instead.
             for name in (
                 "study_overview.pdf",
                 "method_pipeline.pdf",
-                "realworld_qualitative.pdf",
             ):
                 artifact = output / name
                 self.assertTrue(artifact.is_file())
