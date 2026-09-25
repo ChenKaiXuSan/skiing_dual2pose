@@ -1,5 +1,24 @@
-weight_decay: 0.01
-lambda_view_recon: 0.05
-lambda_alpha_balance: 0.02
-lambda_alpha_entropy: 0.005
-lambda_temporal_smooth: 0.01
+# CanonFuse3D cross-view fusion model.
+#
+# This group is the single source of truth for the model's hyperparameters:
+# CrossViewFusionTrainer reads every value below from `config.model`. Select
+# this group with `model=cross_view_fusion` (the default) and override any
+# single value from the command line, e.g.
+#   python dual2pose/train_unity.py model.optim.lr=5e-4
+backbone: crossview_fusion
+
+arch:
+  hidden_dim: 128
+  num_heads: 4
+  dropout: 0.1
+  temporal_kernel_size: 5
+
+optim:
+  lr: 0.001
+  weight_decay: 0.01
+
+loss:
+  lambda_view_recon: 0.05
+  lambda_alpha_balance: 0.02
+  lambda_alpha_entropy: 0.005
+  lambda_temporal_smooth: 0.01

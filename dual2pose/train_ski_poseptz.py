@@ -34,6 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from dual2pose.config import load_config
 from dual2pose.dataloader.ski_poseptz_dataset_dual_view import (
     LabeledSkiPosePTZDataset,
 )
@@ -105,7 +106,7 @@ def _build_config(args: argparse.Namespace):
     if not args.config_path.exists():
         raise FileNotFoundError(f"Config not found: {args.config_path}")
 
-    config = OmegaConf.load(str(args.config_path))
+    config = load_config(args.config_path)
     config.model.backbone = "crossview_fusion"
     config.data.left_hip_idx = 4
     config.data.right_hip_idx = 5

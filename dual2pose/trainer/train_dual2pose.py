@@ -22,58 +22,52 @@ class Dual2PoseTrainer(LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        model_cfg = getattr(hparams, "dual2pose", None)
-        self.lr = float(getattr(hparams.loss, "lr", 0.1))
-        self.weight_decay = float(
-            getattr(
-                model_cfg, "weight_decay", getattr(hparams.loss, "weight_decay", 0.01)
-            )
-        )
-        self.lambda_view_recon = float(
-            getattr(
-                model_cfg,
-                "lambda_view_recon",
-                getattr(hparams.loss, "lambda_view_recon", 0.05),
-            )
-        )
-        self.lambda_alpha_balance = float(
-            getattr(model_cfg, "lambda_alpha_balance", 0.02)
-        )
-        self.lambda_alpha_entropy = float(
-            getattr(model_cfg, "lambda_alpha_entropy", 0.005)
-        )
-        self.lambda_p0_supervise = float(getattr(model_cfg, "lambda_p0_supervise", 0.2))
+        # Hyperparameters come from the `model` config group
+        # (configs/model/dual2pose.yaml), reached as `config.model.*`.
+        model_cfg = getattr(hparams, "model", None)
+        arch_cfg = getattr(model_cfg, "arch", None)
+        optim_cfg = getattr(model_cfg, "optim", None)
+        loss_cfg = getattr(model_cfg, "loss", None)
+        log_cfg = getattr(model_cfg, "log", None)
+
+        self.lr = float(getattr(optim_cfg, "lr", 0.001))
+        self.weight_decay = float(getattr(optim_cfg, "weight_decay", 0.01))
+        self.lambda_view_recon = float(getattr(loss_cfg, "lambda_view_recon", 0.05))
+        self.lambda_alpha_balance = float(getattr(loss_cfg, "lambda_alpha_balance", 0.02))
+        self.lambda_alpha_entropy = float(getattr(loss_cfg, "lambda_alpha_entropy", 0.005))
+        self.lambda_p0_supervise = float(getattr(loss_cfg, "lambda_p0_supervise", 0.2))
+
         self.rigid_align_right_to_left = bool(
-            getattr(model_cfg, "rigid_align_right_to_left", False)
+            getattr(arch_cfg, "rigid_align_right_to_left", False)
         )
         self.console_print_train_metrics = bool(
-            getattr(model_cfg, "console_print_train_metrics", True)
+            getattr(log_cfg, "console_print_train_metrics", True)
         )
         self.console_print_every_n_steps = int(
-            getattr(model_cfg, "console_print_every_n_steps", 20)
+            getattr(log_cfg, "console_print_every_n_steps", 20)
         )
         self.console_print_include_val = bool(
-            getattr(model_cfg, "console_print_include_val", False)
+            getattr(log_cfg, "console_print_include_val", False)
         )
 
-        d_model = int(getattr(model_cfg, "d_model", 256))
-        n_layers = int(getattr(model_cfg, "n_layers", 4))
+        d_model = int(getattr(arch_cfg, "d_model", 256))
+        n_layers = int(getattr(arch_cfg, "n_layers", 4))
         # Default to confidence-free reliability modeling.
-        use_conf = bool(getattr(model_cfg, "use_conf", False))
-        predict_logvar = bool(getattr(model_cfg, "predict_logvar", False))
-        self.use_dino_features = bool(getattr(model_cfg, "use_dino_features", False))
+        use_conf = bool(getattr(arch_cfg, "use_conf", False))
+        predict_logvar = bool(getattr(arch_cfg, "predict_logvar", False))
+        self.use_dino_features = bool(getattr(arch_cfg, "use_dino_features", False))
         self.dino_model_name = str(
             getattr(
-                model_cfg,
+                arch_cfg,
                 "dino_model_name",
                 "facebook/dinov3-convnext-tiny-pretrain-lvd1689m",
             )
         )
-        self.dino_freeze = bool(getattr(model_cfg, "dino_freeze", True))
-        self.dino_image_size = int(getattr(model_cfg, "dino_image_size", 224))
-        self.dino_feature_dim = int(getattr(model_cfg, "dino_feature_dim", 768))
+        self.dino_freeze = bool(getattr(arch_cfg, "dino_freeze", True))
+        self.dino_image_size = int(getattr(arch_cfg, "dino_image_size", 224))
+        self.dino_feature_dim = int(getattr(arch_cfg, "dino_feature_dim", 768))
 
-        num_joints_character = 15  # After filtering with FILTER_SKELETON_CONNECTIONS
+        num_joints_character = int(getattr(arch_cfg, "num_joints", 15))
 
         self.models = torch.nn.ModuleDict()
         self.models["character"] = Dual2PoseNet(
@@ -93,12 +87,12 @@ class Dual2PoseTrainer(LightningModule):
         logger.info(f"Created model: character=Dual2PoseNet({num_joints_character})")
 
         weights = PoseLossWeights(
-            mpjpe=float(getattr(hparams.loss, "lambda_mpjpe", 1.0)),
-            bone=float(getattr(hparams.loss, "lambda_bone", 0.2)),
-            vel=float(getattr(hparams.loss, "lambda_vel", 0.05)),
-            acc=float(getattr(hparams.loss, "lambda_acc", 0.02)),
-            agree=float(getattr(hparams.loss, "lambda_agree", 0.1)),
-            bone_stab=float(getattr(hparams.loss, "lambda_bone_stab", 0.05)),
+            mpjpe=float(getattr(loss_cfg, "lambda_mpjpe", 1.0)),
+            bone=float(getattr(loss_cfg, "lambda_bone", 0.2)),
+            vel=float(getattr(loss_cfg, "lambda_vel", 0.05)),
+            acc=float(getattr(loss_cfg, "lambda_acc", 0.02)),
+            agree=float(getattr(loss_cfg, "lambda_agree", 0.1)),
+            bone_stab=float(getattr(loss_cfg, "lambda_bone_stab", 0.05)),
         )
 
         # Create loss function only for character (has skeleton)

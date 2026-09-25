@@ -21,6 +21,7 @@ from typing import Any, Dict
 import matplotlib
 import numpy as np
 import torch
+from dual2pose.config import load_config
 from omegaconf import OmegaConf
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import RichProgressBar
@@ -173,7 +174,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _build_config(args: argparse.Namespace):
-    config = OmegaConf.load(str(args.config_path))
+    config = load_config(args.config_path)
     config.model.backbone = args.backbone
     config.data.left_hip_idx = 4
     config.data.right_hip_idx = 5

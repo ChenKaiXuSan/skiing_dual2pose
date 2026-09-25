@@ -103,7 +103,7 @@ The repository also contains `dual2pose/models/dual2pose_net.py`, an alternative
 - temporal SSM-style residual refinement,
 - optional DINO image features.
 
-This branch is selectable with `model.backbone=dual2pose`, while the default config uses `model.backbone=crossview_fusion`.
+This branch is selectable with `model=dual2pose`, which swaps the whole config group; the default group is `model=cross_view_fusion`.
 
 ---
 
@@ -199,8 +199,12 @@ python dual2pose/train_unity.py
 Useful overrides:
 
 ```bash
-python dual2pose/train_unity.py model.backbone=crossview_fusion data.load_frames=false
-python dual2pose/train_unity.py model.backbone=dual2pose
+python dual2pose/train_unity.py data.load_frames=false
+python dual2pose/train_unity.py model=dual2pose
+
+# Every model hyperparameter lives in configs/model/<group>.yaml and can be
+# overridden on the command line:
+python dual2pose/train_unity.py model.optim.lr=5e-4 model.arch.hidden_dim=256
 ```
 
 ### 3. Train on Ski-PosePTZ pseudo GT
@@ -234,7 +238,7 @@ Skiing_Canonical_DualView_3D_Pose_PyTorch/
 │   ├── trainer/                 # PyTorch Lightning trainers and canonicalization
 │   └── utils/                   # Utility functions
 ├── configs/                     # Hydra configuration files
-│   └── model/                   # Model-specific config fragments
+│   └── model/                   # Model hyperparameters (arch / optim / loss), one group per backbone
 ├── cross_validation/            # Camera-pair split generation
 ├── SAM3Dbody/                   # SAM 3D Body helper utilities
 ├── analysis/                    # Data checks, notebooks, export scripts

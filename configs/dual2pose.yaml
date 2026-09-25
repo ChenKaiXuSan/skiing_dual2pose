@@ -4,14 +4,13 @@ hydra:
     dir: ${log_path} # the log path, used for log and checkpoint
 
 defaults:
+  # Model hyperparameters live in configs/model/<name>.yaml and are reached as
+  # `config.model.*`. Swap the whole group with `model=dual2pose`; overriding
+  # `model.backbone` alone only renames the branch and leaves the other group's
+  # hyperparameters in place.
   - model: cross_view_fusion
-  # Keep `_self_` last: this file's own keys override the loaded groups,
-  # which is the composition order this config has always relied on.
+  # Keep `_self_` last: this file's own keys override the loaded groups.
   - _self_
-
-loss:
-  lr: 0.001
-  weight_decay: 0.01
 
 cross_validation:
   # 生成 index mapping 的配置（用于 cross_validation/main.py）
@@ -65,9 +64,6 @@ data:
 
   num_workers: 32
   batch_size: 4096
-
-model:
-  backbone: crossview_fusion # crossview_fusion, dual2pose
 
 train:
   # Training config

@@ -251,6 +251,7 @@ class CrossViewCanonicalFusion(nn.Module):
         hidden_dim=128,
         num_heads=4,
         dropout=0.1,
+        temporal_kernel_size=5,
         disable_aligned: bool = False,
         disable_residual: bool = False,
         disable_velocity: bool = False,
@@ -287,7 +288,7 @@ class CrossViewCanonicalFusion(nn.Module):
 
         self.temporal = TemporalRefiner(
             dim=hidden_dim,
-            kernel_size=5,
+            kernel_size=temporal_kernel_size,
             dropout=dropout,
         )
 

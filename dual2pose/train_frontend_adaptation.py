@@ -88,7 +88,7 @@ def main(config: DictConfig) -> None:
     fold_path = resolve_fold_index_path(data_root, int(config.train.fold))
     validate_fold_metadata(fold_path, int(config.train.fold))
     config.data.unity.index_mapping_path = str(fold_path)
-    config.loss.lr = float(config.adaptation.learning_rate)
+    config.model.optim.lr = float(config.adaptation.learning_rate)
     output_root = Path(str(config.log_path)).resolve()
     output_root.mkdir(parents=True, exist_ok=True)
 

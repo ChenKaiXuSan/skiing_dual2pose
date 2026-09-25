@@ -19,6 +19,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from dual2pose.config import load_config
 from omegaconf import OmegaConf
 from pytorch_lightning import LightningDataModule, Trainer, seed_everything
 from pytorch_lightning.callbacks import RichProgressBar
@@ -221,7 +222,7 @@ def _realworld_collate(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
 def _load_model_and_config(ckpt_path: Path, backbone: str) -> Tuple[Any, Any]:
     crossview_fusion_cls, dual2pose_cls, _, _ = _repo_symbols()
     config_path = REPO_ROOT / "configs" / "dual2pose.yaml"
-    config = OmegaConf.load(str(config_path))
+    config = load_config(config_path)
     config.model.backbone = backbone
     config.data.load_frames = False
     config.data.load_2d_kpt = False

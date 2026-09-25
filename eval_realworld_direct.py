@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import torch
+from dual2pose.config import load_config
 from omegaconf import OmegaConf
 
 
@@ -161,7 +162,7 @@ def load_model(ckpt_path, backbone="crossview_fusion"):
                 return d
             return super().get(k, default)
     
-    raw = OmegaConf.load(str(REPO_ROOT / "configs" / "dual2pose.yaml"))
+    raw = load_config(REPO_ROOT / "configs" / "dual2pose.yaml")
     c = AttrDict(OmegaConf.to_container(raw))
     c["model"] = {"backbone": backbone}
     c["data"] = {"load_frames": False, "load_2d_kpt": False, "load_3d_kpt": True,

@@ -78,8 +78,9 @@ def _worker_init(worker_id):
 
 
 def create_datasets(dataset, splits):
-    from omegaconf import OmegaConf
-    config = OmegaConf.load(ROOT / "configs/dual2pose.yaml")
+    from dual2pose.config import load_config
+
+    config = load_config(ROOT / "configs/dual2pose.yaml")
     if dataset == "unity":
         from dual2pose.dataloader.data_loader import UnityDataModule
         dm = UnityDataModule(config)

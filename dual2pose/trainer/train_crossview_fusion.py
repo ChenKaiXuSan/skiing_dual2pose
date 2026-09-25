@@ -27,32 +27,28 @@ class CrossViewFusionTrainer(LightningModule):
         self.right_hip_idx = int(getattr(data_cfg, "right_hip_idx", 7))
         self.neck_idx = int(getattr(data_cfg, "neck_idx", 14))
 
-        model_cfg = getattr(hparams, "cross_view_fusion", None)
-        self.lr = float(getattr(hparams.loss, "lr", 0.1))
-        self.weight_decay = float(
-            getattr(
-                model_cfg, "weight_decay", getattr(hparams.loss, "weight_decay", 0.01)
-            )
-        )
-        self.lambda_view_recon = float(
-            getattr(
-                model_cfg,
-                "lambda_view_recon",
-                getattr(hparams.loss, "lambda_view_recon", 0.05),
-            )
-        )
-        self.lambda_alpha_balance = float(
-            getattr(model_cfg, "lambda_alpha_balance", 0.02)
-        )
-        self.lambda_alpha_entropy = float(
-            getattr(model_cfg, "lambda_alpha_entropy", 0.005)
-        )
+        # Hyperparameters come from the `model` config group
+        # (configs/model/cross_view_fusion.yaml). The fallbacks keep partial
+        # configs, such as the ones the evaluation scripts build, working.
+        model_cfg = getattr(hparams, "model", None)
+        arch_cfg = getattr(model_cfg, "arch", None)
+        optim_cfg = getattr(model_cfg, "optim", None)
+        loss_cfg = getattr(model_cfg, "loss", None)
+
+        self.lr = float(getattr(optim_cfg, "lr", 0.001))
+        self.weight_decay = float(getattr(optim_cfg, "weight_decay", 0.01))
+        self.lambda_view_recon = float(getattr(loss_cfg, "lambda_view_recon", 0.05))
+        self.lambda_alpha_balance = float(getattr(loss_cfg, "lambda_alpha_balance", 0.02))
+        self.lambda_alpha_entropy = float(getattr(loss_cfg, "lambda_alpha_entropy", 0.005))
         self.lambda_temporal_smooth = float(
-            getattr(model_cfg, "lambda_temporal_smooth", 0.01)
+            getattr(loss_cfg, "lambda_temporal_smooth", 0.01)
         )
 
         self.models = CrossViewCanonicalFusion(
-            num_heads=4,
+            hidden_dim=int(getattr(arch_cfg, "hidden_dim", 128)),
+            num_heads=int(getattr(arch_cfg, "num_heads", 4)),
+            dropout=float(getattr(arch_cfg, "dropout", 0.1)),
+            temporal_kernel_size=int(getattr(arch_cfg, "temporal_kernel_size", 5)),
         )
 
         self.save_root = str(getattr(hparams, "log_path", "./logs"))

@@ -18,7 +18,7 @@ class GateAblationTrainingTests(unittest.TestCase):
         from dual2pose.eval.main_baseline_data import canonical_batch
         torch.manual_seed(42)
         torch.set_num_threads(1)
-        trainer = CrossViewFusionTrainer(OmegaConf.create({"loss": {"lr": .001}})).eval()
+        trainer = CrossViewFusionTrainer(OmegaConf.create({"model": {"optim": {"lr": .001}}})).eval()
         raw = tuple(torch.randn(2, 6, 15, 3) for _ in range(3))
         batch = {"kpt3d_sam": {"cam1": raw[0], "cam2": raw[1]}, "kpt3d_gt": raw[2]}
         with warnings.catch_warnings(), torch.no_grad():

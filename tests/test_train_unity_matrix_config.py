@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 
+from dual2pose.config import load_config
 from omegaconf import OmegaConf
 from torch.utils.data import TensorDataset
 import torch
@@ -20,7 +21,7 @@ class TrainUnityMatrixConfigTest(unittest.TestCase):
     """Breaks caught: matrix runs silently reuse seed 42 or fold 0."""
 
     def test_default_config_declares_seed(self) -> None:
-        config = OmegaConf.load("configs/dual2pose.yaml")
+        config = load_config("configs/dual2pose.yaml")
         self.assertEqual(int(config.train.seed), 42)
         self.assertEqual(str(config.train.test_ckpt_path), "best")
 

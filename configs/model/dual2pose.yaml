@@ -1,30 +1,53 @@
-num_joints: 15
-weight_decay: 0.01
+# Alternative Dual2Pose branch.
+#
+# This group is the single source of truth for the branch's hyperparameters:
+# Dual2PoseTrainer reads every value below from `config.model`. Select it with
+# `model=dual2pose`.
+#
+# NOTE: until 2026-09-25 the trainer looked up a `config.dual2pose` key that the
+# defaults list never produced, so these values were silently ignored and the
+# code fallbacks were used instead. Four entries below differ from those
+# fallbacks and therefore change this branch's behaviour now that the wiring
+# works: rigid_align_right_to_left (was False), use_conf (was False),
+# dino_freeze (was True) and loss.lambda_bone (was 0.2). No published result
+# uses this branch.
+backbone: dual2pose
 
-# Pre-align right-view 3D pose to left-view coordinates before fusion.
-rigid_align_right_to_left: true
-rigid_align_ref_variant: character
+arch:
+  num_joints: 15
+  d_model: 256
+  n_layers: 4
+  use_conf: true
+  predict_logvar: false
+  # Pre-align right-view 3D pose to left-view coordinates before fusion.
+  rigid_align_right_to_left: true
+  rigid_align_ref_variant: character
 
-d_model: 256
-n_layers: 4
-use_conf: true
-predict_logvar: false
+  # frame branch
+  use_dino_features: false
+  dino_model_name: facebook/dinov2-base
+  dino_freeze: false
+  dino_image_size: 224
+  dino_feature_dim: 768
 
-# frame branch
-use_dino_features: false
-dino_model_name: facebook/dinov2-base
-dino_freeze: false
-dino_image_size: 224
-dino_feature_dim: 768
+optim:
+  lr: 0.001
+  weight_decay: 0.01
 
-lambda_view_recon: 0.05
-lambda_alpha_balance: 0.02
-lambda_alpha_entropy: 0.005
-lambda_p0_supervise: 0.2
+loss:
+  lambda_view_recon: 0.05
+  lambda_alpha_balance: 0.02
+  lambda_alpha_entropy: 0.005
+  lambda_p0_supervise: 0.2
 
-lambda_mpjpe: 1.0
-lambda_bone: 0.1
-lambda_vel: 0.05
-lambda_acc: 0.02
-lambda_agree: 0.1
-lambda_bone_stab: 0.05
+  lambda_mpjpe: 1.0
+  lambda_bone: 0.1
+  lambda_vel: 0.05
+  lambda_acc: 0.02
+  lambda_agree: 0.1
+  lambda_bone_stab: 0.05
+
+log:
+  console_print_train_metrics: true
+  console_print_include_val: false
+  console_print_every_n_steps: 20
