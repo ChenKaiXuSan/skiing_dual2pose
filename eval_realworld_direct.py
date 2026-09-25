@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import os
 import sys
 import importlib
 from functools import lru_cache
@@ -255,7 +256,7 @@ ALL_RUNS = ["pro_1", "pro_2", "run_3", "run_4", "run_5", "run_6"]
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-root", type=Path, default=Path("/home/kaixu_chen/data/skiing/sam3d_body_results/person"))
+    parser.add_argument("--data-root", type=Path, default=Path(os.environ.get("DUAL2POSE_RAW_ROOT", "/home/kaixu_chen/data/skiing")) / "sam3d_body_results/person")
     parser.add_argument("--ckpt-path", type=Path, default=None)
     parser.add_argument("--backbone", default="crossview_fusion")
     parser.add_argument("--gpu", type=int, default=0)

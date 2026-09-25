@@ -52,8 +52,9 @@ def _repo_symbols():
     )
 
 
-DEFAULT_CKPT = Path(
-    "/home/kaixu_chen/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/train_ski_poseptz/crossview_fusion/2026-05-25/14-13-23/checkpoints/last.ckpt"
+DEFAULT_CKPT = (
+    REPO_ROOT
+    / "logs/train_ski_poseptz/crossview_fusion/2026-05-25/14-13-23/checkpoints/last.ckpt"
 )
 DEFAULT_CONFIG = REPO_ROOT / "configs" / "dual2pose.yaml"
 
@@ -167,7 +168,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-path",
         type=Path,
-        default="/home/kaixu_chen/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/eval_ski_poseptz_masking",
+        default=REPO_ROOT / "logs/eval_ski_poseptz_masking",
         help="Optional base output path for this sweep. Overrides config.log_path.",
     )
     return parser.parse_args()

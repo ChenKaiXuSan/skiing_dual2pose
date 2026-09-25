@@ -609,9 +609,9 @@ def parse_args() -> argparse.Namespace:
         parser.error("batch size, worker count, and progress interval must be positive")
     if args.dataset_root is None:
         args.dataset_root = Path(
-            "/home/kaixu_chen/skiing/data/skiing_unity_dataset"
+            os.environ.get("DUAL2POSE_UNITY_ROOT", "/home/kaixu_chen/skiing/data/skiing_unity_dataset")
             if args.dataset == "unity"
-            else "/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png"
+            else os.environ.get("DUAL2POSE_SKI_ROOT", "/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png")
         )
     return args
 

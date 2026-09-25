@@ -188,6 +188,20 @@ conda activate canonfuse3d
 pip install -r requirements.txt
 ```
 
+Dataset locations default to the paths this project was developed on. Point them
+at your own copies with these environment variables, or edit `configs/dual2pose.yaml`:
+
+| Variable | Default | Holds |
+|---|---|---|
+| `DUAL2POSE_UNITY_ROOT` | `/home/kaixu_chen/skiing/data/skiing_unity_dataset` | Unity synthetic dataset |
+| `DUAL2POSE_SKI_ROOT` | `/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png` | Ski-PosePTZ dataset |
+| `DUAL2POSE_RAW_ROOT` | `/home/kaixu_chen/data/skiing` | raw videos and SAM 3D Body results |
+| `DUAL2POSE_REPO` | this checkout | repository root, for archived checkpoint paths |
+
+The `index_path_rewrite_from` entries in the config are deliberately *not*
+configurable: they record the data root stored inside the archived index files,
+which `dual2pose/path_rewrite.py` maps onto the roots above.
+
 ### 2. Train on Unity
 
 Default training uses `crossview_fusion`:

@@ -1,5 +1,6 @@
 from pathlib import Path
 import subprocess
+import sys
 import unittest
 
 
@@ -10,7 +11,7 @@ class FrontEndAdaptationEntrypointTest(unittest.TestCase):
         repo = Path(__file__).resolve().parents[1]
         result = subprocess.run(
             [
-                "/home/kaixu_chen/miniforge3/envs/dual2pose/bin/python",
+                sys.executable,
                 "dual2pose/train_frontend_adaptation.py",
                 "--cfg",
                 "job",

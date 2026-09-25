@@ -38,8 +38,8 @@ from dual2pose.map_config import (
 
 EPS = 1e-10
 DEFAULT_GATE_PX = 25.0
-DEFAULT_UNITY_ROOT = Path("/home/kaixu_chen/skiing/data/skiing_unity_dataset")
-DEFAULT_SKI_ROOT = Path("/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png")
+DEFAULT_UNITY_ROOT = Path(os.environ.get("DUAL2POSE_UNITY_ROOT", "/home/kaixu_chen/skiing/data/skiing_unity_dataset"))
+DEFAULT_SKI_ROOT = Path(os.environ.get("DUAL2POSE_SKI_ROOT", "/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png"))
 
 
 @dataclass(frozen=True)

@@ -26,8 +26,10 @@ from dual2pose.map_config import filter_sam3d_body_kpts, filter_unity_kpts
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_ROOT = Path(
-    "/home/kaixu_chen/skiing/data/skiing_unity_dataset"
+    os.environ.get("DUAL2POSE_UNITY_ROOT", "/home/kaixu_chen/skiing/data/skiing_unity_dataset")
 )
+# Not a path on this machine: this is the root recorded inside the archived
+# index files, which path_rewrite maps onto DEFAULT_DATA_ROOT.
 DEFAULT_REWRITE_FROM = Path(
     "/home/kaixu_chen/data/skiing/skiing_unity_dataset"
 )

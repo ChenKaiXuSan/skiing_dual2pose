@@ -15,8 +15,8 @@ import time
 from typing import Any, Mapping
 
 
-DEFAULT_DATA_ROOT = Path("/home/kaixu_chen/skiing/data/skiing_unity_dataset")
-DEFAULT_PYTHON = Path("/home/kaixu_chen/miniforge3/envs/dual2pose/bin/python")
+DEFAULT_DATA_ROOT = Path(os.environ.get("DUAL2POSE_UNITY_ROOT", "/home/kaixu_chen/skiing/data/skiing_unity_dataset"))
+DEFAULT_PYTHON = Path(os.environ.get("DUAL2POSE_PYTHON", sys.executable))
 SEEDS = (13, 42, 73)
 FOLDS = (0, 1)
 VALID_TRANSITIONS = {

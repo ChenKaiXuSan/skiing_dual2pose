@@ -46,6 +46,8 @@ DEFAULT_CKPT_PATH = (
     / "last.ckpt"
 )
 DEFAULT_OFFSETS = [-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0]
+# Not a path on this machine: this is the data root recorded inside the
+# archived index files, which path_rewrite maps onto the real root.
 DEFAULT_DATA_ROOT_IN_INDEX = "/home/kaixu_chen/data/skiing/skiing_unity_dataset"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

@@ -17,7 +17,7 @@ from dual2pose.eval.export_unity_frontend_predictions import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DATA_ROOT = Path("/home/kaixu_chen/skiing/data/skiing_unity_dataset")
+DATA_ROOT = Path(os.environ.get("DUAL2POSE_UNITY_ROOT", "/home/kaixu_chen/skiing/data/skiing_unity_dataset"))
 OUTPUT_ROOT = REPO_ROOT / "logs/ivc_p1/frontend_adaptation/predictions"
 FRONTEND_CONFIGS: dict[str, dict[str, Any]] = {
     "videopose3d": {

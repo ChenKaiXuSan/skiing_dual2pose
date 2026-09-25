@@ -441,7 +441,7 @@ def plot_all(results: Dict[str, Dict[str, Any]], ckpt_name: str, output_dir: Pat
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Evaluate dual-view fusion on real-world SAM3D-body data")
-    p.add_argument("--data-root", type=Path, default=Path("/home/kaixu_chen/data/skiing/sam3d_body_results/person"))
+    p.add_argument("--data-root", type=Path, default=Path(os.environ.get("DUAL2POSE_RAW_ROOT", "/home/kaixu_chen/data/skiing")) / "sam3d_body_results/person")
     p.add_argument("--ckpt-path", type=Path, default=None)
     p.add_argument("--backbone", type=str, default="crossview_fusion", choices=["crossview_fusion", "dual2pose"])
     p.add_argument("--gpu", type=int, default=0)

@@ -1,8 +1,8 @@
 # Copy this file and replace every /absolute/path placeholder.
-data_root: /home/kaixu_chen/skiing/data/skiing_unity_dataset
-fold_json: /home/kaixu_chen/skiing/data/skiing_unity_dataset/index_mapping/use_layer_camera_filter_disabled/camera_pairs_by_action_folds/fold_00.json
+data_root: ${oc.env:DUAL2POSE_UNITY_ROOT,/home/kaixu_chen/skiing/data/skiing_unity_dataset}
+fold_json: ${oc.env:DUAL2POSE_UNITY_ROOT,/home/kaixu_chen/skiing/data/skiing_unity_dataset}/index_mapping/use_layer_camera_filter_disabled/camera_pairs_by_action_folds/fold_00.json
 rewrite_from: /home/kaixu_chen/data/skiing/skiing_unity_dataset
-fusion_checkpoint: /home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt
+fusion_checkpoint: ${oc.env:DUAL2POSE_REPO,/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch}/logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt
 output_root: logs/ivc_mmsports_extension/frontend_generalization
 fold: 0
 split: test

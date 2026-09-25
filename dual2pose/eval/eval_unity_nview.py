@@ -32,6 +32,8 @@ from dual2pose.training_protocol import resolve_fold_index_path, validate_fold_m
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CHECKPOINT = REPO_ROOT / "logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt"
+# Not a path on this machine: this is the data root recorded inside the
+# archived index files, which path_rewrite maps onto the real root.
 DEFAULT_STALE_ROOT = "/home/kaixu_chen/data/skiing/skiing_unity_dataset"
 OUTPUT_ROOT = REPO_ROOT / "logs/ivc_p1/nview"
 

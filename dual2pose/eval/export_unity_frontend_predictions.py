@@ -27,6 +27,8 @@ from dual2pose.eval.frontend_lifters import (
 
 
 logger = logging.getLogger(__name__)
+# Not a path on this machine: this is the data root recorded inside the
+# archived index files, which path_rewrite maps onto the real root.
 DEFAULT_STALE_DATA_ROOT = Path(
     "/home/kaixu_chen/data/skiing/skiing_unity_dataset"
 )
