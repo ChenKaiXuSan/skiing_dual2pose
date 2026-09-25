@@ -5,6 +5,9 @@ hydra:
 
 defaults:
   - model: cross_view_fusion
+  # Keep `_self_` last: this file's own keys override the loaded groups,
+  # which is the composition order this config has always relied on.
+  - _self_
 
 loss:
   lr: 0.001
