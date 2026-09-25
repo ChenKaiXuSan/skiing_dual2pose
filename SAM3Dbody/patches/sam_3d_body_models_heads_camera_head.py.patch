@@ -1,0 +1,11 @@
+--- upstream/3e6d20f/sam_3d_body/models/heads/camera_head.py
++++ SAM3Dbody/sam_3d_body/models/heads/camera_head.py
+@@ -5,7 +5,7 @@
+ import torch
+ import torch.nn as nn
+ 
+-from sam_3d_body.models.modules.geometry_utils import perspective_projection
++from SAM3Dbody.sam_3d_body.models.modules.geometry_utils import perspective_projection
+ 
+ from ..modules import get_intrinsic_matrix, to_2tuple
+ from ..modules.transformer import FFN

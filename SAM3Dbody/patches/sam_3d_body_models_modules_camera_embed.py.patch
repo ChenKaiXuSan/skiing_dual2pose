@@ -1,0 +1,11 @@
+--- upstream/3e6d20f/sam_3d_body/models/modules/camera_embed.py
++++ SAM3Dbody/sam_3d_body/models/modules/camera_embed.py
+@@ -5,7 +5,7 @@
+ import torch
+ import torch.nn.functional as F
+ 
+-from sam_3d_body.models.modules.transformer import LayerNorm2d
++from SAM3Dbody.sam_3d_body.models.modules.transformer import LayerNorm2d
+ from torch import nn
+ 
+ 

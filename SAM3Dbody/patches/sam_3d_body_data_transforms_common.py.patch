@@ -1,0 +1,11 @@
+--- upstream/3e6d20f/sam_3d_body/data/transforms/common.py
++++ SAM3Dbody/sam_3d_body/data/transforms/common.py
+@@ -7,7 +7,7 @@
+ import torch.nn as nn
+ import torchvision.transforms.functional as F
+ from PIL import Image, ImageOps
+-from sam_3d_body.models.modules import to_2tuple
++from SAM3Dbody.sam_3d_body.models.modules import to_2tuple
+ 
+ from .bbox_utils import (
+     bbox_cs2xyxy,

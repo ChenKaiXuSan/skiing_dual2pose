@@ -1,0 +1,40 @@
+--- upstream/3e6d20f/sam_3d_body/sam_3d_body_estimator.py
++++ SAM3Dbody/sam_3d_body/sam_3d_body_estimator.py
+@@ -6,16 +6,16 @@
+ import numpy as np
+ import torch
+ 
+-from sam_3d_body.data.transforms import (
++from .data.transforms import (
+     Compose,
+     GetBBoxCenterScale,
+     TopdownAffine,
+     VisionTransformWrapper,
+ )
+ 
+-from sam_3d_body.data.utils.io import load_image
+-from sam_3d_body.data.utils.prepare_batch import prepare_batch
+-from sam_3d_body.utils import recursive_to
++from .data.utils.io import load_image
++from .data.utils.prepare_batch import prepare_batch
++from .utils import recursive_to
+ from torchvision.transforms import ToTensor
+ 
+ 
+@@ -157,7 +157,7 @@
+         batch = prepare_batch(img, self.transform, boxes, masks, masks_score)
+ 
+         #################### Run model inference on an image ####################
+-        batch = recursive_to(batch, "cuda")
++        batch = recursive_to(batch, self.device)
+         self.model._initialize_batch(batch)
+ 
+         # Handle camera intrinsics
+@@ -211,6 +211,7 @@
+                     "mask": masks[idx] if masks is not None else None,
+                     "pred_joint_coords": out["pred_joint_coords"][idx],
+                     "pred_global_rots": out["joint_global_rots"][idx],
++                    "mhr_model_params": out["mhr_model_params"][idx],
+                 }
+             )
+ 
