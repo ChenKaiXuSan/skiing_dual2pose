@@ -33,17 +33,17 @@ from pytorch_lightning.callbacks import (
 from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
 
 THIS_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = THIS_DIR.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+REPO_ROOT = THIS_DIR.parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from dataloader.data_loader import UnityDataModule, SkiPosePTZDataModule
+from dual2pose.dataloader.data_loader import UnityDataModule, SkiPosePTZDataModule
 
 #####################################
 # select different experiment trainer
 #####################################
-from trainer.train_dual2pose import Dual2PoseTrainer
-from trainer.train_crossview_fusion import CrossViewFusionTrainer
+from dual2pose.trainer.train_dual2pose import Dual2PoseTrainer
+from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
 
 logger = logging.getLogger(__name__)
 

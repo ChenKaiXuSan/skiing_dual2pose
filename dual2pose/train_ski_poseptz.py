@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -28,11 +29,16 @@ from pytorch_lightning.callbacks import (
 from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 from torch.utils.data import DataLoader, default_collate
 
-from dataloader.ski_poseptz_dataset_dual_view import (
+# Allow `python dual2pose/train_ski_poseptz.py`, where sys.path[0] is dual2pose/.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from dual2pose.dataloader.ski_poseptz_dataset_dual_view import (
     LabeledSkiPosePTZDataset,
 )
-from map_config import filter_filtered_kpts_to_common, filter_h36m_kpts
-from trainer.train_crossview_fusion import CrossViewFusionTrainer
+from dual2pose.map_config import filter_filtered_kpts_to_common, filter_h36m_kpts
+from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

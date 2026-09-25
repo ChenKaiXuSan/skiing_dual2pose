@@ -25,7 +25,7 @@ from dual2pose.eval.eval_unity_sampling_rate import (
 )
 from dual2pose.eval.eval_unity_temporal_offset import (
     TemporalOffsetSetting,
-    _ensure_legacy_import_path,
+    _ensure_repo_import_path,
     TemporalOffsetUnityDataModule,
 )
 from dual2pose.eval.eval_unity_masking import (
@@ -109,12 +109,12 @@ class ViewAngleTest(unittest.TestCase):
 class SamplingRateTest(unittest.TestCase):
     """Break caught: rate error uses the wrong time direction or perturbs both views."""
 
-    def test_legacy_import_path_is_explicitly_bootstrapped(self) -> None:
-        expected = str(Path(__file__).resolve().parents[1] / "dual2pose")
+    def test_repo_import_path_is_explicitly_bootstrapped(self) -> None:
+        expected = str(Path(__file__).resolve().parents[1])
         original = list(__import__("sys").path)
         try:
             __import__("sys").path[:] = [value for value in original if value != expected]
-            _ensure_legacy_import_path()
+            _ensure_repo_import_path()
             self.assertEqual(__import__("sys").path[0], expected)
         finally:
             __import__("sys").path[:] = original

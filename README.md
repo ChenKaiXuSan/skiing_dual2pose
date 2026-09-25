@@ -230,13 +230,12 @@ Skiing_Canonical_DualView_3D_Pose_PyTorch/
 ├── dual2pose/
 │   ├── dataloader/              # Unity and Ski-PosePTZ dataset loaders
 │   ├── eval/                    # Evaluation and visualization scripts
-│   ├── models/                  # Cross-view fusion, Dual2Pose, Sim3, ST-GCN modules
+│   ├── models/                  # Cross-view fusion, Dual2Pose, Sim3, baseline modules
 │   ├── trainer/                 # PyTorch Lightning trainers and canonicalization
 │   └── utils/                   # Utility functions
 ├── configs/                     # Hydra configuration files
 │   └── model/                   # Model-specific config fragments
 ├── cross_validation/            # Camera-pair split generation
-├── SAM3/                        # SAM3 helper utilities
 ├── SAM3Dbody/                   # SAM 3D Body helper utilities
 ├── analysis/                    # Data checks, notebooks, export scripts
 ├── pegasus/                     # Cluster job scripts

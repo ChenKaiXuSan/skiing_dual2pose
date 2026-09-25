@@ -37,18 +37,19 @@ from pytorch_lightning.callbacks import (
 )
 from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
 
+# Allow `python dual2pose/train_unity.py`, where sys.path[0] is dual2pose/.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from dataloader.data_loader import UnityDataModule, SkiPosePTZDataModule
+from dual2pose.dataloader.data_loader import UnityDataModule, SkiPosePTZDataModule
 
 #####################################
 # select different experiment trainer
 #####################################
-from trainer.train_dual2pose import Dual2PoseTrainer
-from trainer.train_crossview_fusion import CrossViewFusionTrainer
-from training_protocol import resolve_fold_index_path, validate_fold_metadata
+from dual2pose.trainer.train_dual2pose import Dual2PoseTrainer
+from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
+from dual2pose.training_protocol import resolve_fold_index_path, validate_fold_metadata
 from dual2pose.eval.multiseed_metrics import summarize_test_outputs_by_action
 
 logger = logging.getLogger(__name__)

@@ -23,13 +23,12 @@ from omegaconf import OmegaConf
 
 
 REPO_ROOT = Path(__file__).resolve().parents[0]
-for p in (str(REPO_ROOT), str(REPO_ROOT / "dual2pose")):
-    if p not in sys.path:
-        sys.path.insert(0, p)
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 @lru_cache(maxsize=1)
 def _symbols():
-    fusion_mod = importlib.import_module("trainer.train_crossview_fusion")
+    fusion_mod = importlib.import_module("dual2pose.trainer.train_crossview_fusion")
     map_mod = importlib.import_module("map_config")
     return (fusion_mod.CrossViewFusionTrainer, map_mod.FILTERED_KPTS_MAPPING, map_mod.filter_sam3d_body_kpts)
 
@@ -191,9 +190,7 @@ def load_model(ckpt_path, backbone="crossview_fusion"):
 
 def direct_inference(model, dataset, device=0):
     """Run inference using canonicalize_pose_torch + model.forward directly."""
-    import sys; sys.path.insert(0, '.')
-    sys.path.insert(0, 'dual2pose')
-    from trainer.canonicalize import canonicalize_pose_torch
+    from dual2pose.trainer.canonicalize import canonicalize_pose_torch
     
     # Move model to device
     model = model.to(device)

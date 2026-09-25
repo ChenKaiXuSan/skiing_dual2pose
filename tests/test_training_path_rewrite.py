@@ -3,9 +3,9 @@ import sys
 import unittest
 from unittest.mock import patch
 
-DUAL2POSE_ROOT = Path(__file__).resolve().parents[1] / "dual2pose"
-if str(DUAL2POSE_ROOT) not in sys.path:
-    sys.path.insert(0, str(DUAL2POSE_ROOT))
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from dual2pose.dataloader.data_loader import UnityDataModule
 

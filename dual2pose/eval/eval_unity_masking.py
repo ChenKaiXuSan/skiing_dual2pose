@@ -39,16 +39,16 @@ from dual2pose.eval.extension_experiment_utils import (
 )
 
 THIS_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = THIS_DIR.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+REPO_ROOT = THIS_DIR.parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 @lru_cache(maxsize=1)
 def _repo_symbols():
-    data_module = importlib.import_module("dataloader.data_loader")
-    fusion_module = importlib.import_module("trainer.train_crossview_fusion")
-    dual_module = importlib.import_module("trainer.train_dual2pose")
+    data_module = importlib.import_module("dual2pose.dataloader.data_loader")
+    fusion_module = importlib.import_module("dual2pose.trainer.train_crossview_fusion")
+    dual_module = importlib.import_module("dual2pose.trainer.train_dual2pose")
     return (
         data_module.UnityDataModule,
         fusion_module.CrossViewFusionTrainer,

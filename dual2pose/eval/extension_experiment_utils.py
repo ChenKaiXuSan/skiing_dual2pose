@@ -17,13 +17,15 @@ from torch.utils.data import DataLoader, Dataset
 
 _UNITY_CAMERA_RE = re.compile(r"(?:^|_)L(?P<layer>\d+)_A(?P<azimuth>\d+(?:\.\d+)?)$")
 DEFAULT_DATA_ROOT_IN_INDEX = "/home/kaixu_chen/data/skiing/skiing_unity_dataset"
-LEGACY_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def ensure_legacy_import_path() -> None:
-    project_root = str(LEGACY_PROJECT_ROOT)
-    if project_root not in sys.path:
-        sys.path.insert(0, project_root)
+def ensure_repo_import_path() -> None:
+    """Expose the repository root so `dual2pose.*` imports work when run by file path."""
+
+    repo_root = str(REPO_ROOT)
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
 
 
 def _rewrite_data_paths(value: Any, old_root: str, new_root: str) -> Any:
@@ -44,8 +46,8 @@ def _rewrite_data_paths(value: Any, old_root: str, new_root: str) -> Any:
 def patch_index_mapping_path_rewrite(old_root: str, new_root: str) -> None:
     """Patch the repository legacy loader so stale absolute roots remain usable."""
 
-    ensure_legacy_import_path()
-    data_module = importlib.import_module("dataloader.data_loader")
+    ensure_repo_import_path()
+    data_module = importlib.import_module("dual2pose.dataloader.data_loader")
     original_loader = data_module.load_index_mapping
     if getattr(original_loader, "_ivc_extension_path_rewrite", False):
         return

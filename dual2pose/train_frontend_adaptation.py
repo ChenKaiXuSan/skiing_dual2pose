@@ -18,15 +18,13 @@ from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 import torch
 
 
+# Allow running this file by path, where sys.path[0] is dual2pose/.
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DUAL2POSE_ROOT = REPO_ROOT / "dual2pose"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
-if str(DUAL2POSE_ROOT) not in sys.path:
-    sys.path.insert(0, str(DUAL2POSE_ROOT))
 
-from dataloader.data_loader import UnityDataModule
-from trainer.train_crossview_fusion import CrossViewFusionTrainer
+from dual2pose.dataloader.data_loader import UnityDataModule
+from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
 
 from dual2pose.dataloader.frontend_pose_data import FrontEndDataModule
 from dual2pose.frontend_adaptation import (

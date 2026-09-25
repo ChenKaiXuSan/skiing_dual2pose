@@ -15,16 +15,6 @@
       "module": "SAM3Dbody.main_ski_pose_ptz",
     },
     {
-      "name": "sam3_infer",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "SAM3.main",
-      "python": "/opt/conda/envs/sam3/bin/python",
-      "args": [
-        "infer.type=person",
-      ]
-    },
-    {
       "name": "index_mapping",
       "type": "debugpy",
       "request": "launch",
@@ -53,19 +43,6 @@
         "data.batch_size=2",
         "train.view=single",
         "model.backbone=pose2equip",
-      ]
-    },
-    {
-      "name": "unity_train_stgcn",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "pose2equip.main",
-      "python": "/opt/conda/envs/canonical_dualview_3d_pose/bin/python",
-      "args": [
-        "data.num_workers=0",
-        "data.batch_size=2",
-        "model.backbone=stgcn",
-        "data.load_frames=false"
       ]
     },
     {

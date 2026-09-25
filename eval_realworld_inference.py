@@ -26,16 +26,14 @@ from torch.utils.data import DataLoader, Dataset
 
 
 REPO_ROOT = Path(__file__).resolve().parents[0]
-DUAL2POSE_ROOT = REPO_ROOT / "dual2pose"
-for p in (str(REPO_ROOT), str(DUAL2POSE_ROOT)):
-    if p not in sys.path:
-        sys.path.insert(0, p)
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 @lru_cache(maxsize=1)
 def _repo_symbols():
-    fusion_module = importlib.import_module("trainer.train_crossview_fusion")
-    dual_module = importlib.import_module("trainer.train_dual2pose")
+    fusion_module = importlib.import_module("dual2pose.trainer.train_crossview_fusion")
+    dual_module = importlib.import_module("dual2pose.trainer.train_dual2pose")
     map_module = importlib.import_module("map_config")
     return (
         fusion_module.CrossViewFusionTrainer,

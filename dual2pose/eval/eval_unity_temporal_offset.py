@@ -47,15 +47,15 @@ DEFAULT_CKPT_PATH = (
 )
 DEFAULT_OFFSETS = [-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0]
 DEFAULT_DATA_ROOT_IN_INDEX = "/home/kaixu_chen/data/skiing/skiing_unity_dataset"
-LEGACY_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _ensure_legacy_import_path() -> None:
-    """Expose the package root required by the repository legacy imports."""
+def _ensure_repo_import_path() -> None:
+    """Expose the repository root so `dual2pose.*` imports work when run by file path."""
 
-    project_root = str(LEGACY_PROJECT_ROOT)
-    if project_root not in sys.path:
-        sys.path.insert(0, project_root)
+    repo_root = str(REPO_ROOT)
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
 
 
 
@@ -86,8 +86,8 @@ def _rewrite_paths(value: Any, old_root: str, new_root: str) -> Any:
 
 
 def _patch_index_mapping_path_rewrite(old_root: str, new_root: str) -> None:
-    _ensure_legacy_import_path()
-    data_module = importlib.import_module("dataloader.data_loader")
+    _ensure_repo_import_path()
+    data_module = importlib.import_module("dual2pose.dataloader.data_loader")
     original_loader = data_module.load_index_mapping
 
     if getattr(original_loader, "_temporal_offset_path_rewrite", False):
