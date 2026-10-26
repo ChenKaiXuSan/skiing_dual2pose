@@ -1,0 +1,11 @@
+{
+  "run_root": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/main_baselines/20260906/pa_mpjpe",
+  "files_sha256": {
+    "official_parity.json": "f09f7eaa65721b08e6665601e251d5cdd6e6dc596fe58e1ac09152f85c382e71",
+    "final_tests.log": "cb5d915262130583a867eb0581d24155fef4a1cd2c1d3b4bc1704c86f36f0228",
+    "verify_artifacts.py": "7bdabe3e6020d5f635b746a3d61e8f6a6c3867f99728198ef1313fb791ac2e1b",
+    "verification.json": "71c81b5d938ef9065daaa4f93bdb399c0d863a3a8d559e18d11dab357337892e",
+    "progress_ski.json": "0f179505e7d105299b9e96bf71f64023a8d13a89b855df0525d9070eaea4c139",
+    "progress_unity.json": "da9d8f7e3bda3624c153f3f9f167b77469146f9a425e417521137e7cdb906a7e"
+  }
+}

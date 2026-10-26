@@ -1,0 +1,44 @@
+{
+  "verified_at": "2026-09-06T10:53:00.239648+09:00",
+  "scope": "E5 manuscript integration, source-to-table consistency, and final rendered pages",
+  "source_artifacts_unchanged": 4,
+  "packaged_sources_verified": 4,
+  "frontend_provenance_sha256": "1268df24e946d7da2071324c6e2e997cac20002b210e4402d51a51f9e7554351",
+  "table_rows_checked": 18,
+  "positive_gain_cells": 15,
+  "negative_gain_settings": [
+    "left_random_r1p00",
+    "right_random_r1p00",
+    "both_random_r1p00"
+  ],
+  "representative_recheck_identical": true,
+  "e4_significance_table_unchanged": true,
+  "artifact_tests": {
+    "command": "python -m unittest tests.test_e4_e5_paper_artifacts -v",
+    "passed": 2
+  },
+  "pdf": {
+    "path": "main.pdf",
+    "sha256": "d6b2ab453bdad7e39be787d9093e696f74e24b53616c11867ce716c10fe9ce62",
+    "pages": 47,
+    "page_locations": {
+      "results": 29,
+      "table": 30,
+      "figure": 31,
+      "discussion": 42,
+      "conclusion": 43
+    },
+    "visually_inspected_pages": [
+      2,
+      29,
+      30,
+      31,
+      42,
+      43
+    ],
+    "undefined_references": 0,
+    "overfull_boxes": 0,
+    "remaining_log_messages": "Font substitutions, hyperref PDF-string warnings, and underfull boxes remain; the inspected updated pages are legible."
+  },
+  "unchanged_experimental_scope": "No new training or GPU evaluation; only the archived representative cell provides independent rerun evidence."
+}

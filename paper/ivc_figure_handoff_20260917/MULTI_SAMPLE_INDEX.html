@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>三数据集多样本素材索引</title>
+  <style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+  <style type="text/css">body{font-family:"Noto Sans CJK SC",Arial,sans-serif;font-size:10pt;line-height:1.6;color:#202932}h1{font-size:18pt;margin-top:1.2em}h2{font-size:13pt}table{border-collapse:collapse;width:100%;font-size:9pt;margin:1em 0}th,td{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top}th{background:#f1f4f6}tr{break-inside:avoid}code{font-size:9pt;overflow-wrap:anywhere}p{orphans:3;widows:3}@page{size:A4;margin:17mm}h1,h2,h3{break-after:avoid}</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">三数据集多样本素材索引</h1>
+</header>
+<h1 id="三个数据集的多样本素材索引">三个数据集的多样本素材索引</h1>
+<p>每类 4 组，共 12 组。所有新样本使用固定检查点在 CPU
+上重新推理；原版单样本素材仍保留在根目录 assets/。先打开
+ASSET_GALLERY.html 选择，再进入 multi_samples/数据集/编号/ 取素材。</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>编号</th>
+<th>数据集</th>
+<th>样本</th>
+<th>视角</th>
+<th>主帧</th>
+<th>参考类型</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>U01</td>
+<td>unity</td>
+<td>Anim_Female_Skier_From_Skiing_To_Straight</td>
+<td>capture_L0_A000 / capture_L0_A030</td>
+<td>10</td>
+<td>Unity avatar GT</td>
+</tr>
+<tr class="even">
+<td>U02</td>
+<td>unity</td>
+<td>Anim_Male_Skier_Braking</td>
+<td>capture_L0_A000 / capture_L0_A060</td>
+<td>15</td>
+<td>Unity avatar GT</td>
+</tr>
+<tr class="odd">
+<td>U03</td>
+<td>unity</td>
+<td>Anim_Male_Skier_Braking_Loop</td>
+<td>capture_L0_A000 / capture_L0_A120</td>
+<td>9</td>
+<td>Unity avatar GT</td>
+</tr>
+<tr class="even">
+<td>U04</td>
+<td>unity</td>
+<td>Anim_Male_Skier_From_Losing_To_Idle</td>
+<td>capture_L0_A000 / capture_L0_A180</td>
+<td>9</td>
+<td>Unity avatar GT</td>
+</tr>
+<tr class="odd">
+<td>S01</td>
+<td>ski</td>
+<td>seq_405</td>
+<td>cam 0 / 1</td>
+<td>121</td>
+<td>Constructed canonical reference</td>
+</tr>
+<tr class="even">
+<td>S02</td>
+<td>ski</td>
+<td>seq_405</td>
+<td>cam 2 / 3</td>
+<td>120</td>
+<td>Constructed canonical reference</td>
+</tr>
+<tr class="odd">
+<td>S03</td>
+<td>ski</td>
+<td>seq_412</td>
+<td>cam 0 / 1</td>
+<td>118</td>
+<td>Constructed canonical reference</td>
+</tr>
+<tr class="even">
+<td>S04</td>
+<td>ski</td>
+<td>seq_412</td>
+<td>cam 2 / 3</td>
+<td>116</td>
+<td>Constructed canonical reference</td>
+</tr>
+<tr class="odd">
+<td>A01</td>
+<td>author</td>
+<td>pro_1</td>
+<td>left / right</td>
+<td>746</td>
+<td>No GT: qualitative only</td>
+</tr>
+<tr class="even">
+<td>A02</td>
+<td>author</td>
+<td>pro_2</td>
+<td>left / right</td>
+<td>1231</td>
+<td>No GT: qualitative only</td>
+</tr>
+<tr class="odd">
+<td>A03</td>
+<td>author</td>
+<td>run_3</td>
+<td>left / right</td>
+<td>180</td>
+<td>No GT: qualitative only</td>
+</tr>
+<tr class="even">
+<td>A04</td>
+<td>author</td>
+<td>run_4</td>
+<td>left / right</td>
+<td>180</td>
+<td>No GT: qualitative only</td>
+</tr>
+</tbody>
+</table>
+<h2 id="使用说明">使用说明</h2>
+<ul>
+<li>每组包含双视角原图、输入与候选骨架、对齐、五路特征相关素材、时间示例、门控和真实注意力热图、输出对照、完整
+30 帧数据。</li>
+<li>注意力热图是当前帧、多头平均的真实权重，区别于原版中的示意连线；横轴为右流
+key 关节，纵轴为左流 query 关节。</li>
+<li>Unity 为 15 关节；Ski 为 13 个共同关节，不补画缺失的双眼；自采为 15
+关节。</li>
+<li>Unity 与 Ski 保留原测试批次锚点（256 /
+4），不能把这些结果解释为各样本独立首帧归一化。自采采用单窗口首帧锚点。</li>
+<li>自采统一使用 Unity
+检查点，按片段中间时刻选样；没有按外观或效果选择模型。相同帧号为已有双视角对应，本次未重新估计时间同步。</li>
+<li>自采数据没有
+GT，未导出误差文件；其输出外观不能证明绝对三维精度提高。Ski 的参考必须写
+Constructed reference，不能改成独立实测 GT。</li>
+<li>这些是预选示例，不是独立受试者样本或全数据集统计。Ski
+的四组来自同一受试者的两段序列，存在相关性。</li>
+<li>所有热图采用固定 0–1
+色标；输出/参考在同一示例内共用投影与范围。三维骨架展示投影不能直接叠到
+RGB 上。</li>
+<li>原任务书中的固定 sample 0 / frame 10
+描述只适用于原版素材；新增样本的帧号、关节数和来源以本索引及每组
+provenance.json 为准。</li>
+</ul>
+<h2 id="本帧对照与选图提示">本帧对照与选图提示</h2>
+<p>以下数值是预选主帧的平均关节距离，单位为各数据集 canonical coordinate
+units；不能跨数据集比较，不能作为总体性能结论。保留所有预选样本，包括效果不佳者。</p>
+<table>
+<thead>
+<tr class="header">
+<th>编号</th>
+<th>原始帧</th>
+<th>Canonical average</th>
+<th>CanonFuse3D</th>
+<th>选图提示</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>U01</td>
+<td>10</td>
+<td>0.13331</td>
+<td>0.04067</td>
+<td>本帧误差降低，可作局部对照</td>
+</tr>
+<tr class="even">
+<td>U02</td>
+<td>15</td>
+<td>0.57729</td>
+<td>1.79997</td>
+<td>本帧误差增大，不宜展示改善</td>
+</tr>
+<tr class="odd">
+<td>U03</td>
+<td>9</td>
+<td>0.71915</td>
+<td>0.41989</td>
+<td>本帧误差降低，可作局部对照</td>
+</tr>
+<tr class="even">
+<td>U04</td>
+<td>9</td>
+<td>0.62751</td>
+<td>0.30388</td>
+<td>本帧误差降低，可作局部对照</td>
+</tr>
+<tr class="odd">
+<td>S01</td>
+<td>121</td>
+<td>0.35474</td>
+<td>0.17225</td>
+<td>本帧误差降低，可作局部对照</td>
+</tr>
+<tr class="even">
+<td>S02</td>
+<td>120</td>
+<td>0.47635</td>
+<td>0.16461</td>
+<td>本帧误差降低，可作局部对照</td>
+</tr>
+<tr class="odd">
+<td>S03</td>
+<td>118</td>
+<td>0.70937</td>
+<td>0.28795</td>
+<td>本帧误差降低，可作局部对照</td>
+</tr>
+<tr class="even">
+<td>S04</td>
+<td>116</td>
+<td>0.21980</td>
+<td>0.11988</td>
+<td>本帧误差降低，可作局部对照</td>
+</tr>
+<tr class="odd">
+<td>A01</td>
+<td>746</td>
+<td>—</td>
+<td>—</td>
+<td>无 GT，仅定性展示</td>
+</tr>
+<tr class="even">
+<td>A02</td>
+<td>1231</td>
+<td>—</td>
+<td>—</td>
+<td>无 GT，仅定性展示</td>
+</tr>
+<tr class="odd">
+<td>A03</td>
+<td>180</td>
+<td>—</td>
+<td>—</td>
+<td>无 GT，仅定性展示</td>
+</tr>
+<tr class="even">
+<td>A04</td>
+<td>180</td>
+<td>—</td>
+<td>—</td>
+<td>无 GT，仅定性展示</td>
+</tr>
+</tbody>
+</table>
+<p>U01 适合说明同一 Unity 示例的输入与输出改善；U02
+保留为不利示例，不应用来说明普遍改善。S01–S04
+可以展示相对于构造参考的本帧变化；A01–A04
+适合展示室内外双视角输入和定性输出。选择其中某组用于论文时，仍应保留其样本范围说明。</p>
+</body>
+</html>

@@ -1,0 +1,70 @@
+{
+  "joint_names": {
+    "0": "Bone_Eye_L",
+    "1": "Bone_Eye_R",
+    "2": "Upperarm_L",
+    "3": "Upperarm_R",
+    "4": "lowerarm_l",
+    "5": "lowerarm_r",
+    "6": "Thigh_L",
+    "7": "Thigh_R",
+    "8": "calf_l",
+    "9": "calf_r",
+    "10": "Foot_L",
+    "11": "Foot_R",
+    "12": "Hand_R",
+    "13": "Hand_L",
+    "14": "neck_01"
+  },
+  "edges": [
+    [
+      14,
+      2
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      4,
+      13
+    ],
+    [
+      14,
+      3
+    ],
+    [
+      3,
+      5
+    ],
+    [
+      5,
+      12
+    ],
+    [
+      14,
+      6
+    ],
+    [
+      14,
+      7
+    ],
+    [
+      6,
+      8
+    ],
+    [
+      8,
+      10
+    ],
+    [
+      7,
+      9
+    ],
+    [
+      9,
+      11
+    ]
+  ],
+  "note": "15 nodes; eyes are isolated points in the repository topology. Do not invent extra predicted joints."
+}

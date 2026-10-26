@@ -1,0 +1,64 @@
+{
+  "id": "S02",
+  "dataset": "ski",
+  "index": 9,
+  "sample": {
+    "index": 9,
+    "subj": 5,
+    "seq": 405,
+    "cam1": 2,
+    "cam2": 3,
+    "num_frames": 30
+  },
+  "batch_size": 4,
+  "batch_start_index": 8,
+  "reference_kind": "Constructed canonical reference",
+  "cache_manifest_sha256": "dddb5c9a56f24769baf6a1309e2c41b3c673284ef120db6d9863d7070fbd8fcc",
+  "rgb_sources": [
+    "/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png/data/test/seq_405/cam_02/image_000120.png",
+    "/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png/data/test/seq_405/cam_03/image_000120.png"
+  ],
+  "rgb_source_sha256": [
+    "25ac1e65623ca53c0bff1d0eac2a8415879926e8bb7a8be9a9e9b65a046c92ca",
+    "17591a2f68afb6a2051c8d798cc85e96335c9ab715762d7f77a115f46c147923"
+  ],
+  "window_index_0based": 14,
+  "source_frame": 120,
+  "checkpoint": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/train_ski_poseptz/crossview_fusion/2026-05-25/14-13-23/checkpoints/last.ckpt",
+  "checkpoint_sha256": "2b985d4f8b5e1f083fa549ae1cfa524c7d48a8fa2452fbcb136f2f514d1ed78d",
+  "inference": "New frozen-checkpoint CPU inference, float32, eval mode; not retraining.",
+  "num_joints": 13,
+  "reconstruction_max_abs_error": 2.9802322387695312e-08,
+  "alpha_min": 0.39605435729026794,
+  "alpha_max": 0.6038725972175598,
+  "projection": "Canonical: u=x+0.45z,v=y+0.15z; raw display flips v. Display only, not RGB projection.",
+  "limitations": [
+    "Selected illustration, not aggregate or independently sampled evidence.",
+    "Reference is never a model input.",
+    "No 2D skeleton overlay exported."
+  ],
+  "frame_errors": {
+    "canonical_average": 0.47634729743003845,
+    "fused": 0.1646093726158142
+  },
+  "assets": [
+    "raw_left",
+    "raw_right",
+    "left",
+    "right_to_left",
+    "base_left",
+    "base_right",
+    "fused",
+    "reference",
+    "alignment_before_after",
+    "cross_view_difference",
+    "temporal_velocity",
+    "residual_correction",
+    "alignment_rotation",
+    "temporal_poses",
+    "gate_heatmap",
+    "attention_heatmap",
+    "output_comparison",
+    "sample_preview"
+  ]
+}

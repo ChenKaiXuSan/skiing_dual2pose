@@ -1,0 +1,32 @@
+\begin{table}[htbp]
+\centering
+\caption{Frozen-checkpoint interventions: common-13 MPJPE on all 64,440 Unity and 30 Ski-PTZ-Pose windows. L/R denote complete raw-pose zeroing of the left/right stream; L$\to$R and R$\to$L switch the zeroed stream after frame 15. These are pipeline stress tests, not new trained models or image-occlusion experiments.}
+\label{tab:gate_frozen_interventions}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrrr}
+\toprule
+Dataset & Gate / output residual & Clean & L & R & L$\to$R & R$\to$L \\
+\midrule
+Unity & Dynamic / on & 0.1551 & 0.7474 & 0.5578 & 0.6765 & 0.5606 \\
+ & Dynamic / off & 0.2050 & 0.4870 & 0.3903 & 0.5428 & 0.5140 \\
+ & Fixed 0.5 / on & 0.2104 & 0.7482 & 0.5695 & 0.6939 & 0.5673 \\
+ & Fixed 0.5 / off & 0.2800 & 0.4890 & 0.4004 & 0.5595 & 0.5217 \\
+ & Left candidate / on & 0.1702 & 0.7977 & 0.4435 & 0.6514 & 0.6339 \\
+ & Left candidate / off & 0.1622 & 0.5301 & 0.2924 & 0.5301 & 0.5852 \\
+ & Right candidate / on & 0.3797 & 0.7215 & 0.7086 & 0.8054 & 0.5771 \\
+ & Right candidate / off & 0.4598 & 0.4820 & 0.5301 & 0.6598 & 0.5301 \\
+ & Canonical average & 0.2792 & 0.4532 & 0.3165 & 0.5633 & 0.4994 \\
+\midrule
+Ski & Dynamic / on & 0.1794 & 0.3400 & 0.2883 & 0.4782 & 0.4607 \\
+ & Dynamic / off & 0.3351 & 0.4527 & 0.4241 & 0.5785 & 0.5936 \\
+ & Fixed 0.5 / on & 0.1842 & 0.3444 & 0.2893 & 0.4847 & 0.4656 \\
+ & Fixed 0.5 / off & 0.3506 & 0.4585 & 0.4256 & 0.5892 & 0.6041 \\
+ & Left candidate / on & 0.2513 & 0.4071 & 0.2551 & 0.4638 & 0.5738 \\
+ & Left candidate / off & 0.3537 & 0.5108 & 0.3704 & 0.5108 & 0.7517 \\
+ & Right candidate / on & 0.3073 & 0.3350 & 0.3765 & 0.6009 & 0.4535 \\
+ & Right candidate / off & 0.4423 & 0.4433 & 0.5108 & 0.7323 & 0.5108 \\
+ & Canonical average & 0.3487 & 0.4322 & 0.3853 & 0.5993 & 0.6019 \\
+\bottomrule
+\end{tabular}
+\end{table}

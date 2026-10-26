@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "new_samples": 12,
+  "by_dataset": {
+    "unity": 4,
+    "ski": 4,
+    "author": 4
+  },
+  "new_vector_asset_sets": 212,
+  "new_rgb_images": 24,
+  "legacy_scientific_files_unchanged": 65,
+  "independent_attention_max_abs_error": {
+    "U01": 2.384185791015625e-07,
+    "U02": 2.086162567138672e-07,
+    "U03": 1.1920928955078125e-07,
+    "U04": 1.341104507446289e-07,
+    "S01": 2.2351741790771484e-07,
+    "S02": 1.043081283569336e-07,
+    "S03": 1.341104507446289e-07,
+    "S04": 1.9371509552001953e-07,
+    "A01": 0.0,
+    "A02": 0.0,
+    "A03": 0.0,
+    "A04": 0.0
+  },
+  "independent_output_max_abs_error": {
+    "U01": 2.980232238769531e-07,
+    "U02": 2.0265579223632812e-06,
+    "U03": 3.8743019104003906e-07,
+    "U04": 2.980232238769531e-07,
+    "S01": 2.682209014892578e-07,
+    "S02": 2.384185791015625e-07,
+    "S03": 3.2782554626464844e-07,
+    "S04": 2.682209014892578e-07,
+    "A01": 0.0,
+    "A02": 0.0,
+    "A03": 0.0,
+    "A04": 0.0
+  },
+  "checks": [
+    "Finite arrays and expected joint counts",
+    "Gate CSV exact equality",
+    "Fusion reconstruction",
+    "Attention shape and row normalization",
+    "Independent sample/frame attention and output parity",
+    "All PNG decode and SVG XML parse",
+    "PDF file signatures",
+    "No GT or error file for author samples"
+  ],
+  "unfavorable_examples": [
+    "U02"
+  ],
+  "scope": "Fixed illustrative samples. New CPU inference from frozen checkpoints; not retraining or full-split reevaluation."
+}

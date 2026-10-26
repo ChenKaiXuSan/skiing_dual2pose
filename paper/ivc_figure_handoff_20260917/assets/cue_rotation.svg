@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="202.896pt" height="218.014125pt" viewBox="0 0 202.896 218.014125" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-09-17T14:22:32.186155</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.9, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 218.014125 
+L 202.896 218.014125 
+L 202.896 0 
+L 0 0 
+L 0 218.014125 
+z
+" style="fill: none"/>
+  </g>
+  <g id="patch_2">
+   <path d="M 7.2 210.814125 
+L 195.696 210.814125 
+L 195.696 22.318125 
+L 7.2 22.318125 
+L 7.2 210.814125 
+z
+" style="fill: none"/>
+  </g>
+  <g id="axes_1">
+   <g id="Line3DCollection_1">
+    <path d="M 133.023656 88.879539 
+L 103.995243 114.018882 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #5c9488"/>
+    <path d="M 133.023656 88.879539 
+L 124.83537 98.930488 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #5c9488"/>
+    <path d="M 133.023656 88.879539 
+L 124.905506 92.940418 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #5c9488"/>
+   </g>
+   <g id="text_1">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start" x="16.6248" y="207.044205" transform="rotate(-0 16.6248 207.044205)">One 3D cue per sequence; broadcast to T x J</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle" x="101.448" y="16.318125" transform="rotate(-0 101.448 16.318125)">Alignment rotation vector</text>
+   </g>
+   <g id="Line3DCollection_2">
+    <path d="M 133.018135 87.048959 
+L 103.995243 114.018882 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke: #5c9488; stroke-width: 2"/>
+    <path d="M 133.018135 87.048959 
+L 124.932298 97.527846 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke: #5c9488; stroke-width: 2"/>
+    <path d="M 133.018135 87.048959 
+L 124.787509 91.721425 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke: #5c9488; stroke-width: 2"/>
+   </g>
+   <g id="Line3DCollection_3">
+    <path d="M 103.995243 73.727058 
+L 103.995243 114.018882 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #a06ba5"/>
+    <path d="M 103.995243 73.727058 
+L 99.859752 84.454688 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #a06ba5"/>
+    <path d="M 103.995243 73.727058 
+L 108.147588 86.731562 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #a06ba5"/>
+   </g>
+   <g id="Line3DCollection_4">
+    <path d="M 101.830138 74.818643 
+L 103.995243 114.018882 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke: #a06ba5; stroke-width: 2"/>
+    <path d="M 101.830138 74.818643 
+L 99.123341 88.176372 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke: #a06ba5; stroke-width: 2"/>
+    <path d="M 101.830138 74.818643 
+L 105.794737 84.586184 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke: #a06ba5; stroke-width: 2"/>
+   </g>
+   <g id="Line3DCollection_5">
+    <path d="M 157.908094 129.582181 
+L 103.995243 114.018882 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #587c9e"/>
+    <path d="M 157.908094 129.582181 
+L 141.927064 128.079054 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #587c9e"/>
+    <path d="M 157.908094 129.582181 
+L 142.061237 121.886387 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #587c9e"/>
+   </g>
+   <g id="Line3DCollection_6">
+    <path d="M 157.903653 129.106881 
+L 103.995243 114.018882 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke: #587c9e; stroke-width: 2"/>
+    <path d="M 157.903653 129.106881 
+L 141.972064 127.759083 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke: #587c9e; stroke-width: 2"/>
+    <path d="M 157.903653 129.106881 
+L 142.003018 121.534559 
+" clip-path="url(#p9a158ba3c6)" style="fill: none; stroke: #587c9e; stroke-width: 2"/>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p9a158ba3c6">
+   <rect x="7.2" y="22.318125" width="188.496" height="188.496"/>
+  </clipPath>
+ </defs>
+</svg>

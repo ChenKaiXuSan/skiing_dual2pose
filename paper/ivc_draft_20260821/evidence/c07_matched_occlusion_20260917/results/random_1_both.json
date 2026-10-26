@@ -1,0 +1,309 @@
+{
+  "status": "complete",
+  "condition": "random_1_both",
+  "protocol_sha256": "ef639a2227b6b7a211ec767d80f83b8066a6944d3ccc7c6b3d47d86e3fd9440c",
+  "results": [
+    {
+      "angle_degrees": 0.0,
+      "method": "canonfuse3d",
+      "metrics": {
+        "mpjpe": 0.5986464209351366,
+        "acceleration_error": 0.08904598533188883,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.261757138777849,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 643764
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 0.0,
+      "method": "canonical_avg",
+      "metrics": {
+        "mpjpe": 0.4654147498976652,
+        "acceleration_error": 0.086947519914791,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.25365585390375067,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 765554
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 0.0,
+      "method": "dlt",
+      "metrics": {
+        "mpjpe": 0.5121418222268725,
+        "acceleration_error": 0.05532146240937968,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.3730759042530073,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1354225
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 0.0,
+      "method": "robust_dlt",
+      "metrics": {
+        "mpjpe": 0.48664619605318865,
+        "acceleration_error": 0.04720308088433702,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.37333462991260485,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1354225
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 0.0,
+      "method": "dlt_mlp",
+      "metrics": {
+        "mpjpe": 0.41553111492673656,
+        "acceleration_error": 0.08245413256538457,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.2478383095869509,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 0
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 1.0,
+      "method": "canonfuse3d",
+      "metrics": {
+        "mpjpe": 0.5986464209351366,
+        "acceleration_error": 0.08904598533188883,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.261757138777849,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 643764
+      },
+      "reused_no_camera_result": true
+    },
+    {
+      "angle_degrees": 1.0,
+      "method": "canonical_avg",
+      "metrics": {
+        "mpjpe": 0.4654147498976652,
+        "acceleration_error": 0.086947519914791,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.25365585390375067,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 765554
+      },
+      "reused_no_camera_result": true
+    },
+    {
+      "angle_degrees": 1.0,
+      "method": "dlt",
+      "metrics": {
+        "mpjpe": 0.5140700674173365,
+        "acceleration_error": 0.07081396356049446,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.37389339631580554,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1354225
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 1.0,
+      "method": "robust_dlt",
+      "metrics": {
+        "mpjpe": 0.5069586478380234,
+        "acceleration_error": 0.060414818153372955,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.37476588096686325,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1354225
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 1.0,
+      "method": "dlt_mlp",
+      "metrics": {
+        "mpjpe": 0.42570931746825513,
+        "acceleration_error": 0.09354162736591615,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.2507029810297704,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 0
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 3.0,
+      "method": "canonfuse3d",
+      "metrics": {
+        "mpjpe": 0.5986464209351366,
+        "acceleration_error": 0.08904598533188883,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.261757138777849,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 643764
+      },
+      "reused_no_camera_result": true
+    },
+    {
+      "angle_degrees": 3.0,
+      "method": "canonical_avg",
+      "metrics": {
+        "mpjpe": 0.4654147498976652,
+        "acceleration_error": 0.086947519914791,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.25365585390375067,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 765554
+      },
+      "reused_no_camera_result": true
+    },
+    {
+      "angle_degrees": 3.0,
+      "method": "dlt",
+      "metrics": {
+        "mpjpe": 0.6074602500355387,
+        "acceleration_error": 0.0984976796189126,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.37651149708640036,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1354225
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 3.0,
+      "method": "robust_dlt",
+      "metrics": {
+        "mpjpe": 0.6133136271229789,
+        "acceleration_error": 0.0700537085814196,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.37945448904308154,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1354225
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 3.0,
+      "method": "dlt_mlp",
+      "metrics": {
+        "mpjpe": 0.5007160545782356,
+        "acceleration_error": 0.12245376644913487,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.26034075493612047,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 0
+      },
+      "reused_no_camera_result": false
+    }
+  ],
+  "detection_coverage": {
+    "left_failed_frame_positions": 783049,
+    "right_failed_frame_positions": 622875,
+    "either_failed_frame_positions": 1060383,
+    "both_failed_frame_positions": 345541,
+    "frame_positions": 1933200,
+    "sample_count": 64440,
+    "left_failed_batch_anchor": 112,
+    "right_failed_batch_anchor": 99,
+    "samples_in_left_failed_anchor_batches": 28600,
+    "samples_in_right_failed_anchor_batches": 25344
+  },
+  "geometry_coverage": {
+    "0.0": {
+      "point_count_all15": 28998000,
+      "dlt_invalid_points": 15905745,
+      "robust_invalid_points": 15905745,
+      "dlt_invalid_points_common13": 13784979,
+      "robust_invalid_points_common13": 13784979,
+      "gate_accepted_points": 11689957,
+      "gate_interpolated_points": 1179531,
+      "gate_ungated_fallback_points": 222767,
+      "nonfinite_reprojection_points": 15905745,
+      "dlt_missing_batch_anchor": 151,
+      "dlt_samples_in_missing_anchor_batches": 38584,
+      "robust_dlt_missing_batch_anchor": 151,
+      "robust_dlt_samples_in_missing_anchor_batches": 38584
+    },
+    "1.0": {
+      "point_count_all15": 28998000,
+      "dlt_invalid_points": 15905745,
+      "robust_invalid_points": 15905745,
+      "dlt_invalid_points_common13": 13784979,
+      "robust_invalid_points_common13": 13784979,
+      "gate_accepted_points": 11290898,
+      "gate_interpolated_points": 1439759,
+      "gate_ungated_fallback_points": 361598,
+      "nonfinite_reprojection_points": 15905745,
+      "dlt_missing_batch_anchor": 151,
+      "dlt_samples_in_missing_anchor_batches": 38584,
+      "robust_dlt_missing_batch_anchor": 151,
+      "robust_dlt_samples_in_missing_anchor_batches": 38584
+    },
+    "3.0": {
+      "point_count_all15": 28998000,
+      "dlt_invalid_points": 15905745,
+      "robust_invalid_points": 15905745,
+      "dlt_invalid_points_common13": 13784979,
+      "robust_invalid_points_common13": 13784979,
+      "gate_accepted_points": 7498656,
+      "gate_interpolated_points": 2107202,
+      "gate_ungated_fallback_points": 3486397,
+      "nonfinite_reprojection_points": 15905745,
+      "dlt_missing_batch_anchor": 151,
+      "dlt_samples_in_missing_anchor_batches": 38584,
+      "robust_dlt_missing_batch_anchor": 151,
+      "robust_dlt_samples_in_missing_anchor_batches": 38584
+    }
+  },
+  "unique_source_detection_failures": {
+    "random_1": 6296
+  }
+}

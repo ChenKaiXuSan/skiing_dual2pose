@@ -1,0 +1,42 @@
+{
+  "status": "complete_predictions_not_yet_scored",
+  "dataset": "unity",
+  "windows": 64440,
+  "frames": 1933200,
+  "finite_coverage": 1.0,
+  "inference_seconds": 174.8733207199839,
+  "total_seconds": 27184.038840972993,
+  "selected_stages": [
+    {
+      "stage": 1,
+      "epoch": 7,
+      "checkpoint_sha256": "10770d54c86d70284533d67c9b3b3d16fd7277a6da0535c47731218e0d54571b",
+      "selection": "full validation 2D MSE"
+    },
+    {
+      "stage": 2,
+      "epoch": 2,
+      "checkpoint_sha256": "307ae2d60ddf2e756c9caf81c21a509a369b7e6692ecb33db00bb37461a89a9a",
+      "selection": "full validation 2D MSE"
+    },
+    {
+      "stage": 3,
+      "epoch": 6,
+      "checkpoint_sha256": "59ef78ff7eae9abd219b8c96354703b783dc4be0e4a4d2ef8825c2a075c8ecb7",
+      "selection": "full validation 2D MSE"
+    }
+  ],
+  "seed": 42,
+  "split_manifests": {
+    "train": "29e425ac0c68e810d3a0fed366a90ad96e01b3192348481c7ea2a4f2d813fc22",
+    "test": "c6b4e44897867fbc5476718fc450eff426da84859abd00fe04a87d06cd6120c3",
+    "val": "599dcc0066ebe5fb3245ecbfe8848b43c43edbdaa91d037df066e6a85b0a88f6"
+  },
+  "native_test_cache": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/main_baselines/20260906/cache/unity/test",
+  "native_test_manifest_sha256": "992be1c97f2f71cf6ecd189ef3b917962b039eed0d468cacd995640beb6cd700",
+  "uncertainty_sha256": "49f98788ba3b16b2bbc3ea619e8acda91821803828de044dc68f9dfbf3f3e8e0",
+  "predictions": {
+    "s1_raw_left.npy": "59ef6bfb19fdc69dc1277186cf4fecae24b9daad933b1249793ebd3a9b8ada57",
+    "metapose_raw_left.npy": "097ce27bee6845e29b9f076866931307f20397bbaee75db89ddcd0aa668e250b"
+  }
+}

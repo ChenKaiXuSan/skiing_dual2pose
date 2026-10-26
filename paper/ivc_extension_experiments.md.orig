@@ -1,0 +1,230 @@
+# IVC Extension Experiments
+
+This note maps the MMSports reviewer feedback to additional experiments for an
+Image and Vision Computing journal extension.
+
+## Priority 1: Temporal Synchronization Robustness
+
+Reviewer motivation:
+
+- Reviewer 2 questioned the assumption of perfect frame/sub-frame
+  synchronization and asked for controlled offsets such as +/-0.5, +/-1, and
+  +/-2 frames.
+- Reviewer 3 also asked for practical handling of sample-rate differences.
+
+Implemented entry point:
+
+```bash
+TEMPORAL_OFFSETS="-2,-1,-0.5,0,0.5,1,2" \
+TEMPORAL_OFFSET_VIEW=right \
+python3 -m dual2pose.eval.eval_unity_temporal_offset
+```
+
+Optional overrides:
+
+```bash
+EVAL_CKPT_PATH=/absolute/path/to/checkpoint.ckpt
+EVAL_OUTPUT_ROOT=/absolute/path/to/output_dir
+FAILURE_THRESHOLD=0.15
+```
+
+Expected outputs:
+
+- `logs/eval_unity_temporal_offset/temporal_offset_summary_<checkpoint>.csv`
+- per-offset JSON metrics
+- per-offset comparison reports
+- alpha visualizations for gate behavior under synchronization noise
+
+Report in the manuscript:
+
+- MPJPE under each temporal offset
+- Acceleration Error under each temporal offset
+- relative degradation from the zero-offset condition
+- whether degradation is symmetric for positive and negative offsets
+
+## Priority 2: Reliability Gate Diagnostics
+
+Reviewer motivation:
+
+- Reviewer 1 asked whether the reliability gate coefficient tracks actual
+  prediction error.
+- Reviewer 3 asked for a clearer explanation of gate behavior.
+
+Implemented in the temporal-offset script:
+
+- `gate_error_corr`: Pearson correlation between alpha and the right-minus-left
+  canonical error advantage. Positive means larger alpha is associated with
+  lower left-view error.
+- `gate_preference_accuracy`: fraction of joint-time points where alpha >= 0.5
+  agrees with the lower-error canonical view.
+- `alpha_when_left_better` and `alpha_when_right_better`: sanity-check means for
+  interpretability.
+
+Report in the manuscript:
+
+- A short table for the zero-offset condition.
+- A trend plot across temporal offsets if the gate remains meaningful under
+  moderate desynchronization.
+
+## Architecture Decision
+
+Do not add a large new architecture before running the above experiments.
+For IVC, the clean path is:
+
+1. If the model is stable up to +/-0.5 or +/-1 frame, keep the current
+   architecture and present temporal robustness as evidence.
+2. If performance collapses under small offsets, add a lightweight temporal
+   alignment component before fusion, such as local offset search or
+   cross-correlation alignment over canonical pose streams.
+3. Avoid a full multi-view or transformer redesign unless additional results
+   show that synchronization is the main failure mode and simple alignment is
+   insufficient.
+
+
+## Priority 3: Camera View-Angle Robustness
+
+The evaluator reads `capture_L*_A*` camera identifiers, uses the circular
+azimuth separation, and reports MPJPE, velocity error, acceleration error,
+failure rate, sample count, and fusion gain for 30-degree bins.
+
+```bash
+EVAL_CKPT_PATH=/absolute/path/to/checkpoint.ckpt \
+python3 -m dual2pose.eval.eval_unity_view_angle \
+  data.unity.root_path=/home/kaixu_chen/skiing/data/skiing_unity_dataset
+```
+
+Optional override: `VIEW_ANGLE_BIN_EDGES="0,30,60,90,120,150,180"`.
+Outputs are written under `logs/eval_unity_view_angle/` as CSV and JSON.
+
+## Priority 4: Sampling-Rate Drift
+
+This study isolates camera clock-rate mismatch from a constant offset by
+anchoring both streams at the sequence center. A rate error is expressed as
+`perturbed_rate / reference_rate - 1`.
+
+```bash
+SAMPLING_RATE_ERRORS="-0.02,-0.01,-0.005,0,0.005,0.01,0.02" \
+SAMPLING_RATE_VIEW=right \
+SAMPLING_RATE_ANCHOR=center \
+EVAL_CKPT_PATH=/absolute/path/to/checkpoint.ckpt \
+python3 -m dual2pose.eval.eval_unity_sampling_rate \
+  data.unity.root_path=/home/kaixu_chen/skiing/data/skiing_unity_dataset
+```
+
+Outputs include per-setting JSON and combined CSV/JSON summaries under
+`logs/eval_unity_sampling_rate/`. The combined table includes degradation
+relative to the zero-drift condition.
+
+## Priority 5: Front-End Estimator Generalization
+
+Reviewer 2 explicitly requested three alternative 3D front ends: VideoPose3D,
+PoseFormer, and MotionBERT. The implemented comparison is controlled: all three
+receive the same Unity ground-truth H36M-17 2D tracks, while the SAM3D-native
+condition is retained as the in-domain reference. Thus the experiment isolates
+whether the frozen CanonFuse3D model generalizes to a different 2D-to-3D lifting
+distribution; it is not an end-to-end RGB detector comparison.
+
+Protocol safeguards:
+
+- the same fold-0 test split, fusion checkpoint, and 64,440 camera pairs are used
+  for every row; the evaluator retains the final partial batch;
+- prediction files store original frame indices, and the manifest loader rejects
+  missing streams, duplicate keys, invalid shapes, and non-finite values;
+- official repository code and pretrained checkpoints are loaded strictly, with
+  repository commit and checkpoint SHA-256 recorded in every manifest;
+- VideoPose3D uses its 243-frame receptive field, PoseFormer uses centered
+  81-frame windows, and both use repeat-edge padding and horizontal-flip test
+  augmentation;
+- MotionBERT uses 243-frame chunks, flip test augmentation, the MMPose default
+  H36M average-bbox normalization (center 528,427 and scale 400), and the
+  MotionBERTLabel inference decode factor of 4;
+- the two CanonFuse eye joints unavailable in H36M-17 are synthesized only for
+  canonicalization. Publication metrics use the exact 13 common joints.
+
+Copy and fill the provided suite specification, then run all exports, the SAM3D
+reference, all three evaluations, and the checked comparison table with one
+command:
+
+```bash
+cp configs/frontend_generalization.example.yaml /tmp/frontend_generalization.yaml
+conda run -n dual2pose python -m dual2pose.eval.run_unity_frontend_suite \
+  --spec /tmp/frontend_generalization.yaml \
+  --overwrite-predictions
+```
+
+The current full fold-0 result, using
+`46-0.0844-0.1629.ckpt`, is:
+
+| Front end | Canonical view average MPJPE (mm) | Fused MPJPE (mm) | Fusion gain (mm) | Gain (%) | Fused acceleration error (mm/frame^2) |
+|---|---:|---:|---:|---:|---:|
+| SAM3D native | 296.2 | 155.2 | +141.0 | +47.61 | 29.2 |
+| MotionBERT | 485.0 | 417.1 | +67.9 | +14.00 | 21.5 |
+| PoseFormer | 468.5 | 486.7 | -18.2 | -3.88 | 24.3 |
+| VideoPose3D | 482.5 | 491.5 | -9.0 | -1.87 | 21.0 |
+
+The result shows that the in-domain SAM3D front end remains substantially best.
+The frozen fusion model still improves MotionBERT, but its learned residual and
+gate do not transfer cleanly to PoseFormer or VideoPose3D, where fusion is
+slightly worse than the canonical single-view average. This is evidence of
+partial, not universal, front-end generalization and should be reported as a
+limitation rather than as a claim that the three lifters have equal input-domain
+accuracy.
+
+Reproducibility outputs:
+
+- `logs/eval_unity_frontend_generalization/predictions/*/*_manifest.json`
+- `logs/eval_unity_frontend_generalization/evaluation/frontend_generalization_summary_46-0.0844-0.1629.csv`
+- `logs/eval_unity_frontend_generalization/frontend_generalization_comparison.csv`
+- the matching `.json` comparison table
+
+## Priority 6: Publication Summary of the Existing Masking Sweep
+
+No masking experiment is rerun. This command converts the existing sweep into
+selected-ratio tables, normalized AUC tables, long-form trends, PNG/PDF figures,
+a Markdown report, and provenance metadata.
+
+```bash
+python3 -m dual2pose.eval.summarize_unity_masking \
+  --input logs/eval_unity_masking/occlusion_summary_last.csv \
+  --output-dir logs/eval_unity_masking/paper_summary \
+  --selected-ratios 0,0.1,0.2,0.3,0.5 \
+  --max-ratio 0.5
+```
+
+The summary uses raw observed points only. It does not smooth the curves or add
+error bars because the existing sweep contains one corruption realization per
+setting.
+
+## Priority 7: Published External-Method Comparisons (2026-09-10)
+
+The author first approved the plan, integration and small-scale checks, then
+authorized full local experiments while preserving all existing results. The detailed protocol,
+official sources, admission gates, commands and execution evidence are in
+`docs/superpowers/plans/2026-09-10-ivc-external-baselines.md`.
+
+| Experiment | Role | Current status |
+|---|---|---|
+| E7a: Avg. + STRIDE (adapted) | Published single-video temporal/test-time refinement; compare with canonical average, Avg. + SmoothNet and CanonFuse3D | Official 17-joint prior and independent 30-update TTT passed non-test preflights. Ski full test completed 30/30: MPJPE 0.348280, PA-MPJPE 0.186061, acceleration error 0.038679. Unity full test launched on GPU1, PID 4124427; final Unity metrics pending. |
+| E7b: MetaPose (adapted two-view) | Uncalibrated multi-view method with additional estimated 2D observations | Native pairing/S1 passed. Official cam2 checkpoint downloaded: stages 0--2 finite, 3--6 nonfinite; README one-stage synthetic forward passed with matched model variables. Native uncertainty/coordinate preparation and formal learned-stage training/evaluation setup remain pending. No dataset accuracy result. |
+| E7c: DeciWatch | Backup published temporal-recovery method | Planned only; no code run or result. |
+
+These are new external-comparison tasks, not replacements for E1--E6. MetaPose
+must be placed in its own additional-estimated-2D/no-supplied-calibration input
+group; its official Ski-Pose data and checkpoints are not released. A stage-1
+initialization check is not a learned MetaPose result. Likewise, a randomly
+initialized STRIDE backbone forward is not pretrained STRIDE or its test-time
+adaptation. Do not add placeholder numbers to the manuscript.
+
+The integration tests reject test-set smoke inputs, verify input/index checksums,
+retain exact cached sample/frame order and the original independent batch-anchor
+canonicalization, and do not read GT or calibration. Official-source checkouts
+and the temporary MetaPose CPU environment do not modify the existing
+`dual2pose` environment. Reports are under
+`logs/ivc_mmsports_extension/external_baselines/20260910/`.
+
+Full-run snapshot and provenance: `docs/ivc_external_baselines_20260910.md`.
+STRIDE's 17-point adaptation supplements four actual MHR bones while retaining
+all 13 scored points; disclose the additional skeletal inputs and semantic mapping.
+It is not the original SMPL mesh-regressor reproduction. The new Ski result was
+recomputed from saved predictions; original numerical evidence remains unchanged.
+No incomplete Unity result or synthetic MetaPose accuracy is inserted into the paper.

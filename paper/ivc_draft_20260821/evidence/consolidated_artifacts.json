@@ -1,0 +1,88 @@
+{
+  "sources": {
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/view_angle/view_angle_summary_last.csv": "7767e89c42202498a902d77030acf97ddb1210bb3b920c16a2767fddb3b781cd",
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/view_angle/view_angle_significance_last.csv": "295fdb69d8b80e5dfb17ef085170d24c8b01210dbf11c000e3de95752f4e7f5f",
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/temporal_offset/temporal_offset_summary_last.csv": "32e70010153172b68989c9c76f997317551c90cd0677c22fb655331e2145a1a9",
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/sampling_rate/sampling_rate_summary_last.csv": "e59bd780d3d0356feb6a4b33dbf3d18e7a99e698171a955a142cf7ee72b5cd1a"
+  },
+  "generator_sha256": "1941f8b348d6d245769bed48482fb8787ce3f8a9ef40d33ec61537ac7dc9702d",
+  "merged_angle_rows": [
+    {
+      "angle_bin": "0-30",
+      "camera_pairs": 2160,
+      "sample_count": 8640,
+      "canonical_avg_mpjpe": 0.28912246227264404,
+      "fused_mpjpe": 0.1563178151845932,
+      "mean_gain": 0.13280492691383525,
+      "ci_low": 0.13126398573158507,
+      "ci_high": 0.13427015409466414,
+      "p_holm": 0.0,
+      "rank_biserial": 0.9935352288892316
+    },
+    {
+      "angle_bin": "30-60",
+      "camera_pairs": 2700,
+      "sample_count": 10800,
+      "canonical_avg_mpjpe": 0.2888164520263672,
+      "fused_mpjpe": 0.1554011106491089,
+      "mean_gain": 0.1334156058245787,
+      "ci_low": 0.13210977502350904,
+      "ci_high": 0.13473185834598178,
+      "p_holm": 0.0,
+      "rank_biserial": 0.9946291496976428
+    },
+    {
+      "angle_bin": "60-90",
+      "camera_pairs": 2700,
+      "sample_count": 10800,
+      "canonical_avg_mpjpe": 0.287570059299469,
+      "fused_mpjpe": 0.15441696345806122,
+      "mean_gain": 0.13315344410879468,
+      "ci_low": 0.1318396692725019,
+      "ci_high": 0.1344665781079826,
+      "p_holm": 0.0,
+      "rank_biserial": 0.9967902148724066
+    },
+    {
+      "angle_bin": "90-120",
+      "camera_pairs": 2700,
+      "sample_count": 10800,
+      "canonical_avg_mpjpe": 0.28653600811958313,
+      "fused_mpjpe": 0.15287621319293976,
+      "mean_gain": 0.13366014719630281,
+      "ci_low": 0.13243610567064887,
+      "ci_high": 0.13485723708604497,
+      "p_holm": 0.0,
+      "rank_biserial": 0.9999566689977649
+    },
+    {
+      "angle_bin": "120-150",
+      "camera_pairs": 2700,
+      "sample_count": 10800,
+      "canonical_avg_mpjpe": 0.2852493226528168,
+      "fused_mpjpe": 0.15275321900844574,
+      "mean_gain": 0.13249647389683458,
+      "ci_low": 0.13136400538616536,
+      "ci_high": 0.13362801627835466,
+      "p_holm": 0.0,
+      "rank_biserial": 1.0
+    },
+    {
+      "angle_bin": "150-180",
+      "camera_pairs": 3150,
+      "sample_count": 12600,
+      "canonical_avg_mpjpe": 0.28439804911613464,
+      "fused_mpjpe": 0.15316161513328552,
+      "mean_gain": 0.13123678199976446,
+      "ci_low": 0.13027593013117947,
+      "ci_high": 0.13221839829023543,
+      "p_holm": 0.0,
+      "rank_biserial": 1.0
+    }
+  ],
+  "outputs": {
+    "tables/view_angle_combined.tex": "0158e03603ca2e696e18e71743522aab363e1ba1c8edc3b22e0c9d02dbcb3849",
+    "figures/extension/temporal_sampling.pdf": "99016873f72f1c3909b700a3ad79a9b1a9c8cb4c58f8ebf2fa80d95705ff7c53",
+    "figures/extension/temporal_sampling.json": "f615f49a7b9c95abc6be4970d149f6fa293e19d2011a9ff7def08950a5c3574c"
+  }
+}

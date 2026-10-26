@@ -1,0 +1,9 @@
+{
+  "run_root": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/manuscript_consolidation/20260906",
+  "files_sha256": {
+    "verification.json": "816e06470c921809f3a23546a7477154ab94eeff567111af439867c5a62ce456",
+    "verify_artifacts.py": "a7f666d323fef86b2b1760c5084aaf609e43b866aeb1115b2a7909fd45b311d8",
+    "final_tests.log": "31f1b5af7c5d95a5f637c6e8170e16c75397bc79aba61bed57c98e45172acbed",
+    "before_manifest.json": "8ada490404d74c09dfc7b591bb96c7c2166f4baa008fdbaac430dd5eae8360f4"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "joint_names": [
+    "Eye L",
+    "Eye R",
+    "Shoulder L",
+    "Shoulder R",
+    "Elbow L",
+    "Elbow R",
+    "Hip L",
+    "Hip R",
+    "Knee L",
+    "Knee R",
+    "Ankle L",
+    "Ankle R",
+    "Wrist R",
+    "Wrist L",
+    "Neck"
+  ],
+  "edges": [
+    [
+      14,
+      2
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      4,
+      13
+    ],
+    [
+      14,
+      3
+    ],
+    [
+      3,
+      5
+    ],
+    [
+      5,
+      12
+    ],
+    [
+      14,
+      6
+    ],
+    [
+      14,
+      7
+    ],
+    [
+      6,
+      8
+    ],
+    [
+      8,
+      10
+    ],
+    [
+      7,
+      9
+    ],
+    [
+      9,
+      11
+    ]
+  ]
+}

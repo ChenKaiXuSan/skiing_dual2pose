@@ -131,5 +131,16 @@ logs/
 ckpt/
 .claude/worktrees/
 6a33ba78cba883c26fb3823f
-# Local manuscripts, figures, and evidence are not published with the code.
-paper/
+# Manuscripts are tracked (repository is private). Skip LaTeX build artifacts,
+# the redundant figure-handoff zip (its contents are tracked unpacked), and the
+# Overleaf-synced conference source, which is its own git repository.
+paper/**/*.aux
+paper/**/*.fls
+paper/**/*.fdb_latexmk
+paper/**/*.out
+paper/**/*.blg
+paper/**/*.spl
+paper/**/*.synctex.gz
+!paper/**/evidence/**/*.log
+paper/ivc_figure_handoff_20260917.zip
+paper/mmsports_reference/

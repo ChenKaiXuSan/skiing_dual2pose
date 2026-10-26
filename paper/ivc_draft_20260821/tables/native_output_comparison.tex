@@ -1,0 +1,36 @@
+\begin{table*}[t]
+\centering
+\caption{Unity comparison before the shared body-coordinate normalization, with every method in its native output frame. Position error removes only per-frame pelvis translation; Procrustes alignment is a separate reflection-free diagnostic. A double dash marks the absence of a target-independent common frame.}
+\label{tab:native_output_comparison}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Method & MPJPE $\downarrow$ & PA-MPJPE $\downarrow$ & Accel. $\downarrow$ \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Native monocular front ends}} \\
+SAM 3D Body~\cite{yang2026sam} & 0.1019 & 0.0732 & 0.0369 \\
+MotionBERT~\cite{zhu2023motionbert} & 0.2553 & 0.1150 & 0.0090 \\
+PoseFormer~\cite{zheng2021poseformer} & 0.2075 & 0.1371 & 0.0068 \\
+VideoPose3D~\cite{pavllo2019videopose3d} & 0.1583 & 0.1028 & 0.0076 \\
+\addlinespace[2pt]
+\multicolumn{4}{@{}l}{\textit{Pre-Canon controls}} \\
+Left native & 0.0967 & 0.0708 & 0.0333 \\
+Right native & 0.1070 & 0.0756 & 0.0406 \\
+Unaligned native average & -- & -- & -- \\
+Sequence-aligned average~\cite{umeyama1991least} & 0.0970 & 0.0666 & 0.0285 \\
+Aligned quality-weighted fusion & 0.0960 & 0.0660 & 0.0276 \\
+Aligned average + SmoothNet~\cite{zeng2022smoothnet} & -- & -- & -- \\
+\addlinespace[2pt]
+\multicolumn{4}{@{}l}{\textit{Published external methods}} \\
+STRIDE (per-view adaptation)~\cite{lal2025stride} & 0.1072 & 0.0776 & 0.0357 \\
+DeciWatch (per-view adaptation)~\cite{zeng2022deciwatch} & 0.6315 & 0.3033 & 0.0119 \\
+MetaPose (adapted)~\cite{usman2022metapose} & 0.2171 & 0.1088 & 0.0382 \\
+\addlinespace[2pt]
+\multicolumn{4}{@{}l}{\textit{Calibrated geometry}} \\
+Calibrated DLT~\cite{hartley2004multiple} & 0.1705 & 0.1072 & 0.0614 \\
+Reprojection-gated DLT~\cite{hartley2004multiple} & 0.1711 & 0.1098 & 0.0520 \\
+DLT-residual MLP~\cite{hartley2004multiple} & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table*}

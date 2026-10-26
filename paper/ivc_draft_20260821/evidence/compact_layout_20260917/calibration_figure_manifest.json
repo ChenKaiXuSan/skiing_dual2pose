@@ -1,0 +1,144 @@
+{
+  "verified_original_table_cells": 35,
+  "conditions": [
+    {
+      "condition": "clean",
+      "label": "Clean",
+      "angles": [
+        0,
+        1,
+        3
+      ],
+      "dlt_mlp": [
+        0.09876737335935554,
+        0.1548060356267795,
+        0.37474537569404226
+      ],
+      "canonfuse3d": 0.15530826863916594,
+      "canonical_avg": 0.27968929570013523
+    },
+    {
+      "condition": "random_0p5_left",
+      "label": "Left 0.5",
+      "angles": [
+        0,
+        1,
+        3
+      ],
+      "dlt_mlp": [
+        0.14979299242105287,
+        0.19396614044717359,
+        0.42070860784196257
+      ],
+      "canonfuse3d": 0.21032145039649786,
+      "canonical_avg": 0.3050606599830911
+    },
+    {
+      "condition": "random_0p5_right",
+      "label": "Right 0.5",
+      "angles": [
+        0,
+        1,
+        3
+      ],
+      "dlt_mlp": [
+        0.14174780435324857,
+        0.18881363897877312,
+        0.4117875966331648
+      ],
+      "canonfuse3d": 0.19494485540696657,
+      "canonical_avg": 0.2889670818368456
+    },
+    {
+      "condition": "random_0p5_both",
+      "label": "Both 0.5",
+      "angles": [
+        0,
+        1,
+        3
+      ],
+      "dlt_mlp": [
+        0.18700450512932296,
+        0.2371001630330105,
+        0.43465096339355713
+      ],
+      "canonfuse3d": 0.2513993576513239,
+      "canonical_avg": 0.3145620779680283
+    },
+    {
+      "condition": "random_1_left",
+      "label": "Left 1.0",
+      "angles": [
+        0,
+        1,
+        3
+      ],
+      "dlt_mlp": [
+        0.3568635175488405,
+        0.3923937288681777,
+        0.491856022020856
+      ],
+      "canonfuse3d": 0.46540073261055404,
+      "canonical_avg": 0.3992465700265643
+    },
+    {
+      "condition": "random_1_right",
+      "label": "Right 1.0",
+      "angles": [
+        0,
+        1,
+        3
+      ],
+      "dlt_mlp": [
+        0.40704075701933934,
+        0.3793885661665015,
+        0.49867426576024576
+      ],
+      "canonfuse3d": 0.37062564521790664,
+      "canonical_avg": 0.33473309173825594
+    },
+    {
+      "condition": "random_1_both",
+      "label": "Both 1.0",
+      "angles": [
+        0,
+        1,
+        3
+      ],
+      "dlt_mlp": [
+        0.41553111492673656,
+        0.42570931746825513,
+        0.5007160545782356
+      ],
+      "canonfuse3d": 0.5986464209351366,
+      "canonical_avg": 0.4654147498976652
+    }
+  ],
+  "source_hashes": {
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/paper/ivc_draft_20260821/evidence/c07_matched_occlusion_20260917/results/clean.json": "b11052ebb15266242eb6eb7ad6265885adeb3bd931155aeaa9d9b68d568e6e23",
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/paper/ivc_draft_20260821/evidence/c07_matched_occlusion_20260917/results/random_0p5_left.json": "bb6d181e73beb73e05030afd2c9876f9f2197bdf8ed06dc112370a3570be2057",
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/paper/ivc_draft_20260821/evidence/c07_matched_occlusion_20260917/results/random_0p5_right.json": "40b12227beef77a697563c9ac8059148c77fdc6c10834409c7c5d8a9951a8ba4",
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/paper/ivc_draft_20260821/evidence/c07_matched_occlusion_20260917/results/random_0p5_both.json": "3e4b88287a38fba63734d7ec20748e69218af89f5b1add9414d47c8f75ea5f42",
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/paper/ivc_draft_20260821/evidence/c07_matched_occlusion_20260917/results/random_1_left.json": "614a4c86ada975e267a5c5719d0d9fcbd261d9114887cd44b6b6a87025ccbc0c",
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/paper/ivc_draft_20260821/evidence/c07_matched_occlusion_20260917/results/random_1_right.json": "994012d0a525d60c924e03b5785c6ffc85ed0cd89a017426a90a86f6cc2b47f7",
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/paper/ivc_draft_20260821/evidence/c07_matched_occlusion_20260917/results/random_1_both.json": "e3e1c7958a04b5fa8851e93bae2ad16e79af1fe6879cb3da62c44debcbadc259"
+  },
+  "script_sha256": "ef1036bd6d9e4f8c662acadee932157660b0d4e531538fe74345785d18b1a101",
+  "figure_sha256": "536086ca0ab1b9e55139bdd900b8fa0aa41dadaed2a17a416333015b25d05576",
+  "figure_table_trace": {
+    "artifact_id": "fig:c07_calibration",
+    "source_data": "Seven archived C07 JSON results; all 35 former Table 8 cells checked",
+    "transformation": "Full-precision MPJPE at 0/1/3 degrees; unchanged pose-only scores repeated as references",
+    "caption_claim": "Calibration sensitivity under all seven matched input conditions",
+    "supported_manuscript_claims": [
+      "DLT-residual retains a lower MPJPE on clean and ratio-0.5 inputs at 1 degree",
+      "The three displayed methods change ranking conditionally; averaging remains best under severe masks at 3 degrees"
+    ],
+    "limitations": [
+      "Fixed checkpoint and partitions, not independent training repeats",
+      "No measured intermediate angles; line segments only guide the eye",
+      "Additional 2D and calibration inputs for DLT-residual",
+      "Artificial calibration errors, not physical camera movement"
+    ]
+  }
+}

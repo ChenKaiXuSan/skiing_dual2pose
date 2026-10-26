@@ -1,0 +1,540 @@
+#!/usr/bin/env python3
+"""Generate journal-specific dataset, overview, method, and qualitative figures."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+import numpy as np
+from PIL import Image
+
+try:
+    from .journal_figure_style import JOURNAL_COLORS, apply_journal_style
+except ImportError:  # Direct script execution.
+    from journal_figure_style import JOURNAL_COLORS, apply_journal_style
+
+
+PAPER = Path(__file__).resolve().parents[1]
+DATA_ROOT = PAPER.parents[2] / "data"
+DATASET_EXAMPLE_SOURCES = {
+    "unity": (
+        DATA_ROOT
+        / "skiing_unity_dataset"
+        / "data_pole_ski"
+        / "female"
+        / "Anim_Female_Skier_Skiing"
+        / "frames"
+        / "capture_L3_A000"
+        / "frame_000036.png",
+        DATA_ROOT
+        / "skiing_unity_dataset"
+        / "data_pole_ski"
+        / "female"
+        / "Anim_Female_Skier_Skiing"
+        / "frames"
+        / "capture_L3_A210"
+        / "frame_000036.png",
+    ),
+    "ski_ptz": (
+        DATA_ROOT
+        / "Ski-PosePTZ-CameraDataset-png"
+        / "data"
+        / "test"
+        / "seq_412"
+        / "cam_02"
+        / "image_000075.png",
+        DATA_ROOT
+        / "Ski-PosePTZ-CameraDataset-png"
+        / "data"
+        / "test"
+        / "seq_412"
+        / "cam_03"
+        / "image_000075.png",
+    ),
+    "author": (
+        DATA_ROOT
+        / "sam3d_body_results"
+        / "person"
+        / "run_3"
+        / "left"
+        / "frame_0000_sam_3d_body_outputs.npz",
+        DATA_ROOT
+        / "sam3d_body_results"
+        / "person"
+        / "run_3"
+        / "right"
+        / "frame_0000_sam_3d_body_outputs.npz",
+    ),
+}
+
+
+def _box(
+    ax,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    text: str,
+    *,
+    facecolor: str,
+    edgecolor: str | None = None,
+    fontsize: float = 8.0,
+    weight: str = "normal",
+    radius: float = 0.018,
+):
+    edgecolor = edgecolor or JOURNAL_COLORS["black"]
+    patch = FancyBboxPatch(
+        (x, y),
+        width,
+        height,
+        boxstyle=f"round,pad=0.008,rounding_size={radius}",
+        facecolor=facecolor,
+        edgecolor=edgecolor,
+        linewidth=0.9,
+    )
+    ax.add_patch(patch)
+    label = ax.text(
+        x + width / 2,
+        y + height / 2,
+        text,
+        ha="center",
+        va="center",
+        fontsize=fontsize,
+        weight=weight,
+        color=JOURNAL_COLORS["black"],
+        linespacing=1.15,
+    )
+    return patch, label
+
+
+def count_text_overflows(fig, records) -> int:
+    """Count labels whose rendered extents exceed their rounded boxes."""
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    overflows = 0
+    for patch, label in records:
+        if not label.get_text():
+            continue
+        box_extent = patch.get_window_extent(renderer)
+        text_extent = label.get_window_extent(renderer)
+        if (
+            text_extent.x0 < box_extent.x0 + 1
+            or text_extent.x1 > box_extent.x1 - 1
+            or text_extent.y0 < box_extent.y0 + 1
+            or text_extent.y1 > box_extent.y1 - 1
+        ):
+            overflows += 1
+    return overflows
+
+
+def _arrow(ax, start: tuple[float, float], end: tuple[float, float]) -> None:
+    ax.add_patch(
+        FancyArrowPatch(
+            start,
+            end,
+            arrowstyle="-|>",
+            mutation_scale=10,
+            linewidth=1.0,
+            color=JOURNAL_COLORS["black"],
+            shrinkA=1,
+            shrinkB=1,
+        )
+    )
+
+
+def _save(fig, output: Path) -> None:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, format="pdf", bbox_inches="tight")
+    plt.close(fig)
+
+
+def build_study_overview_figure():
+    """Show only the system flow, from two pose streams to one refined output."""
+    apply_journal_style()
+    plt.rcParams["mathtext.default"] = "regular"
+    fig, ax = plt.subplots(figsize=(7.2, 2.35))
+    ax.set(xlim=(0, 1), ylim=(0, 1)); ax.axis("off")
+    records = []
+    ax.text(0.5, 0.96, "Calibration-free post-estimation dual-view refinement",
+            ha="center", va="top", fontsize=10, weight="bold")
+    nodes = (
+        (0.015, 0.15, "Two monocular\n3D pose streams\n$P^L, P^R$", "#DCEEFF"),
+        (0.205, 0.16, "Human-centric\ncoordinates +\npose alignment", "#DFF3EF"),
+        (0.405, 0.16, "Cross-view +\ntemporal\nfeatures", "#FFF0DF"),
+        (0.605, 0.16, "Joint-frame gate\n+ residual\ncorrection", "#F2E7F5"),
+        (0.805, 0.18, "Refined canonical\n3D pose sequence\n$P^F$", "#DFF3EF"),
+    )
+    for x, width, label, fill in nodes:
+        records.append(_box(ax, x, 0.30, width, 0.40, label,
+                            facecolor=fill, fontsize=7.5))
+    for current, following in zip(nodes[:-1], nodes[1:]):
+        _arrow(ax, (current[0] + current[1] + 0.006, 0.50),
+               (following[0] - 0.006, 0.50))
+    ax.text(0.5, 0.13, "Approximately synchronized pose inputs; no camera parameters",
+            ha="center", va="center", fontsize=8)
+    return fig, records
+
+
+def render_study_overview(output: Path) -> None:
+    """Show the pose-space refinement system flow."""
+    fig, records = build_study_overview_figure()
+    overflow_count = count_text_overflows(fig, records)
+    if overflow_count:
+        plt.close(fig)
+        raise ValueError(f"Study-overview labels overflow {overflow_count} boxes")
+    _save(fig, output)
+
+
+def build_method_pipeline_figure():
+    """Build the two-row method flow and return records for overflow checks."""
+    apply_journal_style()
+    plt.rcParams["mathtext.default"] = "regular"
+    fig, ax = plt.subplots(figsize=(7.2, 4.0))
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    records = []
+
+    ax.text(
+        0.5, 0.965,
+        "CanonFuse3D architecture",
+        ha="center", va="top", fontsize=10, weight="bold",
+    )
+    top = (
+        (0.03, 0.20, "1  Input\npose streams\n$P^L, P^R$", "#DCEEFF", JOURNAL_COLORS["blue"]),
+        (0.265, 0.20, "2  Human-centric\nlandmark\ncanonicalization", "#DFF3EF", JOURNAL_COLORS["teal"]),
+        (0.50, 0.20, "3  Sequence-level\nbidirectional\npose alignment", "#E8F1FB", JOURNAL_COLORS["blue"]),
+        (0.735, 0.20, "4  Geometric-motion\nfeature construction\n(see feature detail)", "#FFF0DF", JOURNAL_COLORS["orange"]),
+    )
+    bottom = (
+        (0.735, 0.20, "5  Joint encoder +\nbidirectional\ncross-view attention", "#F2E7F5", JOURNAL_COLORS["magenta"]),
+        (0.50, 0.20, "6  Short-range\ntemporal refinement", "#FFF0DF", JOURNAL_COLORS["orange"]),
+        (0.265, 0.20, "7  Joint-frame gate\n+ residual correction", "#FBE6E2", JOURNAL_COLORS["red"]),
+        (0.03, 0.20, "8  Refined output\n$P^F$", "#DFF3EF", JOURNAL_COLORS["teal"]),
+    )
+    for x, width, label, fill, edge in top:
+        records.append(_box(
+            ax, x, 0.59, width, 0.23, label,
+            facecolor=fill, edgecolor=edge, fontsize=7.4,
+            weight="bold" if label.startswith("1") else "normal",
+        ))
+    for current, following in zip(top[:-1], top[1:]):
+        _arrow(ax, (current[0] + current[1] + 0.004, 0.705), (following[0] - 0.004, 0.705))
+
+    _arrow(ax, (0.835, 0.58), (0.835, 0.46))
+    for x, width, label, fill, edge in bottom:
+        records.append(_box(
+            ax, x, 0.20, width, 0.23, label,
+            facecolor=fill, edgecolor=edge, fontsize=7.4,
+            weight="bold" if label.startswith("8") else "normal",
+        ))
+    for current, following in zip(bottom[:-1], bottom[1:]):
+        _arrow(ax, (current[0] - 0.004, 0.315), (following[0] + following[1] + 0.004, 0.315))
+
+    ax.text(
+        0.5, 0.08,
+        "Human-centric pose alignment and learned fusion require no camera parameters.",
+        ha="center", va="center", fontsize=7.0, style="normal",
+    )
+    return fig, records
+
+
+def render_method_pipeline(output: Path) -> None:
+    """Render the full end-to-end CanonFuse3D data flow as a new vector figure."""
+    fig, records = build_method_pipeline_figure()
+    overflow_count = count_text_overflows(fig, records)
+    if overflow_count:
+        plt.close(fig)
+        raise ValueError(f"Method-pipeline labels overflow {overflow_count} boxes")
+    _save(fig, output)
+
+
+def build_feature_details_figure():
+    """Expand the five per-joint cues concatenated before the shared encoder."""
+    apply_journal_style()
+    plt.rcParams["mathtext.default"] = "regular"
+    fig, ax = plt.subplots(figsize=(7.2, 3.7))
+    ax.set(xlim=(0, 1), ylim=(0, 1)); ax.axis("off")
+    records = []
+    ax.text(0.5, 0.97, "Geometric-motion features: left stream",
+            ha="center", va="top", fontsize=10, weight="bold")
+    cues = (
+        ("Own-view pose\n$\\tilde{P}^{L}$\n3 channels", "#DCEEFF"),
+        ("Aligned other pose\n$\\tilde{P}^{R\\to L}$\n3 channels", "#DFF3EF"),
+        ("Pose difference\n$D^L = \\tilde{P}^{R\\to L}-\\tilde{P}^{L}$\n3 channels", "#FFF0DF"),
+        ("Temporal velocity\n$V^L$\n3 channels", "#FBE6E2"),
+        ("Alignment rotation\n$r^{R\\to L}$\n3 channels", "#F2E7F5"),
+    )
+    for i, (label, color) in enumerate(cues):
+        x = 0.01 + 0.20 * i
+        records.append(_box(ax, x, 0.64, 0.18, 0.23, label,
+                            facecolor=color, fontsize=7.1))
+        _arrow(ax, (x + 0.09, 0.63), (x + 0.09, 0.51))
+    records.append(_box(ax, 0.025, 0.35, 0.95, 0.15,
+        "Channel concatenation at each joint and frame:  3 + 3 + 3 + 3 + 3 = 15",
+        facecolor="#F3F7F9", fontsize=8.2))
+    _arrow(ax, (0.50, 0.34), (0.50, 0.25))
+    records.append(_box(ax, 0.26, 0.11, 0.48, 0.13,
+        "$X^L$  (15 channels)  →  Shared joint encoder",
+        facecolor="#E8F1FB", fontsize=8.2))
+    ax.text(0.5, 0.025, "The right stream uses the same construction with L and R exchanged.",
+            ha="center", va="center", fontsize=7.8)
+    return fig, records
+
+
+def render_feature_details(output: Path) -> None:
+    fig, records = build_feature_details_figure()
+    overflow_count = count_text_overflows(fig, records)
+    if overflow_count:
+        plt.close(fig)
+        raise ValueError(f"Feature-detail labels overflow {overflow_count} boxes")
+    _save(fig, output)
+
+
+def _load_dataset_frame(path: Path) -> np.ndarray:
+    """Load an RGB frame from an image file or a SAM3D result archive."""
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(f"Dataset-example frame is missing: {path}")
+    if path.suffix.lower() == ".npz":
+        with np.load(path, allow_pickle=False) as archive:
+            if "frame" not in archive.files:
+                raise KeyError(f"SAM3D archive has no 'frame' array: {path}")
+            frame = np.asarray(archive["frame"]).copy()
+        if frame.ndim != 3 or frame.shape[2] not in (3, 4):
+            raise ValueError(f"Expected an HxWx3/4 frame in {path}, got {frame.shape}")
+        if frame.dtype != np.uint8:
+            frame = np.clip(frame, 0, 255).astype(np.uint8)
+        return np.asarray(Image.fromarray(frame).convert("RGB"))
+    with Image.open(path) as image:
+        return np.asarray(image.convert("RGB"))
+
+
+def _crop_to_content(
+    frame: np.ndarray,
+    *,
+    target_aspect: float = 16 / 9,
+    padding: float = 0.22,
+) -> np.ndarray:
+    """Crop a dark-background render around its foreground at a fixed aspect."""
+    if frame.ndim != 3 or frame.shape[2] < 3:
+        raise ValueError(f"Expected an RGB-like frame, got {frame.shape}")
+    foreground = np.max(frame[..., :3], axis=2) > 8
+    if not np.any(foreground):
+        return frame
+    rows, columns = np.nonzero(foreground)
+    content_height = rows.max() - rows.min() + 1
+    content_width = columns.max() - columns.min() + 1
+    crop_height = int(np.ceil(content_height * (1 + 2 * padding)))
+    crop_width = int(np.ceil(content_width * (1 + 2 * padding)))
+    if crop_width / crop_height < target_aspect:
+        crop_width = int(np.ceil(crop_height * target_aspect))
+    else:
+        crop_height = int(np.ceil(crop_width / target_aspect))
+
+    height, width = frame.shape[:2]
+    if crop_width > width:
+        crop_width = width
+        crop_height = min(height, int(round(crop_width / target_aspect)))
+    if crop_height > height:
+        crop_height = height
+        crop_width = min(width, int(round(crop_height * target_aspect)))
+
+    center_x = (columns.min() + columns.max() + 1) / 2
+    center_y = (rows.min() + rows.max() + 1) / 2
+    left = int(round(center_x - crop_width / 2))
+    top = int(round(center_y - crop_height / 2))
+    left = min(max(left, 0), width - crop_width)
+    top = min(max(top, 0), height - crop_height)
+    return frame[top : top + crop_height, left : left + crop_width]
+
+
+def _validate_view_pair(name: str, paths) -> tuple[Path, Path]:
+    pair = tuple(Path(path) for path in paths)
+    if len(pair) != 2:
+        raise ValueError(f"{name} requires exactly two synchronized views")
+    return pair
+
+
+def build_dataset_examples_figure(unity_views, ski_ptz_views, author_views):
+    """Build the two-view by three-source dataset montage."""
+    apply_journal_style()
+    sources = (
+        ("Unity synthetic", _validate_view_pair("Unity", unity_views)),
+        ("Ski-PTZ-Pose", _validate_view_pair("Ski-PTZ-Pose", ski_ptz_views)),
+        (
+            "Author-collected videos",
+            _validate_view_pair("Author-collected videos", author_views),
+        ),
+    )
+    roles = (
+        "Quantitative\nAvatar 3D ground truth",
+        "Quantitative\nFused canonical reference",
+        "Qualitative only\nNo metric 3D reference",
+    )
+    accents = (
+        JOURNAL_COLORS["blue"],
+        JOURNAL_COLORS["teal"],
+        JOURNAL_COLORS["grey"],
+    )
+    panel_labels = ("(a)", "(b)", "(c)", "(d)", "(e)", "(f)")
+
+    fig, axes = plt.subplots(
+        2,
+        3,
+        figsize=(7.2, 3.9),
+        gridspec_kw={"hspace": 0.08, "wspace": 0.035},
+    )
+    fig.subplots_adjust(left=0.065, right=0.995, top=0.89, bottom=0.18)
+
+    panel_index = 0
+    for column, (title, pair) in enumerate(sources):
+        axes[0, column].set_title(title, fontsize=9, weight="bold", pad=4)
+        for row, path in enumerate(pair):
+            ax = axes[row, column]
+            ax.set_box_aspect(9 / 16)
+            ax.set_facecolor("#F4F4F4")
+            frame = _load_dataset_frame(path)
+            if column == 0:
+                frame = _crop_to_content(frame)
+            ax.imshow(frame, interpolation="antialiased")
+            ax.set_xticks([])
+            ax.set_yticks([])
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_color(JOURNAL_COLORS["light_grey"])
+                spine.set_linewidth(0.8)
+            ax.text(
+                0.02,
+                0.96,
+                panel_labels[panel_index],
+                transform=ax.transAxes,
+                ha="left",
+                va="top",
+                fontsize=8,
+                weight="bold",
+                bbox={
+                    "facecolor": "white",
+                    "edgecolor": "none",
+                    "alpha": 0.84,
+                    "pad": 1.4,
+                },
+            )
+            panel_index += 1
+    axes[0, 0].set_ylabel("View 1", fontsize=8.5, weight="bold", labelpad=5)
+    axes[1, 0].set_ylabel("View 2", fontsize=8.5, weight="bold", labelpad=5)
+
+    for column, (role, accent) in enumerate(zip(roles, accents)):
+        position = axes[1, column].get_position()
+        fig.text(
+            (position.x0 + position.x1) / 2,
+            0.07,
+            role,
+            ha="center",
+            va="center",
+            fontsize=7.3,
+            weight="bold",
+            color=accent,
+            linespacing=1.15,
+        )
+    return fig
+
+
+def render_dataset_examples(
+    unity_views,
+    ski_ptz_views,
+    author_views,
+    output_pdf: Path,
+    output_png: Path,
+) -> None:
+    """Render representative synchronized views from the three data sources."""
+    fig = build_dataset_examples_figure(
+        unity_views,
+        ski_ptz_views,
+        author_views,
+    )
+    output_pdf = Path(output_pdf)
+    output_png = Path(output_png)
+    output_pdf.parent.mkdir(parents=True, exist_ok=True)
+    output_png.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_pdf, format="pdf", bbox_inches="tight")
+    fig.savefig(output_png, format="png", dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
+def _crops(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    image = np.asarray(Image.open(path).convert("RGB"))
+    height, width = image.shape[:2]
+    left_frame = image[int(0.055 * height) : int(0.405 * height), : int(0.395 * width)]
+    right_frame = image[int(0.50 * height) : int(0.86 * height), : int(0.395 * width)]
+    pose_comparison = image[int(0.015 * height) : int(0.965 * height), int(0.39 * width) :]
+    return left_frame, right_frame, pose_comparison
+
+
+def render_realworld_qualitative(outdoor: Path, indoor: Path, output: Path) -> None:
+    """Recompose the two qualitative outputs into a journal-specific panel layout."""
+    apply_journal_style()
+    rows = ((_crops(outdoor), "Outdoor"), (_crops(indoor), "Indoor"))
+    fig, axes = plt.subplots(
+        2,
+        3,
+        figsize=(7.2, 4.4),
+        gridspec_kw={"width_ratios": (1.0, 1.0, 1.72), "hspace": 0.08, "wspace": 0.035},
+    )
+    panel_labels = ("(a)", "(b)", "(c)", "(d)", "(e)", "(f)")
+    panel_index = 0
+    for row_index, (panels, scene) in enumerate(rows):
+        for column_index, panel in enumerate(panels):
+            ax = axes[row_index, column_index]
+            ax.imshow(panel)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_color(JOURNAL_COLORS["light_grey"])
+                spine.set_linewidth(0.7)
+            ax.text(
+                0.02,
+                0.96,
+                panel_labels[panel_index],
+                transform=ax.transAxes,
+                ha="left",
+                va="top",
+                fontsize=8,
+                weight="bold",
+                bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.82, "pad": 1.5},
+            )
+            panel_index += 1
+        axes[row_index, 0].set_ylabel(scene, fontsize=8.5, weight="bold", labelpad=5)
+    axes[0, 0].set_title("Left view", fontsize=8.5, weight="bold", pad=3)
+    axes[0, 1].set_title("Right view", fontsize=8.5, weight="bold", pad=3)
+    axes[0, 2].set_title("3D pose comparison", fontsize=8.5, weight="bold", pad=3)
+    _save(fig, output)
+
+
+def main() -> None:
+    output = PAPER / "figures" / "journal"
+    original = PAPER / "figures" / "original" / "experiment3"
+    dataset_sources = DATASET_EXAMPLE_SOURCES
+    render_dataset_examples(
+        dataset_sources["unity"],
+        dataset_sources["ski_ptz"],
+        dataset_sources["author"],
+        output / "dataset_examples.pdf",
+        output / "dataset_examples.png",
+    )
+    render_study_overview(output / "study_overview.pdf")
+    render_method_pipeline(output / "method_pipeline.pdf")
+    render_feature_details(output / "feature_details.pdf")
+    render_realworld_qualitative(
+        original / "pro_1_frame0000_real_compare.png",
+        original / "run_3_frame0000_real_compare.png",
+        output / "realworld_qualitative.pdf",
+    )
+    print(output)
+
+
+if __name__ == "__main__":
+    main()

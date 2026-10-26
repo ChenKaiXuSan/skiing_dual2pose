@@ -1,0 +1,39 @@
+\begin{table*}[t]
+\centering
+\caption{Independent comparison before the shared body-coordinate normalization. All listed methods operate on their native outputs and do not use CanonFuse3D's canonical transform. Position error removes only per-frame pelvis translation; Procrustes alignment is a separate reflection-free diagnostic. A double dash denotes that no target-independent common coordinate frame or admissible output gauge was available.}
+\label{tab:native_output_comparison}
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+& & \multicolumn{3}{c}{Unity} & \multicolumn{3}{c}{Ski-PTZ-Pose} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+Method & Canon & MPJPE $\downarrow$ & PA-MPJPE $\downarrow$ & Accel. $\downarrow$ & MPJPE $\downarrow$ & PA-MPJPE $\downarrow$ & Accel. $\downarrow$ \\
+\midrule
+\multicolumn{8}{@{}l}{\textit{Native monocular front ends}} \\
+SAM 3D Body~\cite{yang2026sam} & No & 0.1019 & 0.0732 & 0.0369 & -- & -- & -- \\
+MotionBERT~\cite{zhu2023motionbert} & No & 0.2553 & 0.1150 & 0.0090 & -- & -- & -- \\
+PoseFormer~\cite{zheng2021poseformer} & No & 0.2075 & 0.1371 & 0.0068 & -- & -- & -- \\
+VideoPose3D~\cite{pavllo2019videopose3d} & No & 0.1583 & 0.1028 & 0.0076 & -- & -- & -- \\
+\addlinespace[2pt]
+\multicolumn{8}{@{}l}{\textit{Pre-Canon controls}} \\
+Left native & No & 0.0967 & 0.0708 & 0.0333 & -- & -- & -- \\
+Right native & No & 0.1070 & 0.0756 & 0.0406 & -- & -- & -- \\
+Unaligned native average & No & -- & -- & -- & -- & -- & -- \\
+Sequence-aligned average~\cite{umeyama1991least} & No & 0.0970 & 0.0666 & 0.0285 & -- & -- & -- \\
+Aligned quality-weighted fusion & No & 0.0960 & 0.0660 & 0.0276 & -- & -- & -- \\
+Aligned average + SmoothNet~\cite{zeng2022smoothnet} & No & -- & -- & -- & -- & -- & -- \\
+\addlinespace[2pt]
+\multicolumn{8}{@{}l}{\textit{Published external methods}} \\
+STRIDE (per-view adaptation)~\cite{lal2025stride} & No & 0.1072 & 0.0776 & 0.0357 & -- & -- & -- \\
+DeciWatch (per-view adaptation)~\cite{zeng2022deciwatch} & No & 0.6315 & 0.3033 & 0.0119 & -- & -- & -- \\
+MetaPose (adapted)~\cite{usman2022metapose} & No & 0.2171 & 0.1088 & 0.0382 & -- & -- & -- \\
+\addlinespace[2pt]
+\multicolumn{8}{@{}l}{\textit{Calibrated geometry}} \\
+Calibrated DLT~\cite{hartley2004multiple} & No & 0.1705 & 0.1072 & 0.0614 & -- & -- & -- \\
+Reprojection-gated DLT~\cite{hartley2004multiple} & No & 0.1711 & 0.1098 & 0.0520 & -- & -- & -- \\
+DLT-residual MLP~\cite{hartley2004multiple} & No & -- & -- & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}}
+\end{table*}

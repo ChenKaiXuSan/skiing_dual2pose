@@ -1,0 +1,17 @@
+\begin{table}[htbp]
+\centering
+\caption{Controlled gate/output-residual ablation on Unity (common-13, canonical coordinates). Each learned configuration is trained from scratch with the same seed, split, budget, and validation selection rule. This independent experiment does not replace the archived main-benchmark model. Lower is better.}
+\label{tab:gate_retraining}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llrrr}
+\toprule
+Gate & Output residual & MPJPE & PA-MPJPE & Accel. \\
+\midrule
+Dynamic & Learned & \textbf{0.14639} & \textbf{0.06734} & 0.02953 \\
+Fixed 0.5 & Learned & 0.17279 & 0.07011 & 0.03012 \\
+Dynamic & None & 0.16334 & 0.07337 & 0.02929 \\
+Fixed 0.5 & None (deterministic) & 0.27997 & 0.11486 & \textbf{0.02513} \\
+\bottomrule
+\end{tabular}
+\end{table}

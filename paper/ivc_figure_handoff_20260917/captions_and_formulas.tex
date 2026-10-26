@@ -1,0 +1,73 @@
+% Drawing handoff only. Do not automatically replace manuscript figures.
+% Requires amsmath when included in a LaTeX document.
+
+% Figure 1 labels:
+% Two monocular 3D pose streams
+% Human-centric coordinates + pose alignment
+% Cross-view + temporal features
+% Joint-frame gate + residual correction
+% Refined canonical 3D pose sequence
+
+\[
+P^L,P^R \in \mathbb{R}^{T\times J\times 3},\qquad
+\tilde P^{R\to L}=\mathcal A(\tilde P^R,\tilde P^L),\quad
+\tilde P^{L\to R}=\mathcal A(\tilde P^L,\tilde P^R).
+\]
+\[
+D^L=\tilde P^{R\to L}-\tilde P^L,\qquad
+V^L_t=\tilde P^L_t-\tilde P^L_{t-1},\quad V^L_1=0.
+\]
+\[
+X^L=[\tilde P^L,\tilde P^{R\to L},D^L,V^L,r^{R\to L}],\qquad
+X^R=[\tilde P^R,\tilde P^{L\to R},D^R,V^R,r^{L\to R}].
+\]
+\[
+3+3+3+3+3=15,\qquad H^L=\phi(X^L),\quad H^R=\phi(X^R).
+\]
+\[
+Z=[\bar H^L,\bar H^R],\qquad
+\alpha=\sigma(g_\theta(Z)),\quad \Delta P=h_\theta(Z),\quad
+\alpha\in[0,1]^{T\times J\times1}.
+\]
+\[
+B^L=\tfrac12(\tilde P^L+\tilde P^{R\to L}),\qquad
+B^R=\tfrac12(\tilde P^R+\tilde P^{L\to R}).
+\]
+\[
+P^{base}=\alpha B^L+(1-\alpha)B^R,\qquad
+P^F=P^{base}+\Delta P.
+\]
+
+% Figure 1 caption:
+% System overview of CanonFuse3D. Two approximately synchronized monocular
+% 3D pose streams are expressed in human-centric coordinates and aligned in
+% pose space. Cross-view and temporal features drive joint-frame gating with
+% residual correction to produce a refined canonical pose sequence. RGB
+% thumbnails illustrate the upstream observations; the fusion stage uses only
+% 3D pose streams and requires no camera parameters. Pose illustrations and
+% the output comparison show one fixed Unity sample, with canonicalized avatar
+% ground truth used only for the comparison.
+
+% Figure 2 caption:
+% Feature construction and reliability-gated fusion. For each joint and frame,
+% the own-view canonical pose, aligned opposite-view pose, cross-view difference,
+% temporal first difference, and sequence-level rotation vector are concatenated
+% into a 15-dimensional feature. A shared joint encoder, bidirectional cross-view
+% attention, and temporal refinement produce features for joint-frame gating
+% and residual correction. The final output combines the two base candidates
+% using alpha and 1-alpha and adds the predicted correction Delta P. The gate
+% heatmap is measured on a fixed Unity sample; attention connections are
+% schematic. The right stream uses the same feature construction with the view
+% roles reversed.
+
+% Multi-dataset caption substitutions:
+% Unity: Pose illustrations show a selected Unity sample; canonicalized avatar
+% ground truth is used only for the output comparison.
+% Ski-PTZ-Pose: Pose illustrations show a selected Ski-PTZ-Pose sample on the
+% common 13-joint set. The comparison uses a constructed canonical reference.
+% Author-collected: Pose illustrations show a selected author-collected
+% dual-view recording. No independent 3D ground truth is available; the output
+% comparison is qualitative and does not establish absolute accuracy gains.
+% New attention heatmaps: The gate and cross-view attention heatmaps are
+% measured on the selected sample. Attention weights are averaged across heads
+% at the displayed frame; rows are left-view queries and columns right-view keys.

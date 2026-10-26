@@ -1,0 +1,310 @@
+{
+  "status": "complete",
+  "condition": "random_1_left",
+  "protocol_sha256": "ef639a2227b6b7a211ec767d80f83b8066a6944d3ccc7c6b3d47d86e3fd9440c",
+  "results": [
+    {
+      "angle_degrees": 0.0,
+      "method": "canonfuse3d",
+      "metrics": {
+        "mpjpe": 0.46540073261055404,
+        "acceleration_error": 0.0726331587844769,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.15322556045687835,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 0
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 0.0,
+      "method": "canonical_avg",
+      "metrics": {
+        "mpjpe": 0.3992465700265643,
+        "acceleration_error": 0.0643997726294401,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.09846832053517438,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 119
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 0.0,
+      "method": "dlt",
+      "metrics": {
+        "mpjpe": 0.44986115711021807,
+        "acceleration_error": 0.10037171129513583,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.3207843076315999,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1067870
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 0.0,
+      "method": "robust_dlt",
+      "metrics": {
+        "mpjpe": 0.4495314783806218,
+        "acceleration_error": 0.08415178336022869,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.32216049626707444,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1067870
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 0.0,
+      "method": "dlt_mlp",
+      "metrics": {
+        "mpjpe": 0.3568635175488405,
+        "acceleration_error": 0.11722911200912543,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.20450603574628004,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 0
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 1.0,
+      "method": "canonfuse3d",
+      "metrics": {
+        "mpjpe": 0.46540073261055404,
+        "acceleration_error": 0.0726331587844769,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.15322556045687835,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 0
+      },
+      "reused_no_camera_result": true
+    },
+    {
+      "angle_degrees": 1.0,
+      "method": "canonical_avg",
+      "metrics": {
+        "mpjpe": 0.3992465700265643,
+        "acceleration_error": 0.0643997726294401,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.09846832053517438,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 119
+      },
+      "reused_no_camera_result": true
+    },
+    {
+      "angle_degrees": 1.0,
+      "method": "dlt",
+      "metrics": {
+        "mpjpe": 0.48165888434186416,
+        "acceleration_error": 0.1438796665802573,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.3222169115031327,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1067870
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 1.0,
+      "method": "robust_dlt",
+      "metrics": {
+        "mpjpe": 0.48575172397242083,
+        "acceleration_error": 0.12000096628417513,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.3247185781751339,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1067870
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 1.0,
+      "method": "dlt_mlp",
+      "metrics": {
+        "mpjpe": 0.3923937288681777,
+        "acceleration_error": 0.1600730035399353,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.2090321785720645,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 0
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 3.0,
+      "method": "canonfuse3d",
+      "metrics": {
+        "mpjpe": 0.46540073261055404,
+        "acceleration_error": 0.0726331587844769,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.15322556045687835,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 0
+      },
+      "reused_no_camera_result": true
+    },
+    {
+      "angle_degrees": 3.0,
+      "method": "canonical_avg",
+      "metrics": {
+        "mpjpe": 0.3992465700265643,
+        "acceleration_error": 0.0643997726294401,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.09846832053517438,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 119
+      },
+      "reused_no_camera_result": true
+    },
+    {
+      "angle_degrees": 3.0,
+      "method": "dlt",
+      "metrics": {
+        "mpjpe": 0.6080533816162261,
+        "acceleration_error": 0.18575198379976204,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.32584106291766757,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1067870
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 3.0,
+      "method": "robust_dlt",
+      "metrics": {
+        "mpjpe": 0.6451471222765767,
+        "acceleration_error": 0.14988677138260062,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.33198386494785,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 1067870
+      },
+      "reused_no_camera_result": false
+    },
+    {
+      "angle_degrees": 3.0,
+      "method": "dlt_mlp",
+      "metrics": {
+        "mpjpe": 0.491856022020856,
+        "acceleration_error": 0.19981888201067632,
+        "sample_count": 64440,
+        "point_count": 25131600,
+        "acceleration_point_count": 23456160,
+        "pa_mpjpe": 0.22209451388899465,
+        "pa_point_count": 25131600,
+        "pa_frame_count": 1933200,
+        "pa_degenerate_prediction_frames": 0
+      },
+      "reused_no_camera_result": false
+    }
+  ],
+  "detection_coverage": {
+    "left_failed_frame_positions": 783049,
+    "right_failed_frame_positions": 178,
+    "either_failed_frame_positions": 783139,
+    "both_failed_frame_positions": 88,
+    "frame_positions": 1933200,
+    "sample_count": 64440,
+    "left_failed_batch_anchor": 112,
+    "right_failed_batch_anchor": 0,
+    "samples_in_left_failed_anchor_batches": 28600,
+    "samples_in_right_failed_anchor_batches": 0
+  },
+  "geometry_coverage": {
+    "0.0": {
+      "point_count_all15": 28998000,
+      "dlt_invalid_points": 11747085,
+      "robust_invalid_points": 11747085,
+      "dlt_invalid_points_common13": 10180807,
+      "robust_invalid_points_common13": 10180807,
+      "gate_accepted_points": 15439782,
+      "gate_interpolated_points": 1533254,
+      "gate_ungated_fallback_points": 277879,
+      "nonfinite_reprojection_points": 11747085,
+      "dlt_missing_batch_anchor": 112,
+      "dlt_samples_in_missing_anchor_batches": 28600,
+      "robust_dlt_missing_batch_anchor": 112,
+      "robust_dlt_samples_in_missing_anchor_batches": 28600
+    },
+    "1.0": {
+      "point_count_all15": 28998000,
+      "dlt_invalid_points": 11747085,
+      "robust_invalid_points": 11747085,
+      "dlt_invalid_points_common13": 10180807,
+      "robust_invalid_points_common13": 10180807,
+      "gate_accepted_points": 14878883,
+      "gate_interpolated_points": 1899968,
+      "gate_ungated_fallback_points": 472064,
+      "nonfinite_reprojection_points": 11747085,
+      "dlt_missing_batch_anchor": 112,
+      "dlt_samples_in_missing_anchor_batches": 28600,
+      "robust_dlt_missing_batch_anchor": 112,
+      "robust_dlt_samples_in_missing_anchor_batches": 28600
+    },
+    "3.0": {
+      "point_count_all15": 28998000,
+      "dlt_invalid_points": 11747085,
+      "robust_invalid_points": 11747085,
+      "dlt_invalid_points_common13": 10180807,
+      "robust_invalid_points_common13": 10180807,
+      "gate_accepted_points": 9782625,
+      "gate_interpolated_points": 2876764,
+      "gate_ungated_fallback_points": 4591526,
+      "nonfinite_reprojection_points": 11747085,
+      "dlt_missing_batch_anchor": 112,
+      "dlt_samples_in_missing_anchor_batches": 28600,
+      "robust_dlt_missing_batch_anchor": 112,
+      "robust_dlt_samples_in_missing_anchor_batches": 28600
+    }
+  },
+  "unique_source_detection_failures": {
+    "clean": 1,
+    "random_1": 6296
+  }
+}

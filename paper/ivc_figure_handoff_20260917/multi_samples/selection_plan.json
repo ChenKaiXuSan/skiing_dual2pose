@@ -1,0 +1,73 @@
+{
+  "rule": "Four Unity action groups with predefined camera gaps; two Ski sequences with two camera pairs each; four author runs. Main display at window position 15 (cached datasets) or clip midpoint (author). No gain-based filtering.",
+  "samples": [
+    {
+      "id": "U01",
+      "dataset": "unity",
+      "index": 2,
+      "azimuth_gap_degrees": 30
+    },
+    {
+      "id": "U02",
+      "dataset": "unity",
+      "index": 16115,
+      "azimuth_gap_degrees": 60
+    },
+    {
+      "id": "U03",
+      "dataset": "unity",
+      "index": 32231,
+      "azimuth_gap_degrees": 120
+    },
+    {
+      "id": "U04",
+      "dataset": "unity",
+      "index": 48347,
+      "azimuth_gap_degrees": 180
+    },
+    {
+      "id": "S01",
+      "dataset": "ski",
+      "index": 0
+    },
+    {
+      "id": "S02",
+      "dataset": "ski",
+      "index": 9
+    },
+    {
+      "id": "S03",
+      "dataset": "ski",
+      "index": 15
+    },
+    {
+      "id": "S04",
+      "dataset": "ski",
+      "index": 24
+    },
+    {
+      "id": "A01",
+      "dataset": "author",
+      "run": "pro_1",
+      "scene": "Outdoor"
+    },
+    {
+      "id": "A02",
+      "dataset": "author",
+      "run": "pro_2",
+      "scene": "Outdoor"
+    },
+    {
+      "id": "A03",
+      "dataset": "author",
+      "run": "run_3",
+      "scene": "Indoor"
+    },
+    {
+      "id": "A04",
+      "dataset": "author",
+      "run": "run_4",
+      "scene": "Indoor"
+    }
+  ]
+}

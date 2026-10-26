@@ -1,0 +1,48 @@
+{
+  "metrics": {
+    "canonical_avg": {
+      "accel_err": 0.039183268897687036,
+      "mpjpe": 0.3487475111683369
+    },
+    "fused": {
+      "accel_err": 0.03107536741514902,
+      "mpjpe": 0.1793979043799301
+    },
+    "left_canonical": {
+      "accel_err": 0.053100610528379104,
+      "mpjpe": 0.3552220630231433
+    },
+    "raw_avg": {
+      "accel_err": 0.039729908122588864,
+      "mpjpe": 1.0169832682482198
+    },
+    "right_canonical": {
+      "accel_err": 0.045467482383708145,
+      "mpjpe": 0.4461922874607735
+    },
+    "sam3d_left": {
+      "accel_err": 0.05426854058231993,
+      "mpjpe": 1.0961580785013672
+    },
+    "sam3d_right": {
+      "accel_err": 0.04538718668617692,
+      "mpjpe": 1.011183663390131
+    }
+  },
+  "provenance": {
+    "batch_size": 4,
+    "checkpoint": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/train_ski_poseptz/crossview_fusion/2026-05-25/14-13-23/checkpoints/last.ckpt",
+    "checkpoint_sha256": "2b985d4f8b5e1f083fa549ae1cfa524c7d48a8fa2452fbcb136f2f514d1ed78d",
+    "drop_last": false,
+    "index_mapping": "/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png/index_mapping/ski_pose_ptz_index_mapping.json",
+    "index_mapping_sha256": "967a17ad2edfa8f56801d9a7cdd9c683dc73d0072660298ff65294445b41ba02",
+    "joint_subset": "common13",
+    "path_rewrite_from": "/home/kaixu_chen/data/skiing/Ski-PosePTZ-CameraDataset-png",
+    "path_rewrite_to": "/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png",
+    "sample_count": 30,
+    "seed": 42,
+    "split": "test",
+    "time_window": 30,
+    "units": "normalized_dataset_coordinates"
+  }
+}

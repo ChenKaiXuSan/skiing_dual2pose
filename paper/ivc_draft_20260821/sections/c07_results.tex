@@ -1,0 +1,21 @@
+\subsection{Matched occlusion and calibration sensitivity}
+\label{subsec:matched_geometry}
+
+We compare pose-only fusion with geometry-assisted reconstruction on predictions from the same corrupted images, following the matched protocol of Section~\ref{subsec:controlled_protocol} and Supplementary Section~\ref{S-sec:c07_matched_geometry}: one SAM3D call supplies both the projected 2D keypoints and the 3D pose of the same person, all five frozen methods retain the same 64,440 windows, and scoring uses the common 13 joints after all-15 canonicalization. This seven-condition study uses fresh paired predictions and a different joint subset from the preceding 18-condition study, so their numbers are not interchangeable.
+
+\input{tables/c07_occlusion_mpjpe.tex}
+
+With unperturbed supplied calibration (Table~\ref{tab:c07_occlusion_mpjpe}), DLT-residual has the lowest MPJPE in six of seven conditions: its clean error is 0.0988 versus 0.1553 for CanonFuse3D, and under the three ratio-0.5 masks its MPJPE is 25.6--28.8\% lower, whereas CanonFuse3D has 1.8--9.5\% lower PA-MPJPE and 43.7--46.0\% lower acceleration error. The additional-input method thus improves position accuracy, while the pose-only method retains advantages on aligned configuration and temporal second-difference error. CanonFuse3D also improves MPJPE over canonical averaging by 20.1--32.5\% under ratio-0.5 masks, but at ratio 1.0 this advantage reverses by 10.7--28.6\% for single-side and bilateral masking alike; the results do not support automatic rejection of an arbitrarily degraded input view.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/extension/c07_calibration_sensitivity.pdf}
+\caption{Calibration sensitivity across the seven matched conditions. Markers show DLT-residual~\cite{hartley2004multiple} at the three tested angles; pose-only references are unchanged. The synthetic rotation affects only the supplied right-camera orientation (values in Supplementary Table~\ref{S-tab:c07_calibration_mpjpe}).}
+\label{fig:c07_calibration}
+\end{figure}
+
+Figure~\ref{fig:c07_calibration} shows the effect of perturbing the supplied right-camera extrinsics by $0^\circ$, $1^\circ$, and $3^\circ$ with the left camera and the right-camera center fixed. DLT-residual still has lower MPJPE than CanonFuse3D on clean and ratio-0.5 inputs at $1^\circ$. At $3^\circ$, CanonFuse3D has the lowest MPJPE and PA-MPJPE among the five methods on those four conditions, whereas canonical averaging is best on both metrics in all three ratio-1.0 conditions. Pose-only scores are invariant because neither their images nor their 3D inputs change; the experiment measures sensitivity to supplied calibration, not to physically moving a camera.
+
+Missing observations remain in all denominators. At bilateral ratio 1.0, at least one view fails in 54.85\% of pair--frame positions, and after the batch-referenced transformation 33.30\% of CanonFuse3D and 70.05\% of DLT and gated-DLT frames have collapsed common-13 configurations, since a missing reference frame can affect an entire batch. These results characterize the coupled front-end, fallback, normalization, and prediction pipeline.
+
+\FloatBarrier

@@ -1,0 +1,291 @@
+{
+  "id": "A01",
+  "dataset": "author",
+  "run": "pro_1",
+  "scene": "Outdoor",
+  "reference_kind": "No GT: qualitative only",
+  "batch_size": 1,
+  "window_start_position": 731,
+  "available_common_frames": 1492,
+  "source_npz": [
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0731_sam_3d_body_outputs.npz",
+      "sha256": "940bd175f52ad8b27744f53555a809a3f88d587e60c9bda1b2c9c13472628ecc"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0732_sam_3d_body_outputs.npz",
+      "sha256": "cf8ca34193a135d1d9193409823c18040f37324afb2da4be1d9adfd2e79a7275"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0733_sam_3d_body_outputs.npz",
+      "sha256": "885100af2744128b32527d06b179b7d3cf96f2bda941b4168dd0743c1b707a63"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0734_sam_3d_body_outputs.npz",
+      "sha256": "4c8f148028c051da7e3a3f821b9302747d32aba960f94091e6320d266f6a4625"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0735_sam_3d_body_outputs.npz",
+      "sha256": "c726782a2cdd8fa957fde4dd3dc6690ebb96d387e7bb8758cd18fafc7c524fc1"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0736_sam_3d_body_outputs.npz",
+      "sha256": "25eb0ed104987e6e1074f5c5100ea7819277de7c8985284856fd47c560b307e5"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0737_sam_3d_body_outputs.npz",
+      "sha256": "bd08908528925c05e975869d7e0bc349e4622f1775abe16348bd1d8b06a594a5"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0738_sam_3d_body_outputs.npz",
+      "sha256": "9f9e6580f2b914df4907017356e4f35a47d05dea4c665047d4673c85b5a5d00e"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0739_sam_3d_body_outputs.npz",
+      "sha256": "5ec038714782bcadda6f42f8fb8e9a627b989f9376256bb2fd57d084919a3ba0"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0740_sam_3d_body_outputs.npz",
+      "sha256": "79fe07299f0840a5228074dfb81bb91cf5c2112771e5c8abdf2e023b090630b9"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0741_sam_3d_body_outputs.npz",
+      "sha256": "58d65794d0aa80d8923418edc5fdfb1aff99cf5a081260463fa4f7f1f9f39aad"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0742_sam_3d_body_outputs.npz",
+      "sha256": "a7945e86422a124ba9b057a20894039accd821a0700af1edfa4d1093b90e8908"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0743_sam_3d_body_outputs.npz",
+      "sha256": "f36030b8d4815963e785c2f9447f2e06c0020d74219abfba192dbc7d68edab5f"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0744_sam_3d_body_outputs.npz",
+      "sha256": "669af7f32826c76162c0c45bf65d541a38abe668a6e14a5ed9b74996820102d9"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0745_sam_3d_body_outputs.npz",
+      "sha256": "42a586939bffd9d207e855a203e39abafc0a197c784d03d72aaf08adc14da68f"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0746_sam_3d_body_outputs.npz",
+      "sha256": "e6f5a5920c6b305925986a532c5765181718968ead6e8c374e7b25cc857330e0"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0747_sam_3d_body_outputs.npz",
+      "sha256": "8a2147c637c085e70d21e29461aa347a86b7f3a09d01ce80636b64ad64f3a708"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0748_sam_3d_body_outputs.npz",
+      "sha256": "5f2523654e6ecda42e75edcef3ada9de64b19c76775c9350cfadd74050e1d459"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0749_sam_3d_body_outputs.npz",
+      "sha256": "b947b10a2426e38703ce2f15664ed1caa5a5001d1cf17be6640c38f88dacbd25"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0750_sam_3d_body_outputs.npz",
+      "sha256": "0efc9111a19773352ded209472a7128f477803ab8fc77ef7561d913dd3d1682e"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0751_sam_3d_body_outputs.npz",
+      "sha256": "9566de10af034e8de0e32cee86f8c0502707972076bca233d7112003d0b7318b"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0752_sam_3d_body_outputs.npz",
+      "sha256": "2e2fdb6c1305b235f5d6b799bdcbdf8a77982f16d95baa278cdede235167a9a8"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0753_sam_3d_body_outputs.npz",
+      "sha256": "afc02b4f70ba6812b9f725cada4cb553f4b140c001469f5d46f70c361f539458"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0754_sam_3d_body_outputs.npz",
+      "sha256": "9ea9b05de8bbe9e0d517901893683e3e22fc14b5f70424e4e0e8ad7597e54e52"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0755_sam_3d_body_outputs.npz",
+      "sha256": "4d6dfb6f0a84440f67f54a980150d63550fdb46c6145fb3874c8aee87db08feb"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0756_sam_3d_body_outputs.npz",
+      "sha256": "0b6a06ac05cb088fe54a29ea895854df7fe712986f924fa3c67998b243938e1e"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0757_sam_3d_body_outputs.npz",
+      "sha256": "f3b376c7d229dc38c522cb80ae5133ad0dbf189bd6470fcc31f0d690bff30ac9"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0758_sam_3d_body_outputs.npz",
+      "sha256": "407d25c560bdc6c5ddfc0fc667d542587b9146d0cab5a3efe6d21e3e78694a80"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0759_sam_3d_body_outputs.npz",
+      "sha256": "662fa177cd6bd94f6394a6e2eb0a361e55cf5e5515df243c0dfc9e65aa07ebbd"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0760_sam_3d_body_outputs.npz",
+      "sha256": "247907556e468ad31986d6966eac3e37cc4ef5a496d781d32ffa519fdd620680"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0731_sam_3d_body_outputs.npz",
+      "sha256": "abfee8159210b60f76220bd8f0ef72386de92e6fc8707800eabefe6553639756"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0732_sam_3d_body_outputs.npz",
+      "sha256": "7ac3f05e3a0f17134175b77bd8c4b0a3678cae6436e90b45101d1269e61ad62c"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0733_sam_3d_body_outputs.npz",
+      "sha256": "17f2ff1f837b062815fbc65e9ef20f2b7f40eeb09578ccb9c2c5654abf32dcd3"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0734_sam_3d_body_outputs.npz",
+      "sha256": "e3b57342f260ebf2091899690fe50049f9a294b79fda4d8f0860cb92163e0073"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0735_sam_3d_body_outputs.npz",
+      "sha256": "98ae0ea01e21e7c787441141867e79f2c6180089cd35f85120c1da8e3920c746"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0736_sam_3d_body_outputs.npz",
+      "sha256": "eb5bcf61db301a5852bd5758a2d1fdcb97f98994a212997055f693972bd29614"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0737_sam_3d_body_outputs.npz",
+      "sha256": "bc701e4dc1eb3f7e827950b2997222363cb441e737640fda6b33e61a94bdaa59"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0738_sam_3d_body_outputs.npz",
+      "sha256": "c2936c693db991ee6df7fcd1c8e65b72333ca7bdd63f8ebe427d5adc41918fee"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0739_sam_3d_body_outputs.npz",
+      "sha256": "b065f5a7194a3d841956a422b52a4deb40c253cb0a92979e1c726ad346c4de19"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0740_sam_3d_body_outputs.npz",
+      "sha256": "b2ec5817e3ec8312e0e48c4f3309cc47c5ed2746b748948069e5e4425011486a"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0741_sam_3d_body_outputs.npz",
+      "sha256": "ef73cf116a06a683e415a28e3b3eec7eb0b07d4fb44d62bf14379697f79fee74"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0742_sam_3d_body_outputs.npz",
+      "sha256": "d1ec9e9528e933c320db8d4477af9ea54ff1e56e2d5968d6388e98d8f8353862"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0743_sam_3d_body_outputs.npz",
+      "sha256": "8e2d1020bc35aabe5d7db90c464304744295e0d3171b9b067d536a4e2c3d898a"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0744_sam_3d_body_outputs.npz",
+      "sha256": "5fcd024a724cb3b94804323e4ecf54b685012da82d56c22533748773e274875a"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0745_sam_3d_body_outputs.npz",
+      "sha256": "d28b5b13a1222525e46c9df8bf043ca021e5d6b29b125e2357360f7374e4f9dc"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0746_sam_3d_body_outputs.npz",
+      "sha256": "18a71c97f3e3857549805b25650c91c02db7fb0673c57851ff9dd432aca5100a"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0747_sam_3d_body_outputs.npz",
+      "sha256": "58d958a3873814018a5fd06383dd089f33c559143f5d9d60a435e3791871f63f"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0748_sam_3d_body_outputs.npz",
+      "sha256": "928f786eaf8ab2cc2c7d8ba8585d47f1022e41edecf526d2c0c11908ff1176bd"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0749_sam_3d_body_outputs.npz",
+      "sha256": "d1bd421e4605458567b05ff36fda8912a48133ca3789022e47d6479c9ec622a9"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0750_sam_3d_body_outputs.npz",
+      "sha256": "aaea5f7dfaa08f636c43e9c7f0cd46ad236af0dd62a0f12aafb8d505343c78c6"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0751_sam_3d_body_outputs.npz",
+      "sha256": "d49588ea57ca81a9365107275e8bae09e3cbc9477a676f28e6ff79d1b3ad22cb"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0752_sam_3d_body_outputs.npz",
+      "sha256": "28d7f5157f1f515b653b64f77b03a7dd2365e11e995523346a3cbab2fcdc7282"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0753_sam_3d_body_outputs.npz",
+      "sha256": "516eabef569dedfe4ffa44d5a9b2524de08f4679d87cc2d1001b5ee01cc51c0c"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0754_sam_3d_body_outputs.npz",
+      "sha256": "aecfe25c235601b3b99168ae93e3973607db45c3dd180fbb6602dda8675dfb5f"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0755_sam_3d_body_outputs.npz",
+      "sha256": "05dc28512b52a7d3c27fd19b05b9f64f921b01239f44178f8af2585adc397704"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0756_sam_3d_body_outputs.npz",
+      "sha256": "00fd0fac519fb5cb5128d68bc800ffd66145e86783276b669dfc6c5050aaf2f0"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0757_sam_3d_body_outputs.npz",
+      "sha256": "c40449d058f23b181b7e7ca3f943cf7149111fcd39b7518530579101201ef3cd"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0758_sam_3d_body_outputs.npz",
+      "sha256": "76514a184f0170436ecab5fe187a552358d8c3a4a575b7936ba5e0227bcb5894"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0759_sam_3d_body_outputs.npz",
+      "sha256": "40fde2aeff8eccb469257d42bbe2eccf22b79a0a75c4fae17a2a4b38b0fa8d59"
+    },
+    {
+      "path": "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0760_sam_3d_body_outputs.npz",
+      "sha256": "1f9aa1459737774cf346e694f0ad8692068063711f7d01b53804ef0dfb798983"
+    }
+  ],
+  "rgb_sources": [
+    "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/left/frame_0746_sam_3d_body_outputs.npz::frame",
+    "/home/kaixu_chen/skiing/data/sam3d_body_results/person/pro_1/right/frame_0746_sam_3d_body_outputs.npz::frame"
+  ],
+  "sync_scope": "Matching filenames; embedded frame_idx additionally checked when available. No new synchronization estimation.",
+  "window_index_0based": 15,
+  "source_frame": 746,
+  "checkpoint": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt",
+  "checkpoint_sha256": "869a2217f8676c0ada75ed3c9a3c82a9b8efbb105749f6ffb8bef71e9172f50f",
+  "inference": "New frozen-checkpoint CPU inference, float32, eval mode; not retraining.",
+  "num_joints": 15,
+  "reconstruction_max_abs_error": 2.9802322387695312e-08,
+  "alpha_min": 0.4752196669578552,
+  "alpha_max": 0.6292545199394226,
+  "projection": "Canonical: u=x+0.45z,v=y+0.15z; raw display flips v. Display only, not RGB projection.",
+  "limitations": [
+    "Selected illustration, not aggregate or independently sampled evidence.",
+    "Reference is never a model input.",
+    "No 2D skeleton overlay exported."
+  ],
+  "assets": [
+    "raw_left",
+    "raw_right",
+    "left",
+    "right_to_left",
+    "base_left",
+    "base_right",
+    "fused",
+    "alignment_before_after",
+    "cross_view_difference",
+    "temporal_velocity",
+    "residual_correction",
+    "alignment_rotation",
+    "temporal_poses",
+    "gate_heatmap",
+    "attention_heatmap",
+    "output_comparison",
+    "sample_preview"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "s1": {
+    "mpjpe": 0.3645459285399948,
+    "acceleration_error": 0.06573126505575938,
+    "sample_count": 30,
+    "point_count": 11700,
+    "acceleration_point_count": 10920,
+    "pa_mpjpe": 0.18248995992074127,
+    "pa_point_count": 11700,
+    "pa_frame_count": 900,
+    "pa_degenerate_prediction_frames": 0
+  },
+  "metapose": {
+    "mpjpe": 0.42525706215340714,
+    "acceleration_error": 0.06344784429882552,
+    "sample_count": 30,
+    "point_count": 11700,
+    "acceleration_point_count": 10920,
+    "pa_mpjpe": 0.14252038652083346,
+    "pa_point_count": 11700,
+    "pa_frame_count": 900,
+    "pa_degenerate_prediction_frames": 0
+  },
+  "average_control": {
+    "mpjpe": 0.3487475095464028,
+    "acceleration_error": 0.03918326788415413,
+    "sample_count": 30,
+    "point_count": 11700,
+    "acceleration_point_count": 10920,
+    "pa_mpjpe": 0.18770442946821594,
+    "pa_point_count": 11700,
+    "pa_frame_count": 900,
+    "pa_degenerate_prediction_frames": 0
+  },
+  "pa_protocol": {
+    "alignment": "per frame; proper rotation, isotropic scale, translation",
+    "reflection_allowed": false,
+    "joint_subset_fit": "independent fit on each reported subset",
+    "aggregation": "mean Euclidean distance over all joint-frame points",
+    "precision": "numpy float64 SVD",
+    "prediction_centered_squared_norm_threshold": 1e-12,
+    "degenerate_prediction": "map to target centroid; retain all points",
+    "evaluation_only": true,
+    "affects_mpjpe_or_acceleration": false
+  },
+  "dataset": "ski",
+  "method_label": "MetaPose (adapted, 2D-supervised, additional estimated 2D)",
+  "coordinate_gauge": "updated left camera, native-input pelvis restored, archived native-left batch transform",
+  "archived_average_control_delta": {
+    "mpjpe": 0.0,
+    "pa_mpjpe": 0.0,
+    "acceleration_error": 0.0
+  },
+  "control_metrics_sha256": "22f704faf7252cd62a183debf30e1f9caeced91f92e45212c713bbd2e158d72e",
+  "report_sha256": "b1a7fa54db639122aef1d8fee484066624d721307b295384050a9b46ad96a278",
+  "evaluator_sha256": "b18384c759244710a198f31fdb24955d7166d75b4df74cb18ced61bcebe9be55",
+  "canonicalizer_sha256": "ff947dd35f4c265c90e4c44067b3a024820daf3ab1ce693f50f9bbea509fe955"
+}

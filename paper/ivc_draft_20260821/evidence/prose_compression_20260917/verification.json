@@ -1,0 +1,48 @@
+{
+  "status": "passed",
+  "before_words": {
+    "Introduction": 653,
+    "Related Work": 963,
+    "Proposed Method": 1255,
+    "Experimental Protocol": 1150,
+    "Results": 3544,
+    "Discussion": 1020,
+    "Conclusion": 196
+  },
+  "after_words": {
+    "Introduction": 495,
+    "Related Work": 691,
+    "Proposed Method": 905,
+    "Experimental Protocol": 1006,
+    "Results": 3384,
+    "Discussion": 609,
+    "Conclusion": 143
+  },
+  "before_total": 8781,
+  "after_total": 7233,
+  "word_reduction": 1548,
+  "word_reduction_percent": 17.63,
+  "main_pages_before": 46,
+  "main_pages_after": 42,
+  "supplementary_pages": 26,
+  "protected_files_unchanged": 52,
+  "main_citation_keys_unchanged": 28,
+  "headings_unchanged": true,
+  "embedded_tables_and_figures_unchanged": true,
+  "result_decimal_multiset_unchanged": true,
+  "frontmatter_and_declarations_unchanged": true,
+  "display_math_blocks_before": 26,
+  "display_math_blocks_after": 20,
+  "main_sha256": "4f1c270665ef88cbe201d27b99eacea278c6fa5eed9c6541a2629f1586d4ae5e",
+  "pdf_sha256": "b28a750ec7753583644266333e8c8a61c7dbd2e06156619828862223223d4b87",
+  "result_table_count": 10,
+  "figure_count": 12,
+  "numerical_verifiers": "123 integrated cells and 36 external cells passed",
+  "focused_tests_passed": 24,
+  "visually_checked_pages": [
+    10,
+    36
+  ],
+  "scope": "Prose compression and algebraically equivalent grouping only; no new experiments or bibliography changes",
+  "word_count_convention": "Introduction through Conclusion; headings retained; captions, tables, math, reference keys, abstract, declarations and bibliography excluded"
+}

@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "protocol": "native_output_before_body_normalization",
+  "methods": {
+    "sam3d_native_view_pool": {
+      "status": "unavailable",
+      "coordinate_frame": null,
+      "reason": "no supplied target in prediction frame left_camera_m; no supplied target in prediction frame right_camera_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "motionbert_native_view_pool": {
+      "status": "unavailable",
+      "coordinate_frame": null,
+      "reason": "no frozen prediction manifest; no frozen prediction manifest",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "poseformer_native_view_pool": {
+      "status": "unavailable",
+      "coordinate_frame": null,
+      "reason": "no frozen prediction manifest; no frozen prediction manifest",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "videopose3d_native_view_pool": {
+      "status": "unavailable",
+      "coordinate_frame": null,
+      "reason": "no frozen prediction manifest; no frozen prediction manifest",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "left_native": {
+      "status": "unavailable",
+      "coordinate_frame": "left_camera_m",
+      "reason": "no supplied target in prediction frame left_camera_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "right_native": {
+      "status": "unavailable",
+      "coordinate_frame": "right_camera_m",
+      "reason": "no supplied target in prediction frame right_camera_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "unaligned_native_average": {
+      "status": "unavailable",
+      "coordinate_frame": "mixed_camera_diagnostic_m",
+      "reason": "no supplied target in prediction frame mixed_camera_diagnostic_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "native_sequence_aligned_average": {
+      "status": "unavailable",
+      "coordinate_frame": "left_camera_m",
+      "reason": "no supplied target in prediction frame left_camera_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "native_aligned_quality_weighted": {
+      "status": "unavailable",
+      "coordinate_frame": "left_camera_m",
+      "reason": "no supplied target in prediction frame left_camera_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "native_aligned_average_smoothnet": {
+      "status": "unavailable",
+      "coordinate_frame": null,
+      "reason": "the archived SmoothNet checkpoint was trained on normalized inputs, not native aligned inputs",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "stride_native_view_pool": {
+      "status": "unavailable",
+      "coordinate_frame": null,
+      "reason": "no supplied target in prediction frame left_camera_m; no supplied target in prediction frame right_camera_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "deciwatch_native_view_pool": {
+      "status": "unavailable",
+      "coordinate_frame": null,
+      "reason": "no supplied target in prediction frame left_camera_m; no supplied target in prediction frame right_camera_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "metapose_native": {
+      "status": "unavailable",
+      "coordinate_frame": "left_camera_m",
+      "reason": "no supplied target in prediction frame left_camera_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "calibrated_dlt_native": {
+      "status": "unavailable",
+      "coordinate_frame": "calibrated_world_m",
+      "reason": "no supplied target in prediction frame calibrated_world_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "reprojection_gated_dlt_native": {
+      "status": "unavailable",
+      "coordinate_frame": "calibrated_world_m",
+      "reason": "no supplied target in prediction frame calibrated_world_m",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "dlt_residual_mlp_native": {
+      "status": "unavailable",
+      "coordinate_frame": null,
+      "reason": "the existing residual checkpoint has no calibrated-world output gauge",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    },
+    "canonfuse3d_internal_canon": {
+      "status": "unavailable",
+      "coordinate_frame": null,
+      "reason": "the current learned output is not guaranteed to equal the invertible left-input gauge",
+      "mpjpe": null,
+      "pa_mpjpe": null,
+      "acceleration_error": null
+    }
+  },
+  "dataset": "ski",
+  "expected_sample_count": 30,
+  "prediction_root": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/native_output_comparison/20260911/ski/predictions",
+  "target_descriptor": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/native_output_comparison/20260911/ski/targets/target_descriptor.json"
+}

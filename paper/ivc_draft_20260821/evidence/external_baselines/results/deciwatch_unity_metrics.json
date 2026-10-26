@@ -1,0 +1,57 @@
+{
+  "deciwatch": {
+    "mpjpe": 0.11336497942908902,
+    "acceleration_error": 0.01320843282677357,
+    "sample_count": 64440,
+    "point_count": 25131600,
+    "acceleration_point_count": 23456160,
+    "pa_mpjpe": 0.06946216342782602,
+    "pa_point_count": 25131600,
+    "pa_frame_count": 1933200,
+    "pa_degenerate_prediction_frames": 0
+  },
+  "denoised": {
+    "mpjpe": 0.3852934301499991,
+    "acceleration_error": 0.1330579350025655,
+    "sample_count": 64440,
+    "point_count": 25131600,
+    "acceleration_point_count": 23456160,
+    "pa_mpjpe": 0.28874220836196884,
+    "pa_point_count": 25131600,
+    "pa_frame_count": 1933200,
+    "pa_degenerate_prediction_frames": 0
+  },
+  "average_control": {
+    "mpjpe": 0.2792121322031988,
+    "acceleration_error": 0.03221404394928908,
+    "sample_count": 64440,
+    "point_count": 25131600,
+    "acceleration_point_count": 23456160,
+    "pa_mpjpe": 0.1162364324854225,
+    "pa_point_count": 25131600,
+    "pa_frame_count": 1933200,
+    "pa_degenerate_prediction_frames": 0
+  },
+  "pa_protocol": {
+    "alignment": "per frame; proper rotation, isotropic scale, translation",
+    "reflection_allowed": false,
+    "joint_subset_fit": "independent fit on each reported subset",
+    "aggregation": "mean Euclidean distance over all joint-frame points",
+    "precision": "numpy float64 SVD",
+    "prediction_centered_squared_norm_threshold": 1e-12,
+    "degenerate_prediction": "map to target centroid; retain all points",
+    "evaluation_only": true,
+    "affects_mpjpe_or_acceleration": false
+  },
+  "method_label": "DeciWatch (official-protocol adaptation, common13, 4/30 observed source frames, seed 4321)",
+  "boundary_policy": "repeat frame 29 at token 30; official 31-frame forward/loss samples tokens 0/10/20/30; crop outputs to 30",
+  "compatibility_shim": "official integer attention masks converted to bool for PyTorch 2.11 without changing mask values",
+  "selection": "minimum validation official loss when validation exists; otherwise fixed final epoch",
+  "control_delta": {
+    "mpjpe": 0.0,
+    "pa_mpjpe": 0.0,
+    "acceleration_error": 0.0
+  },
+  "control_metrics_sha256": "dc511be296ddad4fa217dabf0930a1c32e0b7c98686fee53bba2683845e605e9",
+  "evaluator_sha256": "19a3031cabd9231c3790fa0400a488fa588b567ff99b0f476364c7fbab26e8e3"
+}

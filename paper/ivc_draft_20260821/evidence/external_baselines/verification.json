@@ -1,0 +1,27 @@
+{
+  "archive_date": "2026-09-13",
+  "external_matrix": "3 methods x 2 datasets; complete",
+  "external_result_cells": 6,
+  "multiseed_crossfold": {
+    "admitted_result_cells": 0,
+    "formal_checkpoints": 0,
+    "launch_smoke_logs": 2,
+    "planned_full_training_cells": 6,
+    "status": "retired_not_run",
+    "training_epochs_completed": 0
+  },
+  "native_ski": {
+    "measured": 0,
+    "unavailable": 17
+  },
+  "native_unity": {
+    "measured": 13,
+    "unavailable": 4
+  },
+  "paper_metric_cells_verified": 36,
+  "status": "passed",
+  "table_pages": {
+    "tab:native_output_comparison": "19",
+    "tab:native_reference": "18"
+  }
+}

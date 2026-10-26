@@ -1,0 +1,232 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,graphicx,booktabs,array}
+\usepackage[section]{placeins}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\thesection}{S\arabic{section}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\title{Supplementary material\\[0.5em]\large Calibration-Free Post-Estimation Fusion of Dual-View 3D Human Pose Streams: Robustness, Front-End Generalization, and Multi-View Extension}
+\author{}
+\date{}
+\AddToHook{begindocument/end}{%
+  \renewcommand{\itshape}{\fontshape{n}\selectfont}%
+  \renewcommand{\slshape}{\fontshape{n}\selectfont}%
+}
+\renewcommand{\textit}[1]{\textup{#1}}
+\renewcommand{\emph}[1]{\textup{#1}}
+\begin{document}
+\maketitle
+
+This supplement provides the full-skeleton Unity comparison, numerical breakdowns, statistical details, and additional visualizations for the main article. The controlled Unity evaluations use the complete 64,440-sequence test index and the stated frozen checkpoint. Errors use dataset coordinate units under the archived batch-referenced transformation. The scopes and denominators specific to each experiment are stated below.
+
+\section{Unity comparison on all 15 joints}
+The main article reports the common 13-joint subset for both datasets. Table~\ref{tab:native_reference_all15} additionally reports the full 15-joint Unity skeleton, including the two eye landmarks, for the same methods and the same 64,440 held-out camera-pair sequences. The ordering of methods is unchanged between the two joint sets.
+\input{tables/native_reference_all15.tex}
+\FloatBarrier
+
+\section{Camera-pair separation}
+The main article combines absolute errors and confidence intervals in one table. Table~\ref{tab:view_angle_significance} retains the per-bin paired tests and effect sizes, using unordered camera pairs as resampling clusters. Figure~\ref{fig:view_angle_extension} shows the corresponding absolute MPJPE curves. The small across-bin effect size limits claims about an optimal camera separation.
+\input{tables/view_angle_significance.tex}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.76\linewidth]{figures/extension/view_angle.pdf}
+\caption{MPJPE by circular azimuth separation of the two Unity cameras, corresponding to the main article's combined accuracy and inference table.}
+\label{fig:view_angle_extension}
+\end{figure}
+\FloatBarrier
+
+\section{Temporal offset and sampling-rate drift}
+Table~\ref{tab:temporal_sampling} lists absolute errors, relative changes, and gate diagnostics at representative perturbation values. The main article plots all seven temporal-offset and all seven sampling-rate conditions as relative changes. Each curve uses its own method's zero-perturbation MPJPE as the denominator.
+\input{tables/temporal_sampling.tex}
+\FloatBarrier
+
+\section{Missing-pose results}
+Table~\ref{tab:masking_extension} retains the numerical comparisons at ratios 0.5 and 1.0 for all affected-view modes and corruption patterns. The main article's curves cover the complete 45-condition grid, including ratios 0, 0.25, and 0.75. Negative gains under bilateral random corruption are retained. Ratios describe the intervention protocol, not equivalent physical occlusion across patterns.
+\input{tables/masking_summary.tex}
+\FloatBarrier
+
+\section{Image-level occlusion results}
+Table~\ref{tab:image_occlusion} lists all 18 image-level occlusion conditions summarized in the main article. Detection failure is the SAM3D failure fraction over pair-aligned sequence frames in the affected views; failed detections remain zero poses in the evaluation.
+\input{tables/image_occlusion_summary.tex}
+\FloatBarrier
+
+\section{Front-end adaptation recovery}
+The main article retains the complete absolute-MPJPE adaptation matrix. Figure~\ref{fig:frontend_adaptation} expresses the same 32 cells as relative recovery: for each front end, recovery is $100(E_{\mathrm{frozen}}-E_{\mathrm{adapted}})/E_{\mathrm{frozen}}$. Negative cells include loss of native SAM3D performance after adaptation and deterioration on some unmatched front ends.
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.96\linewidth]{figures/extension/frontend_adaptation.pdf}
+\caption{Relative MPJPE recovery of each adapted model against the frozen reference checkpoint on the same front end. Positive values indicate improvement; negative values indicate deterioration.}
+\label{fig:frontend_adaptation}
+\end{figure}
+\FloatBarrier
+
+\section{N-view numerical results}
+Table~\ref{tab:nview_scaling} gives the mean, standard deviation, and paired-group bootstrap interval for all evaluated view counts and methods. It uses the 44 accepted groups under the strict common-frame filter. The pairwise oracle uses reference errors to choose a complete pair and serves as a diagnostic upper bound. The main article retains the scaling plot and a separate table of deployable latency, throughput, and memory.
+\input{tables/nview_scaling.tex}
+\FloatBarrier
+
+\section{Automatic synchronization diagnostics}
+Table~\ref{tab:temporal_alignment} complements the main article's retained synchronization plot with lag-estimation error, exact-lag accuracy, and activation rate across all eleven offsets. All three conditions use the fixed central 20-frame interval, and the confidence threshold was selected on validation data. Correction helps positive delays but worsens negative integer leads; its 41.5\% activation rate at zero offset shows that the procedure can introduce unnecessary corrections. This diagnostic is not part of the main fusion method.
+\input{tables/temporal_alignment.tex}
+\FloatBarrier
+\section{Implementation and reproducibility record}
+\label{sec:implementation_record}
+The following details specify the evaluated models and coordinate protocol. They support reproduction of the main article's results and do not introduce additional algorithmic claims.
+
+\subsection{Body-reference selection and landmark conventions}
+
+
+The two input streams may differ in global position, orientation, and scale because they are estimated independently. All experiments use the archived preprocessing of the evaluated checkpoints so that training and evaluation follow the same executable protocol. Its behavior is batch-referenced rather than sample-wise or frame-wise. For an input stream minibatch \(P\in\mathbb{R}^{B\times T\times J\times 3}\), the implementation first flattens the batch and time dimensions in batch-major order. In the default \texttt{first\_frame} mode, the reference is therefore the first frame of the first sequence, \(P_{0,0}\), not the first frame of every sequence.
+
+Let \(h_L\), \(h_R\), and \(n\) denote the configured left hip-root, right hip-root, and neck slots, and let \(\operatorname{nrm}(v)=v/(\|v\|_2+\epsilon)\), with \(\epsilon=10^{-8}\). The configured indices are \((h_L,h_R,n)=(6,7,14)\) for the Unity joint layout and \((4,5,12)\) for the Ski-PTZ-Pose common-13 layout. The stream-specific batch anchor and axes are
+\[
+c^P=\frac{1}{2}\left(P_{0,0,h_L}+P_{0,0,h_R}\right),
+\]
+\[
+e_x^P=\operatorname{nrm}\!\left(P_{0,0,h_R}-P_{0,0,h_L}\right),
+\qquad
+e_y^P=\operatorname{nrm}\!\left(P_{0,0,n}-c^P\right),
+\]
+\[
+e_z^P=\operatorname{nrm}\!\left(e_x^P\times e_y^P\right).
+\]
+With the default face-direction option enabled, the sign of \(e_z^P\) is reversed if necessary according to the direction from the neck to the midpoint of tensor positions 0 and 1. These positions are the two eye landmarks in the Unity 15-joint layout. In the Ski-PTZ-Pose common-13 layout, however, they are the first two retained upper-arm landmarks because the default face-direction indices are not remapped in the executable path. The column matrix \(R^P=[e_x^P,e_y^P,e_z^P]\) is then applied to every sequence and frame in that stream minibatch:
+\[
+\tilde{P}_{b,t,j}=\left(P_{b,t,j}-c^P\right)R^P.
+\]
+The left input, right input, and reference target are passed through this function separately, so they use independently estimated anchors \((c^L,R^L)\), \((c^R,R^R)\), and \((c^G,R^G)\), respectively.
+
+This literal implementation normalizes the three constructed axis vectors but does not re-orthogonalize \(e_y^P\) after the cross product and does not divide coordinates by a skeleton scale. Thus, \(R^P\) is a landmark-derived axis matrix rather than a guaranteed orthonormal rotation, and coordinate magnitudes remain in the upstream or dataset coordinate units. The transform also depends on minibatch composition and order: changing the first sequence, batch size, or batch grouping can change the transformed coordinates of other sequences. The reported results retain the archived batching protocol so that the description and numbers correspond to the same executable method. Consequently, canonical coordinates here refer to this fixed batch anchor, not to a new pelvis origin and body orientation at every frame. Any motion retained relative to the anchor depends on the upstream coordinates; the transform does not recover a trajectory in a shared world frame.
+
+\subsection{Similarity fit and missing inputs}
+The implementation uses an unweighted SVD solution. With row means \(\bar{x},\bar{y}\), centered coordinates \(X_c,Y_c\), and \(X_c^\top Y_c/N=U\operatorname{diag}(\sigma)V^\top\), it computes
+\[
+\begin{aligned}
+D&=\operatorname{diag}(1,1,\det(VU^\top)), & Q^\star&=VDU^\top,\\
+s^\star&=\frac{\sum_{k=1}^{3}D_{kk}\sigma_k}
+{\max(\|X_c\|_F^2/N,10^{-8})}, &
+(d^\star)^\top&=\bar{y}-s^\star\bar{x}(Q^\star)^\top.
+\end{aligned}
+\]
+Thus, reflection and independent scaling along coordinate axes are excluded. The same transform is applied to all frames and joints; rotation and scale are not fitted separately for each frame. Both directions are solved independently. These are auxiliary pose-space transforms, not estimated camera extrinsics, and they are distinct from the evaluation-only per-frame fit used for PA-MPJPE.
+
+The fusion model consumes dense, finite 3D tensors without an input-validity channel. In the pose-corruption study, selected raw input entries are replaced by zero or perturbed before landmark canonicalization; the image-occlusion study likewise retains failed detections as all-zero raw poses. The corruption and detection-failure flags are used for reporting, not as network inputs or alignment weights. Every joint-frame entry, including a zero-filled or corrupted entry after transformation, participates equally in the fit above. A raw zero need not remain zero after subtracting the batch anchor. Corruption of the landmarks that define that anchor can also affect other sequences in the same minibatch. The evaluated fusion path neither interpolates missing joints nor excludes them from alignment. The reference pose is not corrupted. The training-objective subsection of the main article specifies how the same absence of input-validity weighting applies to training.
+
+\subsection{Feature boundary conventions}
+Each joint-frame feature concatenates five three-dimensional cues: own-view pose, aligned opposite-view pose, their difference, temporal velocity, and the alignment rotation vector. Velocity is the first finite difference of the canonical pose, with zero velocity at the first frame. The sequence-level rotation vector is repeated across all joints and frames of that sequence. The same shared encoder is applied to the two view directions.
+
+\subsection{Training and comparison models}
+
+
+Within each dataset, all methods operate on the same synchronized left- and right-view pose sequences and joint convention: the full 15-joint CanonFuse3D skeleton for Unity and the common 13-joint subset for Ski-PTZ-Pose. The input to the proposed model is a tensor of joint-frame pose features in the transformed coordinate representation; no RGB frames, 2D keypoints, masks, camera intrinsics, or camera extrinsics are provided to the refinement network. Left and right streams are canonicalized in separate calls, each using the first sequence in the current minibatch as its anchor, and are then aligned in both directions to form the auxiliary opposite-view poses and residual features described in the proposed-method section of the main article.
+
+During training, the reference tensor is transformed in a third, independent canonicalization call: the Unity avatar skeleton is used for the synthetic dataset and the fused reference pose is used for Ski-PTZ-Pose. Thus, Ski-PTZ-Pose training targets the constructed reference under its own batch anchor rather than independent physical ground truth. The author-collected videos are not included in either training path and do not affect checkpoint or hyperparameter selection. For each indexed camera pair, the frames shared by both streams and the reference are uniformly resampled to a 30-frame sequence; the index entries are not sliding windows.
+
+Both dataset-specific models use a hidden dimension of 128, four attention heads, dropout 0.1, a depthwise temporal-convolution kernel of size 5, AdamW with learning rate \(10^{-3}\) and weight decay 0.01, and a 100-epoch training budget. The loss weights are \(\lambda_{view}=0.05\), \(\lambda_{bal}=0.02\), \(\lambda_{ent}=0.005\), and \(\lambda_{temp}=0.01\). The Unity reference checkpoint, used for every controlled Unity evaluation, is the stored epoch-89 checkpoint trained with batch size 4096. All frozen Unity evaluations use the archived batch size of 256; because the executable first-frame transformation is batch-referenced, this evaluation batch size is part of the numerical protocol.
+
+The reported Ski-PTZ-Pose evaluation uses a separate dataset-specific \texttt{last.ckpt} from epoch 97, trained with batch size 4 on the common 13-joint representation. The archived Ski index contains 150 training, zero validation, and 30 test camera-pair entries. The historical training path reused the training list for epoch monitoring because the index has no non-empty validation partition; those monitoring values are therefore not treated as independent validation evidence. To avoid retrospective test-based selection, we fix \texttt{last.ckpt} in advance and evaluate all 30 test entries once with \texttt{drop\_last=False}. The checkpoint and index SHA-256 digests are recorded in the evidence manifest.
+
+
+The executed Unity index uses an action-disjoint train--validation--test split containing 12, eight, and four avatar-specific action sequences, respectively. Pairing all 180 viewpoints yields 193,320 training, 128,880 validation, and 64,440 test camera-pair sequences. We keep the complete final test batch (\texttt{drop\_last=False}) and seed all perturbation generators with 42. The complete-split Unity record supplies the primary result and all controlled robustness, generalization, adaptation, and N-view analyses. The Ski-PTZ-Pose record is an independent journal re-evaluation under its fixed common-13 test index and dataset-specific checkpoint. The two datasets use different reference regimes and are never pooled; all comparisons are made within a dataset and representation.
+
+
+The direct comparison group uses the same native 3D pose streams, joint subset, synchronization, and evaluation protocol as CanonFuse3D. The additional-input geometric group uses the same indexed sequences and frames with estimated 2D observations and calibration. Raw-space single-view and averaging results remain in the archived evidence; main-table errors are measured after the stated body-coordinate transformation.
+
+\paragraph{Expanded pose-only baselines.}
+The direct-input groups in the main Unity and Ski-PTZ-Pose comparison tables include both single views, equal canonical averaging, sequence-level right-to-left similarity alignment followed by equal averaging, and a 3D quality-weighted average. The alignment uses Umeyama-style similarity estimation (cited in the main article); the subsequent averaging is a controlled fusion rule. The quality-weighted average assigns one weight to each view and sequence using temporal second-difference magnitude and temporal bone-length inconsistency, each normalized by median bone length; it uses neither detection confidence nor reference poses. A collapsed skeleton is rejected when the other view is non-degenerate. These are controlled geometric and heuristic baselines rather than published learned fusion systems.
+
+We additionally train a temporal convolutional fusion baseline and canonical averaging followed by SmoothNet (cited in the main article). The TCN uses concatenated pose channels, two 128-channel hidden convolutions, and an output convolution; all three kernels have width 5, with dropout 0.1 in the hidden layers. These convolutions use symmetric padding without dilation; the sequence-modeling citation in the main article provides background, not an attribution of this architecture to Bai et al. SmoothNet retains the official 512-unit encoder, five 512--128--512 residual blocks, dropout 0.25, and temporal decoder, with its input and output windows adapted to the same 30 sampled frames. It refines the average pose with shared temporal weights across joint coordinates. The TCN is a local controlled architecture; SmoothNet is an adaptation of the published temporal refinement method, not a competing multi-view reconstruction network.
+
+\paragraph{Additional-input geometric references.}
+The DLT formulation follows the classical multi-view geometry treatment of Hartley and Zisserman (cited in the main article). Reprojection gating with temporal gap filling and the learned residual MLP are study-specific extensions of this geometric baseline.
+A separate group uses the native SAM3D estimated 2D joints and supplied camera calibration to triangulate corresponding observations by DLT. The robust variant rejects joint-frame estimates whose maximum two-view reprojection residual exceeds 25 pixels and fills gaps by temporal interpolation of accepted estimates, with nearest-value extension at sequence boundaries. Tracks with no accepted point retain their finite ungated DLT estimates; validity and fallback counts are archived. Every fixed test sample is retained. The DLT-residual MLP predicts a correction from the complete canonicalized DLT pose, log-scaled reprojection residuals, and validity indicators, using two 256-unit hidden layers. No annotation coordinates are supplied as predictive features. All three methods are evaluated after independently applying the same body-coordinate transformation to their predictions and to the reference. Ski-PTZ-Pose annotations are pelvis-relative in every frame: the source hip joint and the midpoint of the two hip joints are zero. We therefore first subtract each geometric prediction's own per-frame hip midpoint (common-13 joints 4 and 5) from its joints, removing world translation without using reference coordinates; Unity retains its world-coordinate trajectory. The subsequent batch-referenced body transform is unchanged. The prediction preprocessing fits no scale or additional similarity transform to test annotations. The separately reported PA-MPJPE uses an evaluation-only reference alignment for every method, as defined in the metrics subsection. This group therefore has additional input requirements and does not establish a common-input ranking against the pose-only methods.
+
+\paragraph{Baseline training and selection.}
+The local TCN, SmoothNet, and DLT-residual MLP baselines use seed 42, AdamW with learning rate $10^{-3}$ and weight decay 0.01, and a fixed 100-epoch budget. The TCN and DLT-residual objectives combine position L1 error with weight 0.01 on the predicted second-difference magnitude; SmoothNet uses its position L1 objective plus weight 0.1 on acceleration L1 error. For these baselines, Unity uses the complete action-disjoint training and validation indices, batch size 4096 for training and validation, and the checkpoint with lowest validation MPJPE on all 15 joints; evaluation uses batch size 256. SmoothNet accumulates gradients over microbatches of 2048 after the complete 4096-sequence batch has been canonicalized, preserving the batch anchor. The archived Unity CanonFuse3D \texttt{last.ckpt} has weights identical to the stored epoch-89 validation-selected checkpoint.
+
+The Ski training index contains 150 entries, of which the original loader admits 145: five pairs involving camera 0 in subject 2, sequence 202 have no surviving shared frames. The local TCN, SmoothNet, and DLT-residual MLP use these same 145 eligible training entries, batch size 4, and the fixed final epoch-99 checkpoint; no test metric selects their parameters or stopping point. Their training follows the archived shuffled, complete-batch policy, processing 192,512 Unity or 144 Ski entries per epoch, with the omitted entries changing with the seeded shuffle. Validation and test retain their final partial batches. CanonFuse3D retains its predeclared dataset-specific checkpoint. These are single-run comparisons under fixed partitions, not averages over independent training seeds.
+
+\paragraph{Published-method adaptations.}
+The preceding 100-epoch recipe does not apply to STRIDE, DeciWatch, or MetaPose. Their canonical-space results use the same fixed test indices, but their input and optimization contracts differ. STRIDE initializes from its released model and resets it for each 30-frame window, applying 30 test-time updates with seed 42 and the archived 17-joint MHR mapping before scoring the common 13 joints. Its canonical comparison refines the dense canonical average; its separate native-output comparison refines each view independently.
+
+DeciWatch follows the released Human3.6M 3D configuration at common-13 dimensionality: seed 4321, hidden width 128, five encoder and five decoder blocks, four attention heads, Adam with AMSGrad, learning rate $10^{-3}$ with factor 0.95 per epoch, and 70 epochs. The canonical-average sequence is extended from 30 to 31 frames by repeating its last frame; observations at indices 0, 10, 20, and 30 therefore correspond to source frames 0, 10, 20, and 29. The official forward and loss operate on the extended sequence, and evaluation crops back to 30 frames. This is an official-protocol adaptation retrained in the target domain, not an unchanged pretrained-model reproduction.
+
+MetaPose uses native monocular 3D estimates plus synchronized estimated 2D joints without supplied calibration. Its common-13 adaptation trains three stage-wise networks with seed 42 and float64 arithmetic, using only the 2D reprojection objective: ten epochs per stage on Unity and 300 per stage on Ski-PTZ-Pose. Unity selects stages by validation 2D loss; Ski uses the fixed final stages. Point-centered uncertainty mixtures are estimated from training residuals rather than supplied detector heatmaps, and no test-reference 3D coordinates enter training or prediction. These differences delimit the comparison with the original MetaPose result. Exact configurations and source/checkpoint hashes are retained in the archived evidence package.
+
+
+\section{Controlled evaluation details}
+\label{sec:controlled_details}
+To evaluate robustness, we mask the input 3D pose streams to simulate missing or unreliable joints caused by occlusion, tracking failure, or upstream pose-estimation errors. We test three masking protocols. Random joint-frame masking independently removes sampled joints at individual frames. Distal-subset masking restricts corruption to the same eight filtered joint indices used by the archived executable protocol. Temporal masking removes contiguous short frame intervals to simulate burst occlusion or tracking failure. We compare the proposed model with canonical average fusion under the same corrupted inputs.
+
+We separately test image-level occlusion by modifying the Unity RGB frames before SAM 3D Body inference. Ground-truth projected 2D joints are used only to place the synthetic occluders; neither those coordinates nor their visibility flags are passed to SAM 3D Body or CanonFuse3D. A selected joint is covered by a square filled with the rounded per-image mean RGB value. Its side length is 12\% of the projected person height, with a minimum of 16 pixels, and the square is clipped to the image boundary. The random protocol selects every joint independently in every source frame, the distal protocol applies the same rule only to the eight archived distal-joint indices, and the temporal protocol selects a fixed fraction of the 15 joints per camera stream and covers each selected joint for one deterministically positioned 10-frame interval. Failed person detections are retained as zero poses with an explicit failure flag rather than removed from evaluation. Detection failure rates average these flags over the affected views after alignment to the fixed camera-pair sequence index, pooling both views for bilateral interventions. They therefore reflect evaluation-frame occurrences rather than unique source-image counts.
+
+\subsection{Perturbation, transfer, and view-group protocols}
+
+
+Every frozen-checkpoint analysis loads the same reference checkpoint (identified in the accompanying evidence manifest) and evaluates all 64,440 camera-pair sequences in the held-out Unity test split. The temporal-offset, sampling-rate, view-angle, and masking experiments use all 15 CanonFuse3D joints. The front-end comparison uses the common 13-joint subset (indices 2--14) shared by all upstream estimators and the model output. Reported errors are in dataset coordinate units after the batch-referenced transform; no conversion to millimeters is applied. The canonicalization code performs no skeleton-scale division, although the subsequent sequence-level similarity alignment can estimate relative scale between the two input streams.
+
+The temporal study shifts the right pose stream using seven offsets from \(-2\) to \(+2\) frames, including half-frame conditions, with linear interpolation and boundary replication. The sampling study uses seven local clock-rate errors from \(-2\%\) to \(+2\%\) around the center frame. Camera-pair geometry is grouped by circular azimuth separation into six 30-degree bins. The pose-stream masking grid crosses three affected-view modes (left, right, both), three patterns (independent random joint-frame, distal-joint, and contiguous temporal), and five ratios (0, 0.25, 0.5, 0.75, 1.0). The image-level study uses the same three affected-view modes and pattern names at ratios 0.5 and 1.0, giving 18 evaluation cells. Six deterministic front-end prediction sets cover 720 camera streams and 17,089 unique RGB frames each; the resulting camera streams are paired according to the unchanged 64,440-sequence test index. Image- and pose-level ratios govern different interventions and are therefore compared as matched protocol labels, not as equal physical occlusion severity. Image-level ratio 1.0 selects all eligible joints under the corresponding pattern; it does not imply that all image pixels are covered.
+
+For front-end transfer, VideoPose3D, PoseFormer, and MotionBERT lift the same Unity ground-truth H36M-17 2D tracks. This deliberately isolates the 2D-to-3D lifting stage rather than comparing image detectors. Outputs are remapped to the CanonFuse3D convention before fusion, and estimator repository commits, checkpoint hashes, manifest hashes, sample counts, and coordinate conventions are recorded in the accompanying evidence manifest.
+
+The following experiments characterize deployment beyond the native two-view, native-front-end condition without changing the CanonFuse3D architecture. Front-end adaptation uses the same fixed Unity train--validation--test split and the common 13-joint subset. VideoPose3D, PoseFormer, and MotionBERT each define two adaptation scopes: the gate and residual heads only, or all CanonFuse3D parameters. A seventh model is fully adapted on a balanced mixture of the native SAM3D stream and all three alternative front ends. Every adaptation uses the training and validation actions only, runs for 20 epochs with learning rate \(10^{-4}\), and selects the checkpoint by validation common-13 MPJPE. The frozen reference checkpoint plus seven adapted models are evaluated on all four front ends, producing an \(8\times4\) matrix of 32 test cells without test-set adaptation.
+
+For N-view scaling, a camera group is proposed from each complete 36-camera action ring by cyclic de-duplication, yielding 180 proposed groups before data-quality filtering. Each accepted group must provide at least 30 frame indices shared by all four cameras. The nested inputs use one, two, three, and four cameras from the same group. Because CanonFuse3D is a dual-view model, the N-view prediction is formed only by composing all unique pairwise forward passes. Canonical averaging provides the non-learned baseline, the mean of pairwise CanonFuse3D predictions is the deployable aggregation, and selection of the best complete pair is reported separately as an oracle upper bound.
+
+For the efficiency analysis, inputs are transferred to the GPU before timing. We execute ten four-view warm-up compositions, synchronize CUDA before and after each timed region, and then measure each of the 44 accepted groups once for (N=2,3,4). The timed serial path includes per-pair canonicalization, all unique pair forwards, and final arithmetic averaging; it excludes data loading, monocular front-end inference, and oracle selection. We report mean, median, and 95th-percentile latency, throughput, and peak allocated GPU memory on one NVIDIA RTX A6000 using 30-frame sequences.
+
+The automatic synchronization experiment is an alignment-only module placed before the frozen CanonFuse3D checkpoint. For its canonical joint-velocity descriptor, every sample and view is transformed independently using that sample's own first frame; this prevents one batch element from defining another element's coordinate system. The module searches right-stream corrections from \(-5\) to \(+5\) frames in half-frame increments. Its confidence threshold is selected exclusively on the validation split by minimum offset MAE and is then frozen. Test offsets are injected at \(-5,-3,-2,-1,-0.5,0,0.5,1,2,3,\text{ and }5\) frames. All three conditions are scored on the same fixed central 20-frame interval, leaving a five-frame margin on each side, so an injected shift cannot change the evaluated pose content. The uncorrected condition uses the shifted stream, automatic uses the accepted estimated correction, and oracle restores the original unperturbed right stream. Exact lag accuracy requires absolute error below 0.25 frames; the auxiliary half-frame criterion is strict, with absolute error below 0.5 frames. A batch-order invariance test is part of the evaluation regression suite.
+
+
+\section{Matched local fusion-module efficiency}
+\label{sec:local_fusion_efficiency}
+\input{tables/fusion_efficiency_local.tex}
+Table~\ref{tab:local_fusion_efficiency} supplements the existing N-view deployment timing with a matched local-model comparison. We use the archived Unity weights, fixed synthetic inputs of shape $(1,30,15,3)$ for each view, one RTX A6000, FP32 with TF32 disabled, four CPU threads, 20 warm-up calls, and 100 timed forward calls with CUDA synchronization before and after each call. The timed region begins with already canonicalized GPU-resident inputs and includes internal pose alignment for CanonFuse3D, but excludes raw-pose canonicalization, data transfer/loading, and monocular front-end inference. It therefore has a different boundary from the existing N-view serial timing and does not replace those measurements.
+
+The MAC column counts matrix products and convolutions using operator-dispatch formulas, with one multiply--accumulate counted as two FLOPs. The corresponding counted FLOPs are 247.959, 10.099, and 61.747 million, respectively. SVD/determinant, normalization, nonlinearities, and elementwise operations are excluded, so these are not complete end-to-end FLOP counts. The timing includes these operations where executed. CanonFuse3D has fewer parameters than SmoothNet but higher fusion latency than both local baselines; parameter count alone does not characterize deployment cost. External adaptations are evaluated separately in Section~\ref{sec:external_fusion_efficiency}, retaining their method-specific inputs and computation.
+
+
+\FloatBarrier
+\section{Gate ablation and frozen-checkpoint diagnostics}
+\label{sec:gate_audit}
+The controlled retraining study uses the original Unity action-disjoint partition: 193,320 training, 128,880 validation, and 64,440 test windows, each with 30 frames and 15 joints. The full, fixed-gate, and no-output-residual variants start from the same seed-42 parameter initialization and use 100 epochs, AdamW (learning rate $10^{-3}$, weight decay $10^{-2}$), no scheduler, FP32 with TF32 disabled, and the original fusion objective. Training and validation batch size is 4096; training drops the final incomplete batch (192,512 windows per epoch), while validation includes every window. Each model is selected by minimum full-validation all-15 MPJPE; test evaluation uses batch size 256 and reports common-13 metrics in the main ablation table. Selected epochs are 91, 100, and 95 respectively (one-based). No test metric controls checkpoint selection. There is one run per configuration, not a seed or fold ensemble.
+
+Fixing the gate to 0.5 disables gate-head gradients; removing the output residual disables residual-head gradients without changing the input difference features. The original implementation's similarly named difference-feature switch is not used. With both fixed gating and no output residual, the output is the arithmetic mean of the two already aligned candidates and does not depend on learned parameters; its score is taken from the deterministic frozen evaluation. This differs from the unaligned canonical average. The archived main-benchmark checkpoint remains unchanged.
+
+\input{tables/gate_frozen_interventions.tex}
+
+The frozen study uses each dataset's archived checkpoint and full test index, retaining the original canonicalization, batch order, and all samples. Interventions replace the gate by 0.5, 1, or 0, and independently remove the output residual; the original gate/residual path and canonical averaging are included as controls. Candidate weights are not raw-camera selection weights. Corruptions zero a complete raw input stream before canonicalization, either throughout a window or switching streams between frames 15 and 16. These deliberately severe conditions can alter the canonical batch anchor and make the alignment input degenerate, so they measure the coupled pipeline response rather than an isolated reliability mechanism or physical occlusion. The reference is never altered. Zero and degenerate predictions are retained; PA alignment follows the declared degeneracy rule.
+
+On clean Unity, the mean left-candidate weight is 0.6804; corresponding means for left zero, right zero, L$\to$R, and R$\to$L are 0.5584, 0.5448, 0.5903, and 0.4619. Ski-PTZ-Pose gives 0.5082, 0.4945, 0.4939, 0.5357, and 0.4612. These means do not imply that the gate approaches 0 or 1 when an original stream fails. Main-text histograms and condition/joint means aggregate the entire Unity split. The examples below use indices 0 and 1 fixed before inspection, not selected successful switches. Compact evidence retains every condition's MPJPE, PA-MPJPE, acceleration error, counts, histograms, and candidate diagnostics.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/journal/gate_diagnostics_exemplars.pdf}
+\caption{Frame--joint weights for the first two fixed Unity test windows under all five frozen-checkpoint conditions. Dashed lines mark the midpoint switch. Every panel uses the same 0--1 color scale. Candidate alignment and canonicalization are also affected by raw-pose zeroing; a weight pattern is not evidence of automatic recovery.}
+\label{fig:gate_fixed_examples}
+\end{figure}
+
+\FloatBarrier
+\section{External-adaptation efficiency audit}
+\label{sec:external_fusion_efficiency}
+\input{tables/fusion_efficiency_external.tex}
+We reload the exact Unity weights underlying the canonical external-method rows and use the first archived test window, fixed before timing, without reference-pose input. Measurements run sequentially on an otherwise idle RTX A6000 (GPU 0). GPU 1 remains occupied by an unrelated job, so the host is not fully isolated. Setup, checkpoint loading, graph tracing, disk I/O, upstream RGB inference, and final metric computation are excluded. All entries are median wall-clock latency per 30-frame work unit, not per-frame throughput. They retain method-specific inputs and necessary computation rather than imposing an artificial common architecture or precision.
+
+For STRIDE~\cite{lal2025stride}, the input is the prepared canonical average with 17 actual predicted points. The full call resets the released prior and AdamW state, performs the fixed 30 gradient updates, applies flip-averaged inference, restores the observed root, and returns the prediction to CPU. We use three full warm-up calls and ten timed repetitions; every repetition resets independently. The 12.095~ms inference-only entry includes both flip forwards after adaptation but omits the reset and optimization; it cannot substitute for the 755.513~ms complete adaptation call.
+
+For DeciWatch~\cite{zeng2022deciwatch}, timing starts at the prepared common-13 canonical average. The existing adapter repeats the last frame to 31 tokens, calls the official network with observed token positions 0/10/20/30, and crops the recovered sequence to 30 frames. Both official output heads execute; no necessary recovery step is removed. Input canonicalization and averaging are excluded, as they precede the prepared-input boundary. STRIDE and DeciWatch use PyTorch 2.11, FP32 with TF32 disabled, four CPU threads, and CUDA synchronization around each timed call. Their pure forward entries use 20 warm-up and 100 timed calls.
+
+MetaPose~\cite{usman2022metapose} retains its three learned FP64 stages in TensorFlow 2.15.1, with FP32 S1 initialization, eight intra-op and two inter-op CPU threads. Thirty independent two-view frames are processed as one batch, not as a temporal network. The 10.666~ms solver entry starts from prepared S1 states and point-mixture tasks. The 18.927~ms path additionally includes predicted weak-projection fitting, S1 initialization, point-mixture construction, projection, and left-camera gauge restoration. Archived native 3D is recovered from the stored prediction-only scale/shift, and estimated 2D is provided in its stored box-normalized units; no test labels or supplied calibration enter this computation. The CPU--GPU transfers required by the NumPy/TensorFlow wrapper are included. Both entries use 20 warm-ups and 100 repetitions; materializing the NumPy outputs synchronizes device execution.
+
+Checkpoint hashes match the archived selections. Recomputed first-window predictions differ from the saved arrays by 0 for STRIDE, $2.07\times10^{-4}$ for DeciWatch, and $4.03\times10^{-7}$ for MetaPose (maximum absolute coordinate difference, consistent with batch/framework floating-point variation). Parameter counts cover the retained learned modules; storage counts parameter bytes only, excluding optimizer state, temporary test-time copies, and framework overhead. External-method FLOPs are not claimed because this audit does not provide complete, comparable counts for gradient-based adaptation and the TensorFlow inverse solver. The differing joint counts, inputs, numerical precision, host transfers, and optimization contracts prohibit interpreting the table as a common-input speed ranking.
+
+\input{sections/c07_supplement.tex}
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+\end{document}

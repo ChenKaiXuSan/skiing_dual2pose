@@ -1,0 +1,23 @@
+\begin{table}[t]
+\centering
+\caption{Joint conventions of the two quantitative datasets. The 15-joint skeleton follows the filtered SAM 3D Body output and the Unity avatar rig. The Ski-PTZ-Pose annotations, like the H36M-style lifting front ends, do not provide the two eye landmarks and are therefore evaluated on the common 13-joint subset.}
+\label{tab:joint_convention}
+\small
+\setlength{\tabcolsep}{8pt}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Joint & Unity avatar & Ski-PTZ-Pose \\
+\midrule
+Left / right eye & \checkmark & -- \\
+Left / right shoulder & \checkmark & \checkmark \\
+Left / right elbow & \checkmark & \checkmark \\
+Left / right hip & \checkmark & \checkmark \\
+Left / right knee & \checkmark & \checkmark \\
+Left / right ankle & \checkmark & \checkmark \\
+Right / left hand & \checkmark & \checkmark \\
+Neck & \checkmark & \checkmark \\
+\midrule
+Evaluated joints & all 15 & common 13 \\
+\bottomrule
+\end{tabular}
+\end{table}

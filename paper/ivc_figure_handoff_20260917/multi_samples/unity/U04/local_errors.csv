@@ -1,0 +1,16 @@
+joint,average_error,fused_error,reference_kind,unit
+Eye L,0.8508609,0.45932302,Unity avatar GT,dataset canonical coordinate units
+Eye R,0.8308959,0.46119475,Unity avatar GT,dataset canonical coordinate units
+Shoulder L,0.7624476,0.437579,Unity avatar GT,dataset canonical coordinate units
+Shoulder R,0.66389245,0.37961742,Unity avatar GT,dataset canonical coordinate units
+Elbow L,0.56568205,0.30429602,Unity avatar GT,dataset canonical coordinate units
+Elbow R,0.5387741,0.2916251,Unity avatar GT,dataset canonical coordinate units
+Hip L,0.23010929,0.21327507,Unity avatar GT,dataset canonical coordinate units
+Hip R,0.29630148,0.17287394,Unity avatar GT,dataset canonical coordinate units
+Knee L,0.397227,0.16007331,Unity avatar GT,dataset canonical coordinate units
+Knee R,0.6302651,0.063277,Unity avatar GT,dataset canonical coordinate units
+Ankle L,0.7334031,0.41535434,Unity avatar GT,dataset canonical coordinate units
+Ankle R,1.0717957,0.22903098,Unity avatar GT,dataset canonical coordinate units
+Wrist R,0.61196274,0.23933017,Unity avatar GT,dataset canonical coordinate units
+Wrist L,0.5535604,0.38421738,Unity avatar GT,dataset canonical coordinate units
+Neck,0.67543924,0.347092,Unity avatar GT,dataset canonical coordinate units

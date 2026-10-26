@@ -1,0 +1,12 @@
+{
+  "status": "complete_full_test",
+  "conditions": [
+    "clean",
+    "left_zero",
+    "right_zero",
+    "switch_left_to_right",
+    "switch_right_to_left"
+  ],
+  "samples": 30,
+  "elapsed_seconds": 0.37300489301560447
+}

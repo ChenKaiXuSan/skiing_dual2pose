@@ -1,0 +1,17 @@
+{
+  "source_url": "https://raw.githubusercontent.com/facebookresearch/VideoPose3D/main/common/loss.py",
+  "source_sha256": "0c5047fc2b098c01ece2b972f32fac016c70c28b019349c8606f347b0b0f31eb",
+  "nondegenerate_formula_parity": {
+    "13": {
+      "official": 1.4100500579895257,
+      "computed": 1.4100500579895257,
+      "absolute_difference": 0.0
+    },
+    "15": {
+      "official": 1.4493522665173708,
+      "computed": 1.4493522665173708,
+      "absolute_difference": 0.0
+    }
+  },
+  "status": "verified"
+}

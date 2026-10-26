@@ -1,0 +1,72 @@
+{
+  "status": "complete",
+  "pid": 2268603,
+  "started_utc": "20260916T125950Z",
+  "gpu": 0,
+  "timeout_seconds_per_stage": 172800.0,
+  "smoke": {
+    "root": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_review_revision_20260916/occluded_geometry_smoke_v2",
+    "protocol_sha256": "eb2b672d879246e17a5badb2faa274a3fefee7b6e28a6f972a474da0bf5f497a",
+    "sample_count": 1,
+    "all_seven_conditions_valid": true
+  },
+  "stages": [
+    {
+      "name": "frontend",
+      "command": [
+        "/home/kaixu_chen/miniforge3/envs/dual2pose/bin/python",
+        "-u",
+        "-m",
+        "dual2pose.eval.run_matched_occlusion_frontend",
+        "--split",
+        "test",
+        "--output",
+        "logs/ivc_review_revision_20260916/occluded_geometry_full/frontend",
+        "--gpu",
+        "0"
+      ],
+      "log": "logs/ivc_review_revision_20260916/occluded_geometry_full/frontend_20260916T125950Z.log",
+      "status": "complete",
+      "returncode": 0,
+      "progress": {
+        "status": "complete",
+        "conditions": [
+          "clean",
+          "random_0p5",
+          "random_1"
+        ],
+        "elapsed_seconds": 50534.08438130404,
+        "pid": 2268683
+      }
+    },
+    {
+      "name": "evaluation",
+      "command": [
+        "/home/kaixu_chen/miniforge3/envs/dual2pose/bin/python",
+        "-u",
+        "-m",
+        "dual2pose.eval.evaluate_occluded_geometry",
+        "--frontend",
+        "logs/ivc_review_revision_20260916/occluded_geometry_full/frontend",
+        "--output",
+        "logs/ivc_review_revision_20260916/occluded_geometry_full/evaluation",
+        "--device",
+        "cuda:0"
+      ],
+      "log": "logs/ivc_review_revision_20260916/occluded_geometry_full/evaluation_20260916T125950Z.log",
+      "status": "complete",
+      "returncode": 0,
+      "progress": {
+        "status": "complete",
+        "conditions": 7,
+        "unique_metric_cells": 77,
+        "display_cells_including_camera_invariant_reuse": 105,
+        "sample_count_per_cell": 64440,
+        "split": "test",
+        "elapsed_seconds": 1610.5476393569843,
+        "pid": 2696717
+      }
+    }
+  ],
+  "elapsed_seconds": 52185.046740511025
+}

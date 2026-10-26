@@ -1,0 +1,108 @@
+{
+  "status": "complete_full_test",
+  "variant": "full",
+  "metrics": {
+    "all15": {
+      "mpjpe": 0.1463393785483952,
+      "acceleration_error": 0.029163825875686035,
+      "sample_count": 64440,
+      "point_count": 28998000,
+      "acceleration_point_count": 27064800,
+      "pa_mpjpe": 0.06428275836570095,
+      "pa_point_count": 28998000,
+      "pa_frame_count": 1933200,
+      "pa_degenerate_prediction_frames": 0
+    },
+    "common13": {
+      "mpjpe": 0.1463910800932388,
+      "acceleration_error": 0.029525479758549755,
+      "sample_count": 64440,
+      "point_count": 25131600,
+      "acceleration_point_count": 23456160,
+      "pa_mpjpe": 0.06733664194816687,
+      "pa_point_count": 25131600,
+      "pa_frame_count": 1933200,
+      "pa_degenerate_prediction_frames": 0
+    }
+  },
+  "selected_epoch": 90,
+  "checkpoint_sha256": "d30c05096f32ac7c7b5ffb52633c93ffecf11651b614a3de143a617c5d866d4e",
+  "test_manifest": {
+    "dataset": "unity",
+    "split": "test",
+    "sample_count": 64440,
+    "time_window": 30,
+    "num_joints": 15,
+    "representation": "raw_pre_batch_canonicalization",
+    "index": "/home/kaixu_chen/skiing/data/skiing_unity_dataset/index_mapping/use_layer_camera_filter_disabled/camera_pairs_by_action_folds/fold_00.json",
+    "index_sha256": "6a9cdbdcdb9b9d61516b573d0e1236c7d46d33d7cceb9c63c65ba11a6d5cfde7",
+    "config_sha256": "b9501b3bfbbc91fddf404d456023915c081bbe0fcbe64db0924c76bafc2f5fc8",
+    "export_code_sha256": "33bb094b0d6fc4016d0f597a3322ebe3c61d2198d8f271b9011cf8507c9abf97",
+    "files": {
+      "left.npy": "3e6d040e2c8723388411175c90501d89195ca2335bd6fa7ff24b602352def154",
+      "right.npy": "4133cf641a83e921ac14d8bf52534197acccded45ce66f2c22abd505cb51df32",
+      "target.npy": "5bca76ac4ebd8a5bb836cb352cb9f6539bbb8a72617c560beabf4b7590ab48bc",
+      "frames.npy": "6a33ce1c9992646a574e14969fad2b721d269c7f36732f7271f9b0f65023fcd1",
+      "samples.jsonl": "9c6948d676f49837840e4f2efeaa5c46932458a58cf3e51beb72d95ef2121ffa"
+    }
+  },
+  "configuration": {
+    "variant": "full",
+    "seed": 42,
+    "epochs": 100,
+    "batch_size": 4096,
+    "validation_batch_size": 4096,
+    "evaluation_batch_size": 256,
+    "train_drop_last": true,
+    "validation_drop_last": false,
+    "initialization": "from scratch; same seed and complete initial parameter layout",
+    "loss": "archived full fusion objective; fixed-gate regularizers remain constants",
+    "selection": "minimum full-validation all15 MPJPE",
+    "optimizer": "AdamW lr=0.001 weight_decay=0.01; no scheduler",
+    "dtype": "float32; TF32 disabled",
+    "smoke_steps": 0,
+    "train_manifest": {
+      "dataset": "unity",
+      "split": "train",
+      "sample_count": 193320,
+      "time_window": 30,
+      "num_joints": 15,
+      "representation": "raw_pre_batch_canonicalization",
+      "index": "/home/kaixu_chen/skiing/data/skiing_unity_dataset/index_mapping/use_layer_camera_filter_disabled/camera_pairs_by_action_folds/fold_00.json",
+      "index_sha256": "6a9cdbdcdb9b9d61516b573d0e1236c7d46d33d7cceb9c63c65ba11a6d5cfde7",
+      "config_sha256": "b9501b3bfbbc91fddf404d456023915c081bbe0fcbe64db0924c76bafc2f5fc8",
+      "export_code_sha256": "33bb094b0d6fc4016d0f597a3322ebe3c61d2198d8f271b9011cf8507c9abf97",
+      "files": {
+        "left.npy": "4fb5300822c6ecf7da1ec13aabeed9b9d54ab3fbe6b4b00fa099760a023dfb57",
+        "right.npy": "b93ce495e249237704d31940425a80e0001fbcc54187d1d2d27a81aa712c58ea",
+        "target.npy": "bb05f63fe8b7a75390ca3ed272a8029c7e034f5b8487d24da6624079a7bb509a",
+        "frames.npy": "4d13f2da7fc4519a53b82e45bc51d8de3d6023a897ac6718cb1e38efd788b441",
+        "samples.jsonl": "8c84ab1ec0cdaa1542a1b8386219fa2c315dd69e815ad4e0446c361ae44688c2"
+      }
+    },
+    "val_manifest": {
+      "dataset": "unity",
+      "split": "val",
+      "sample_count": 128880,
+      "time_window": 30,
+      "num_joints": 15,
+      "representation": "raw_pre_batch_canonicalization",
+      "index": "/home/kaixu_chen/skiing/data/skiing_unity_dataset/index_mapping/use_layer_camera_filter_disabled/camera_pairs_by_action_folds/fold_00.json",
+      "index_sha256": "6a9cdbdcdb9b9d61516b573d0e1236c7d46d33d7cceb9c63c65ba11a6d5cfde7",
+      "config_sha256": "b9501b3bfbbc91fddf404d456023915c081bbe0fcbe64db0924c76bafc2f5fc8",
+      "export_code_sha256": "33bb094b0d6fc4016d0f597a3322ebe3c61d2198d8f271b9011cf8507c9abf97",
+      "files": {
+        "left.npy": "0196b340478696a15d96d19ddae18d927acfc168d619da993905fcdd7d573275",
+        "right.npy": "ca7a6152e53ff16a2f354a857ab88cf999d37577decbb047461ca85859faed55",
+        "target.npy": "d972e3ec2ac3e5d839299d298a67550ee883b45d02f812cf0abe496ffcbefb05",
+        "frames.npy": "cb82255472e09a26450a118f56ac85aa6083af582bc5b3a4f8cae7da51315241",
+        "samples.jsonl": "025483259bfe6797e48c46f0c2a34e698b744420bb6b49994e28727c3fe257dd"
+      }
+    },
+    "source_sha256": {
+      "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/dual2pose/experiments/run_gate_ablation.py": "5f16b59f49ba61e2b10dca805078f7c3290c973b8e2b66f1d8c76d885b06e3e3",
+      "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/dual2pose/models/crossview_fusion.py": "ab27fcb446d10e8a80fb2f86d00cc3fe1143ef95cb6a48d4d8b7560588097ffd",
+      "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/dual2pose/eval/main_baseline_data.py": "c438e7eecad436618588121572037c7ff3d71d96a23371ac0306510d7394d393"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+\begin{table*}[!htb]
+\centering
+\caption{Data sources used in this study, with their content, scale, split, and reference regimes. Split counts are action-disjoint camera-pair sequences for Unity and camera-pair entries for Ski-PTZ-Pose; the author-collected videos are not used for training or quantitative evaluation.}
+\label{tab:dataset_summary}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.125\linewidth}
+                >{\raggedright\arraybackslash}p{0.18\linewidth}
+                >{\raggedright\arraybackslash}p{0.18\linewidth}
+                rrr
+                >{\raggedright\arraybackslash}p{0.17\linewidth}@{}}
+\toprule
+Data source & Content & Scale & \multicolumn{3}{c}{Split} & Reference / role \\
+\cmidrule(lr){4-6} & & & Train & Val & Test & \\
+\midrule
+Unity synthetic & Rendered dual-view videos, monocular 3D pose streams, and the avatar skeleton & 2 avatars \(\times\) 12 actions (24 sequences of 20--65 frames); 180 synchronized views per action (5 layers \(\times\) 36 azimuths) & 193,320 & 128,880 & 64,440 & Avatar 3D skeleton, 15 joints; training, testing, and all controlled studies \\
+\midrule
+Ski-PTZ-Pose & Real giant-slalom videos with 2D/3D annotations and PTZ calibration metadata & 12 sequences; 6 PTZ cameras; about 10K images & 150 & -- & 30 & Constructed canonical reference from the annotations, 13 joints; real-world evaluation \\
+\midrule
+Author-collected videos & Indoor and outdoor dual-view recordings with estimated pose streams & 6 recordings (12 videos); 360--2,609 frames per view & -- & -- & -- & No metric 3D reference; qualitative deployment only \\
+\bottomrule
+\end{tabular}
+\end{table*}

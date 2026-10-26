@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "assets": 20,
+  "vector_asset_sets": 18,
+  "unmodified_rgb_images": 2,
+  "brief_pdf_pages": 5,
+  "checks": [
+    "PNG decode",
+    "SVG XML parse",
+    "DOCX ZIP/XML parse",
+    "CSV/NPZ gate exact equality",
+    "output reconstruction equality",
+    "finite arrays",
+    "PDF required text",
+    "five rendered PDF pages visually inspected",
+    "output comparison, gate, rotation, RGB, body reference visually inspected",
+    "manuscript source hash unchanged"
+  ],
+  "source_cache_scope": "Source cache manifest matches frozen record; first 256 values used for canonicalization; entire large cache not rehashed.",
+  "base_parity_max_abs_error": {
+    "base_l": 3.5762786865234375e-07,
+    "base_r": 4.76837158203125e-07
+  }
+}

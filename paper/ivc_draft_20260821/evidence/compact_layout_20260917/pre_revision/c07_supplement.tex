@@ -1,0 +1,46 @@
+\FloatBarrier
+\section{Matched RGB occlusion and calibration quality}
+\label{sec:c07_matched_geometry}
+
+\subsection{Matched observations and fixed evaluation}
+The seven conditions are clean and random ratio 0.5/1.0 applied to the left, right, or both images. The deterministic seed-42 patch rule, image-mean fill, and source-frame identities are unchanged from the original RGB masking study. Three prediction sets (clean, random 0.5, random 1.0) each cover 720 camera streams and 17,089 unique source images. Each image is processed once per set, with paired 2D and 3D outputs taken from the same largest-area detected person. SAM3D provides its projected 2D keypoints directly in original-image pixels; no second crop rescaling is applied. Ground-truth 2D positions are used only to place patches, never as triangulation observations.
+
+The original ordered test cohort contains 64,440 windows of 30 frames. Repeated selected frame positions remain repeated. Each method therefore contributes 1,933,200 evaluated frames and 25,131,600 common-13 points. The cohort is inherited from the original available-frame index, not selected according to successful detection after corruption. We retain the original batch size of 256 and independently canonicalize each prediction/reference on all 15 joints before selecting indices 2--14. This preserves the batch-referenced protocol, including its limitations, rather than introducing a sample-independent transform. All models use their archived weights; neither checkpoint selection nor the 25-pixel reprojection threshold is retuned on corrupted test data. A fixed first validation pair checks implementation only.
+
+DLT follows the classical linear formulation~\cite{hartley2004multiple}. Reprojection-gated DLT and the residual MLP are study-specific extensions, not reproductions of a named learned-triangulation architecture. The MLP receives the canonical DLT pose, $\log(1+e/25)$ for each reprojection error $e$, and per-joint validity, and predicts an additive correction independently per frame. CanonFuse3D and canonical averaging receive only predicted 3D. Matched source images therefore do not imply identical input information.
+
+These paired caches were generated separately from the earlier experiments. The clean common-13 CanonFuse3D MPJPE is 0.155308, whereas the archived primary comparison is 0.155069; the earlier all-15 image-occlusion results also use a different reported joint subset. We preserve those tables and use the newly measured clean control throughout this matched study, rather than splicing archived clean rows into its corrupted-input comparisons.
+
+\subsection{Calibration and missing-data conventions}
+Only the supplied right-camera extrinsics are perturbed. For intrinsic matrix $K_R$, world-to-image projection $P_R$, and a positive local-$y$ rotation $Q_y(\theta)$, we use
+\[
+ P'_R=K_R Q_y(\theta)K_R^{-1}P_R,\qquad
+ \theta\in\{0^\circ,1^\circ,3^\circ\}.
+\]
+The right camera center remains fixed because its homogeneous null vector is unchanged, and the left projection is untouched. Zero degrees recovers the original projection exactly. These predeclared angles are synthetic sensitivity settings, not estimates of real calibration errors. Images, 2D/3D front-end predictions, intrinsics, and model weights are otherwise unchanged. The two pose-only methods reuse their identical scores across angles. There are 77 independently computed method/condition/angle cells, expanded to 105 displayed cells; the reused rows are not additional replications.
+
+No-person detections produce zero 3D, NaN 2D, and explicit false 2D validity. NaN is not interpreted as pixel $(0,0)$. DLT points without a finite solution are set to zero before the unchanged canonicalization and are counted as invalid, not recovered. Nonfinite reprojection features are zero-filled with validity retained for the MLP. The gated baseline interpolates only finite DLT points that fail the reprojection test; if an entire joint track has no accepted anchor, it retains finite ungated DLT. Missing 2D observations are not repaired by this interpolation rule. All failed windows remain in the errors, and neither fallback uses test ground truth. PA evaluation alone fits the declared per-frame similarity transform to the reference.
+
+\subsection{Full metric matrix}
+Tables~\ref{tab:c07_full_0}--\ref{tab:c07_full_3} retain all methods, conditions, and metrics, including cases where CanonFuse3D loses to averaging or the learned geometric control. At $1^\circ$, DLT-residual still has the lowest MPJPE in six conditions. At $3^\circ$, CanonFuse3D leads MPJPE and PA-MPJPE on clean and ratio-0.5 inputs, while averaging leads both metrics on the three ratio-1.0 inputs. This is a conditional trade-off rather than universal superiority. Small numerical differences, such as clean MPJPE 0.1548 versus 0.1553 at $1^\circ$, are not claims of statistical equivalence or significance.
+
+\input{tables/c07_full_0.tex}
+\FloatBarrier
+\input{tables/c07_full_1.tex}
+\FloatBarrier
+\input{tables/c07_full_3.tex}
+\FloatBarrier
+
+\subsection{Coverage, reference-frame failures, and degeneracy}
+Unique-image detection failures are 1/17,089 for clean, 583/17,089 (3.41\%) for ratio 0.5, and 6,296/17,089 (36.84\%) for ratio 1.0. Table~\ref{tab:c07_coverage} instead counts occurrences after pairing and temporal selection; these denominators must not be mixed. At $0^\circ$, the DLT-invalid common-13 point fractions equal the corresponding either-view failure fractions at the displayed precision. Full invalid-point, gate-acceptance, interpolation, and fallback counts are retained in the accompanying evidence JSON.
+
+\input{tables/c07_coverage.tex}
+
+The existing canonicalization uses the first sample's first frame to define a reference for the entire batch. A zero reference pose can therefore collapse other predictions in that batch, including frames with detected observations. In bilateral ratio 1.0, 38,584 windows (59.88\%) lie in a batch with missing geometric reference joints. Left and right failure rates also differ (40.51\% and 32.22\% of their pair--frame occurrences), so unequal left/right errors do not isolate an architectural view preference.
+
+\input{tables/c07_degeneracy.tex}
+
+Table~\ref{tab:c07_degeneracy} defines collapsed configurations by the same centered squared-norm threshold used in PA evaluation. Such predictions are mapped to the target centroid during PA fitting and retained. The residual MLP's zero degeneracy rate only means it produces noncollapsed outputs, not that it reconstructs all missing poses correctly. Gated DLT's low acceleration error of 0.0472 in bilateral ratio 1.0 coexists with 70.05\% degenerate frames and must not be read as the best motion recovery. Likewise, when one canonical stream is zero, averaging gives half the remaining stream and PA scaling can remove that factor; a low aligned error does not itself demonstrate missing-view completion.
+
+The experiment measures a fixed-checkpoint system response that combines front-end failures, explicit fallback, batch-reference effects, and the prediction module. It neither isolates a causal gate failure nor validates robustness to natural occluders or alternative front ends. All conditions share the fixed Unity partition, camera streams, and many source images. They are not independent training runs, and no multi-seed interval, cross-fold conclusion, or new significance test is claimed.
+\FloatBarrier

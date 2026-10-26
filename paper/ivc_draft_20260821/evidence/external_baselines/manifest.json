@@ -1,0 +1,139 @@
+{
+  "archive_date": "2026-09-13",
+  "file_count": 22,
+  "files": [
+    {
+      "archive_path": "provenance/deciwatch_ski_config.json",
+      "bytes": 1278,
+      "sha256": "575584e3556018d8795bc2f7aafe70cb39fc7f46be1da072f45959ffe48c843e",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/deciwatch_ski_official_protocol_full_seed4321/config.json"
+    },
+    {
+      "archive_path": "provenance/deciwatch_ski_report.json",
+      "bytes": 2812,
+      "sha256": "a3c4283140d3d070f0fe91e1ad2b73247faa6d63d4683c3dc54f1a00eebe53b5",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/deciwatch_ski_official_protocol_full_seed4321/report.json"
+    },
+    {
+      "archive_path": "provenance/deciwatch_unity_config.json",
+      "bytes": 1417,
+      "sha256": "21c16ae3545eec11c78ddfa395fd8df66554caa3e441ac51303e4b70b4916044",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/deciwatch_unity_official_protocol_full_seed4321/config.json"
+    },
+    {
+      "archive_path": "provenance/deciwatch_unity_report.json",
+      "bytes": 2869,
+      "sha256": "ff5ba98c0dde6600123551263555706ac3a9250c48555aa6c89d79cdb2defd68",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/deciwatch_unity_official_protocol_full_seed4321/report.json"
+    },
+    {
+      "archive_path": "provenance/metapose_ski_config.json",
+      "bytes": 1582,
+      "sha256": "b918c4d7b9f95f6ff297f7ed08deae86dbcafff42f345067db78333ca900e8b5",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/metapose_ski_full_seed42/config.json"
+    },
+    {
+      "archive_path": "provenance/metapose_ski_progress.json",
+      "bytes": 128,
+      "sha256": "b313c34a4d5d74351bc8ecf39c656e5165bc8bd4a569a7291e6a770a9cd35ebe",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/metapose_ski_full_seed42/progress.json"
+    },
+    {
+      "archive_path": "provenance/metapose_ski_report.json",
+      "bytes": 1560,
+      "sha256": "b1a7fa54db639122aef1d8fee484066624d721307b295384050a9b46ad96a278",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/metapose_ski_full_seed42/report.json"
+    },
+    {
+      "archive_path": "provenance/metapose_ski_selected_stages.json",
+      "bytes": 522,
+      "sha256": "068fe0743e7bd99c0942bfa7dd7db2b99aaaeb06a2be54147c4baaf402c54252",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/metapose_ski_full_seed42/selected_stages.json"
+    },
+    {
+      "archive_path": "provenance/metapose_unity_config.json",
+      "bytes": 1733,
+      "sha256": "c31620b5b604c936bf77bce905699fb0198dbbc04c4d89f8398caedad5996ccc",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/metapose_unity_full_seed42/config.json"
+    },
+    {
+      "archive_path": "provenance/metapose_unity_progress.json",
+      "bytes": 135,
+      "sha256": "a4d46b18b6c31084a99715430090a84585c7b829f3bd2f34dcba99239161fabd",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/metapose_unity_full_seed42/progress.json"
+    },
+    {
+      "archive_path": "provenance/metapose_unity_report.json",
+      "bytes": 1661,
+      "sha256": "b84e44fa853047c4820222b44ecfdc47d7e79e4c9e2dfbe64b98b92041f417ee",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/metapose_unity_full_seed42/report.json"
+    },
+    {
+      "archive_path": "provenance/metapose_unity_selected_stages.json",
+      "bytes": 531,
+      "sha256": "631be612f8df039d11bd57916dbb0f248788921d304ff09e3d906922eaf8a096",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/metapose_unity_full_seed42/selected_stages.json"
+    },
+    {
+      "archive_path": "provenance/stride_ski_report.json",
+      "bytes": 4903,
+      "sha256": "00bfb91345636e47bddfb62d1cb9e7be2bd78cda6e325806f3f20c17e4bbf648",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260910/stride_ski_test_full_seed42/report.json"
+    },
+    {
+      "archive_path": "provenance/stride_unity_report.json",
+      "bytes": 5003,
+      "sha256": "dc3e2f186afba45bff59724576e909865e3bcce86098121fa392ad02a736834d",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260910/stride_unity_test_full_seed42/report.json"
+    },
+    {
+      "archive_path": "results/deciwatch_ski_metrics.json",
+      "bytes": 2248,
+      "sha256": "52684dc02672b0977f8a7cecd3bea7e5ba81a899febce5d2098b714d6f01fbd0",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/deciwatch_ski_official_protocol_full_seed4321/metrics.json"
+    },
+    {
+      "archive_path": "results/deciwatch_unity_metrics.json",
+      "bytes": 2296,
+      "sha256": "32b7aab84cea89f33ea8347c55d3c39437b5b7b23d0854b321780c77eed20c06",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/deciwatch_unity_official_protocol_full_seed4321/metrics.json"
+    },
+    {
+      "archive_path": "results/metapose_ski_metrics.json",
+      "bytes": 2185,
+      "sha256": "706db0d37c399a2eb6765460abbe565df960031d7c838176baf54d141a05968b",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/metapose_ski_full_seed42/metrics.json"
+    },
+    {
+      "archive_path": "results/metapose_unity_metrics.json",
+      "bytes": 2234,
+      "sha256": "eaf322b40f5b3c1a59d6deda4269352b7958bad5257cf9095bd4177ddca5870b",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260911/metapose_unity_full_seed42/metrics.json"
+    },
+    {
+      "archive_path": "results/native_ski_scores.json",
+      "bytes": 5242,
+      "sha256": "e95c9caba8daf5473727147aff1b96b85efdb35153e321511f51deee125b4699",
+      "source_path": "logs/ivc_mmsports_extension/native_output_comparison/20260911/ski/scores.json"
+    },
+    {
+      "archive_path": "results/native_unity_scores.json",
+      "bytes": 15046,
+      "sha256": "d61a6cb6c3690b587ec927fb6dfc2a1794ec99f9660008086a76bc4a9c15efe7",
+      "source_path": "logs/ivc_mmsports_extension/native_output_comparison/20260911/unity/scores.json"
+    },
+    {
+      "archive_path": "results/stride_ski_metrics.json",
+      "bytes": 1180,
+      "sha256": "22f704faf7252cd62a183debf30e1f9caeced91f92e45212c713bbd2e158d72e",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260910/stride_ski_test_full_seed42/metrics.json"
+    },
+    {
+      "archive_path": "results/stride_unity_metrics.json",
+      "bytes": 1211,
+      "sha256": "dc511be296ddad4fa217dabf0930a1c32e0b7c98686fee53bba2683845e605e9",
+      "source_path": "logs/ivc_mmsports_extension/external_baselines/20260910/stride_unity_test_full_seed42/metrics.json"
+    }
+  ],
+  "status": "complete"
+}

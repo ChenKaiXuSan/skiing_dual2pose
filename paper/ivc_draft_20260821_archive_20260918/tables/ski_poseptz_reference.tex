@@ -1,0 +1,34 @@
+\begin{table}[t]
+\centering
+\caption{Expanded Ski-PTZ-Pose comparison on all 30 fixed test camera-pair sequences. Lower values are better for all errors. Bold identifies the lowest value within each input group.}
+\label{tab:ski_poseptz_reference}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Method & MPJPE $\downarrow$ & PA-MPJPE $\downarrow$ & Accel. $\downarrow$ \\
+\midrule
+\multicolumn{4}{l}{\textit{3D pose inputs only}} \\
+\midrule
+Left canonical & 0.3552 & 0.1864 & 0.0531 \\
+Right canonical & 0.4462 & 0.1754 & 0.0455 \\
+Canonical average & 0.3487 & 0.1877 & 0.0392 \\
+Aligned average & 0.3537 & 0.1718 & 0.0381 \\
+3D quality-weighted fusion & 0.3499 & 0.1875 & 0.0385 \\
+Cross-view MLP & \textbf{0.1423} & \textbf{0.1045} & 0.0315 \\
+Temporal fusion (TCN) & 0.1581 & 0.1144 & 0.0411 \\
+Avg. + SmoothNet~\cite{zeng2022smoothnet} & 0.3227 & 0.1924 & \textbf{0.0151} \\
+CanonFuse3D & 0.1794 & 0.1269 & 0.0311 \\
+\midrule
+\multicolumn{4}{l}{\textit{Additional estimated 2D and camera calibration}} \\
+\midrule
+Calibrated DLT & 0.3984 & 0.2219 & 0.0816 \\
+Reprojection-gated DLT & 0.3996 & 0.2234 & 0.0846 \\
+DLT-residual MLP & \textbf{0.1643} & \textbf{0.1172} & \textbf{0.0598} \\
+\bottomrule
+\end{tabular}
+\vspace{0.4em}
+\begin{minipage}{0.98\linewidth}
+\footnotesize\textit{Note.} Errors use dataset coordinate units after independent batch-referenced body transforms; 30 frames per sequence, batch size 4, with the final batch retained. The two input groups have different information requirements. PA uses a separate per-frame similarity fit for each joint subset, with no reflection; MPJPE and acceleration use predictions before this evaluation-only fit. The target is a constructed annotation reference, not independent motion capture. Geometric predictions are first centered at their own per-frame pelvis, then independently body-canonicalized; this preprocessing uses no test-fitted similarity map. Raw-space single-view metrics remain in the archived evidence.
+\end{minipage}
+\end{table}

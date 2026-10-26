@@ -1,0 +1,82 @@
+{
+  "sample": {
+    "index": 0,
+    "person_id": "female",
+    "action_id": "Anim_Female_Skier_From_Skiing_To_Straight",
+    "cam1_id": "capture_L0_A000",
+    "cam2_id": "capture_L0_A010",
+    "num_aligned_frames": 30
+  },
+  "selection": "Fixed sample index 0, fixed window index 14; not selected by gain.",
+  "window_index_0based": 14,
+  "source_frame": 10,
+  "frame_ids": [
+    0,
+    1,
+    1,
+    2,
+    3,
+    4,
+    4,
+    5,
+    6,
+    7,
+    7,
+    8,
+    9,
+    9,
+    10,
+    11,
+    12,
+    12,
+    13,
+    14,
+    14,
+    15,
+    16,
+    17,
+    17,
+    18,
+    19,
+    20,
+    20,
+    21
+  ],
+  "canonical_batch_size": 256,
+  "base_parity_max_abs_error": {
+    "base_l": 3.5762786865234375e-07,
+    "base_r": 4.76837158203125e-07
+  },
+  "output_source": "Reconstructed from archived alpha/base_l/base_r/output_residual; no new network inference.",
+  "alpha_range_sample_0": [
+    0.4586374759674072,
+    0.5970326066017151
+  ],
+  "frame_all15_error": {
+    "canonical_average": 0.09211234003305435,
+    "fused": 0.04920168657184461,
+    "unit": "canonical coordinate units"
+  },
+  "projection": "Canonical poses: drawing-only oblique projection u=x+0.45z, v=y+0.15z. Raw poses and body-reference display invert v because camera y points down. Neither is a physical camera projection.",
+  "rgb_sources": [
+    "/home/kaixu_chen/skiing/data/skiing_unity_dataset/data_pole_ski/female/Anim_Female_Skier_From_Skiing_To_Straight/frames/capture_L0_A000/frame_000010.png",
+    "/home/kaixu_chen/skiing/data/skiing_unity_dataset/data_pole_ski/female/Anim_Female_Skier_From_Skiing_To_Straight/frames/capture_L0_A010/frame_000010.png"
+  ],
+  "checkpoint_sha256": "869a2217f8676c0ada75ed3c9a3c82a9b8efbb105749f6ffb8bef71e9172f50f",
+  "limitations": [
+    "Single fixed sample, not aggregate performance evidence.",
+    "View separation is 10 degrees; do not redraw cameras as a wide-baseline example.",
+    "Resampled positions repeat source frames; window position is not physical time.",
+    "Body references are separate; output does not recover a shared physical world frame.",
+    "Attention links are schematic; no attention weights have been exported."
+  ],
+  "source_files": {
+    "paper/ivc_draft_20260821/evidence/review_revision_20260916/gate_unity/clean.json": "a64419f7dc5b7b59bf8c06682c5d3f62b7958f19a8dcc75a5eb7c97abb5397b5",
+    "paper/ivc_draft_20260821/evidence/review_revision_20260916/gate_unity/config.json": "3b15afd989e258038d0d73665c8bd7d4bc743cc085febf6fd308e77d51a33cb5",
+    "paper/ivc_draft_20260821/main.tex": "8f656742efe4adcd4b655c4c0f94dcaff00c3568c9118f19a9c59ddb4df77ae8",
+    "dual2pose/models/crossview_fusion.py": "ab27fcb446d10e8a80fb2f86d00cc3fe1143ef95cb6a48d4d8b7560588097ffd",
+    "dual2pose/trainer/canonicalize.py": "ff947dd35f4c265c90e4c44067b3a024820daf3ab1ce693f50f9bbea509fe955",
+    "dual2pose/models/sim3.py": "37eea7ea979406a2f4a9edcb53eef66a2977eff6c5f0ea872bf49c2be3b796b8",
+    "logs/ivc_mmsports_extension/main_baselines/20260906/cache/unity/test/manifest.json": "992be1c97f2f71cf6ecd189ef3b917962b039eed0d468cacd995640beb6cd700"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "status": "running",
+  "experiment": "frozen checkpoint intervention, not retraining",
+  "dataset": "ski",
+  "split": "test",
+  "limit": 0,
+  "full_test": true,
+  "samples": 30,
+  "cache_manifest": {
+    "dataset": "ski",
+    "split": "test",
+    "sample_count": 30,
+    "time_window": 30,
+    "num_joints": 13,
+    "representation": "raw_pre_batch_canonicalization",
+    "index": "/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png/index_mapping/ski_pose_ptz_index_mapping.json",
+    "index_sha256": "967a17ad2edfa8f56801d9a7cdd9c683dc73d0072660298ff65294445b41ba02",
+    "config_sha256": "b9501b3bfbbc91fddf404d456023915c081bbe0fcbe64db0924c76bafc2f5fc8",
+    "export_code_sha256": "33bb094b0d6fc4016d0f597a3322ebe3c61d2198d8f271b9011cf8507c9abf97",
+    "files": {
+      "left.npy": "f5e4c4d8c338a4646ec1f638dc6e24cd8deeb2efcca832c9d0a976b6ad6a0b53",
+      "right.npy": "08a182e666610e62394f0dd76db8ecca786d173c4bcc9f8720353c27cf91b5f9",
+      "target.npy": "a32ae7ad09a5ed3f64ce4315facb174f594f9bec4e2a91a9ac5651b25e9d87a1",
+      "frames.npy": "a4b2056012377c397b97e22a04355fa4604174288546641cbe699785b60a965d",
+      "samples.jsonl": "e1ec6dd94a73fc5256c4de7074de3596eb64a58df99424ecfe9682e92b02e3b9"
+    }
+  },
+  "checkpoint_sha256": "2b985d4f8b5e1f083fa549ae1cfa524c7d48a8fa2452fbcb136f2f514d1ed78d",
+  "source_sha256": {
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/dual2pose/eval/evaluate_gate_interventions.py": "86f25ef8aa10b52ed271485c1f7ef34e30b89e8df96320b5ad44272e3c305fe2",
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/dual2pose/models/crossview_fusion.py": "ab27fcb446d10e8a80fb2f86d00cc3fe1143ef95cb6a48d4d8b7560588097ffd"
+  },
+  "corruption": "complete raw-pose zeroing; switch at floor(T/2); reference untouched",
+  "anchor_warning": "corruption may also change batch-anchor landmarks"
+}

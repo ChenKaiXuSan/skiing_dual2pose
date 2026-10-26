@@ -1,0 +1,41 @@
+{
+  "status": "complete_predictions_not_yet_scored",
+  "dataset": "ski",
+  "windows": 30,
+  "frames": 900,
+  "finite_coverage": 1.0,
+  "inference_seconds": 6.95987486600643,
+  "total_seconds": 750.4661678959965,
+  "selected_stages": [
+    {
+      "stage": 1,
+      "epoch": 300,
+      "checkpoint_sha256": "4d179e92f7e3de9e0090bf38a6d0605589ed1eca1e4ceef5e452f8508825f879",
+      "selection": "fixed final epoch"
+    },
+    {
+      "stage": 2,
+      "epoch": 300,
+      "checkpoint_sha256": "494fe672cde98247581a14234e622671b64132272bd6313b57043bb7a2d09c3c",
+      "selection": "fixed final epoch"
+    },
+    {
+      "stage": 3,
+      "epoch": 300,
+      "checkpoint_sha256": "0d0cb40517ab06f9b80d3b25a1c6ac6616c7653ce9522fe05612e716c246bca4",
+      "selection": "fixed final epoch"
+    }
+  ],
+  "seed": 42,
+  "split_manifests": {
+    "train": "a0a203c696bddf2742acccab8d14097dcdc8a5e88867f61b5e2bb3a95b884d1e",
+    "test": "47cbc93d27d6f79e964122ba7f270c6bbf0084e68edfa9decee205e2a4b3d543"
+  },
+  "native_test_cache": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/main_baselines/20260906/cache/ski/test",
+  "native_test_manifest_sha256": "dddb5c9a56f24769baf6a1309e2c41b3c673284ef120db6d9863d7070fbd8fcc",
+  "uncertainty_sha256": "0249e13e680a5c998723ca7086e162c0940e771b346c3eaf3dee7c89e485d40a",
+  "predictions": {
+    "s1_raw_left.npy": "62eba6c206945b7346507b8cad8226af96d2b6326f61f0d176de3a1f49d3dba0",
+    "metapose_raw_left.npy": "d80fd2d6b3c55d2530d8c8cff2aad8427ab7dffdfa895a0b95b1a279bedab6aa"
+  }
+}

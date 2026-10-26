@@ -1,0 +1,611 @@
+\documentclass[preprint,12pt]{elsarticle}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage[section]{placeins}
+\usepackage{float}
+\usepackage{xr-hyper}
+\usepackage{hyperref}
+\externaldocument[S-]{supplementary}
+\hypersetup{hidelinks,
+  pdftitle={CanonFuse3D: Calibration-Free Dual-View 3D Pose Refinement via Human-Centric Fusion},
+  pdfauthor={Kaixu Chen, Qingyu Wang, Nan Luo, Chun Xie, Eiichi Naito, Toshitaka Kimura, Itaru Kitahara}}
+\usepackage{lineno}
+\setlength{\emergencystretch}{2em}
+\journal{Image and Vision Computing}
+
+% Upright prose, including class-generated headings and bibliography emphasis.
+\AddToHook{begindocument/end}{%
+  \renewcommand{\itshape}{\fontshape{n}\selectfont}%
+  \renewcommand{\slshape}{\fontshape{n}\selectfont}%
+}
+\renewcommand{\textit}[1]{\textup{#1}}
+\renewcommand{\emph}[1]{\textup{#1}}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{CanonFuse3D: Calibration-Free Dual-View 3D Pose Refinement via Human-Centric Fusion\tnoteref{tnote:conference}}
+\tnotetext[tnote:conference]{A preliminary version of this work has been accepted for publication at the 9th International Workshop on Multimedia Content Analysis in Sports (MMSports 2026). This article substantially extends that work.}
+
+\author[ccs]{Kaixu Chen\corref{cor1}}
+\ead{chenkaixusan@gmail.com}
+\author[imiss]{Qingyu Wang}
+\ead{wang.qingyu@image.iit.tsukuba.ac.jp}
+\author[imiss]{Nan Luo}
+\ead{nan.luo@image.iit.tsukuba.ac.jp}
+\author[ccs]{Chun Xie}
+\ead{xie.chun@image.iit.tsukuba.ac.jp}
+\author[nict]{Eiichi Naito}
+\ead{eiichi.naito@nict.go.jp}
+\author[ntt]{Toshitaka Kimura}
+\ead{toshitaka.kimura@ntt.com}
+\author[ccs]{Itaru Kitahara}
+\ead{kitahara.itaru@image.iit.tsukuba.ac.jp}
+
+\cortext[cor1]{Corresponding author.}
+\address[ccs]{Center for Computational Sciences, University of Tsukuba, Tsukuba, Ibaraki, Japan}
+\address[imiss]{Intelligent and Mechanical Interaction Systems, University of Tsukuba, Tsukuba, Ibaraki, Japan}
+\address[nict]{Advanced ICT Research Institute, National Institute of Information and Communications Technology, Osaka, Japan}
+\address[ntt]{NTT Communication Science Laboratories, Tokyo, Japan}
+
+\begin{abstract}
+Recovering three-dimensional (3D) human motion from two distant viewpoints is challenging when the subject moves rapidly and camera calibration is unavailable. We present CanonFuse3D, a calibration-free post-estimation framework that refines two approximately synchronized monocular 3D pose streams through human-centric fusion. The output consists of canonical joint coordinates relative to fixed, stream-specific body references; it does not represent a reconstructed world-space trajectory. Sequence-level pose alignment exposes cross-view agreement and disagreement, while joint features, bidirectional attention, and temporal refinement support joint-frame gated fusion with residual correction. We evaluate the framework using three skiing datasets: two for quantitative assessment and one for qualitative deployment. Compared with canonical averaging, CanonFuse3D reduces mean per-joint position error (MPJPE) on a shared body-joint subset by 44.5\% on Unity and 48.6\% on Ski-PTZ-Pose, where the latter measures agreement with a constructed canonical reference. Controlled input perturbations show gains across the tested view separations and small timing errors, with failures under severe corruption. Experiments with alternative pose estimators show that transfer depends on the upstream error distribution and benefits from target-specific adaptation. Simple learned baselines achieve lower clean-input position or acceleration errors, so the findings support the usefulness and limits of human-centric dual-view refinement rather than universal accuracy superiority.
+
+\end{abstract}
+
+\begin{keyword}
+3D human pose estimation \sep dual-view fusion \sep calibration-free refinement \sep human-centric representation \sep temporal refinement
+
+\end{keyword}
+
+\end{frontmatter}
+
+\linenumbers
+
+\section{Introduction}
+
+Recovering 3D human motion from two camera views is a computer-vision problem with practical value when a moving subject must be observed over a large area. At long capture distances, the body occupies fewer pixels, making limb localization difficult. Rapid movement introduces motion blur, changing body orientation, and short-lived occlusion. A second viewpoint can provide complementary evidence, but independently estimated monocular poses may still disagree in depth, limb configuration, and temporal continuity.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{figures/journal/study_overview.pdf}
+  \caption{System overview. Two monocular 3D pose streams are expressed in human-centric coordinates, aligned in pose space, and fused using cross-view and temporal features. CanonFuse3D produces a refined canonical pose sequence without camera parameters.}
+  \label{fig:teaser}
+\end{figure}
+
+Calibrated multi-view reconstruction addresses these ambiguities through geometric constraints. Maintaining calibration is more difficult when cameras follow a distant subject, change their orientation or zoom, or are installed temporarily in a large capture area. Existing monocular estimators also make independently predicted 3D pose streams readily available. These conditions motivate a post-estimation question: how can two such streams be combined to improve pose quality when camera parameters are unavailable?
+
+We address calibration-free post-estimation dual-view 3D pose refinement. Calibration-free means that the refinement model receives no camera intrinsics, extrinsics, epipolar geometry, or triangulated image observations during training or inference. Its inputs are two approximately synchronized 3D pose sequences. Human-centric coordinates reduce their global position and orientation discrepancy using body landmarks, and sequence-level similarity alignment provides an aligned opposite-view pose for each stream. The resulting representation describes motion relative to fixed body references and does not recover a shared world coordinate system.
+
+The proposed CanonFuse3D framework combines each view's pose, the aligned opposite-view pose, cross-view disagreement, and motion cues. Bidirectional cross-view attention exchanges joint information, and temporal refinement models local motion continuity. A joint-frame gate then weights view-specific pose candidates, together with a learned residual correction. This design uses complementary pose evidence after monocular estimation while keeping the upstream estimator separate from the fusion model.
+
+Skiing provides a demanding application of distant capture and rapid human motion. We use three skiing datasets: Unity synthetic data and public Ski-PTZ-Pose data for quantitative evaluation, and author-collected indoor and outdoor recordings for qualitative deployment. Unity provides recorded avatar skeletons; Ski-PTZ-Pose is evaluated against a constructed canonical reference derived from its annotations. Controlled studies examine how the same refinement framework behaves when capture conditions or upstream pose estimates change.
+
+The main contributions are:
+\begin{itemize}
+    \item A human-centric framework for calibration-free post-estimation dual-view 3D pose refinement, motivated by distant capture of rapidly moving subjects.
+    \item Quantitative evaluation on two skiing datasets with explicit reference regimes, complemented by a third dataset of real-world deployment videos.
+    \item An assessment of refinement under viewpoint and timing changes, pose and image corruption, alternative pose estimators, and additional input views, identifying both useful conditions and failure cases.
+\end{itemize}
+
+\section{Related Work}
+\label{sec:related_work}
+
+\subsection{Monocular and Sports 3D Human Pose Estimation}
+Monocular 3D human pose estimation has progressed from temporal lifting models to transformer-based architectures and large-scale motion representation learning. VideoPose3D uses dilated temporal convolutions to lift 2D keypoint sequences into 3D poses~\cite{pavllo2019videopose3d}. PoseFormer models spatial joint relations and temporal correlations with transformers~\cite{zheng2021poseformer}. MHFormer represents multiple plausible pose hypotheses before synthesizing a final estimate~\cite{li2022mhformer}. MotionBERT pretrains a motion encoder on heterogeneous data for transfer to several human-centric tasks~\cite{zhu2023motionbert}. Recent full-body systems broaden the available front ends: SAM 3D Body estimates body, hand, and foot pose and shape from a single image and emphasizes generalization to diverse in-the-wild conditions~\cite{yang2026sam}, while VIBE uses a sequence-level adversarial motion prior to obtain kinematically plausible pose and shape estimates from video~\cite{kocabas2020vibe}. These methods improve the quality of an individual monocular stream, but they do not use a second synchronized stream to correct view-specific errors.
+
+Sports footage makes the monocular problem especially difficult because professional movements are rapid, atypical of common training corpora, and frequently self-occluded. Rhodin et al. introduced a skiing dataset with rotating cameras and expert motion and used multi-view consistency mainly as supervision for a model that performs monocular inference~\cite{rhodin2018learning}. SportsCap likewise targets monocular sports videos, using semantic and temporally structured sub-motion priors to handle complex non-daily movements and severe self-occlusion~\cite{chen2021sportscap}. These studies demonstrate the value of sports-specific data and motion priors. Their inference setting nevertheless remains monocular; complementary 3D predictions from simultaneously available viewpoints are not fused after estimation.
+
+\subsection{Multi-view 3D Pose Estimation}
+A recent survey of markerless multi-view 3D human pose estimation emphasizes the benefits of complementary viewpoints while identifying occlusion, camera variation, limited supervision, temporal consistency, view selection, and the accuracy--complexity trade-off as continuing concerns~\cite{nogueira2025survey}. Classical and learned multi-view pipelines usually recover a single 3D pose inside the estimator. Learnable Triangulation combines per-view evidence through differentiable algebraic or volumetric triangulation~\cite{iskakov2019learnable}. Epipolar Transformers transfer image features along epipolar lines in a synchronized, calibrated setting~\cite{he2020epipolar}, and MVGFormer alternates appearance modules with learning-free geometric modules that triangulate refined 2D poses~\cite{liao2024multiple}. AdaFuse addresses unreliable or occluded views by estimating point correspondences between heatmaps and learning camera-specific fusion weights so that poor features do not corrupt stronger views~\cite{zhang2021adafuse}. Although these strategies use different fusion mechanisms, they operate on images, feature maps, heatmaps, or calibrated 2D observations as part of multi-view reconstruction rather than on independently produced 3D pose streams.
+
+Other work relaxes calibration or supervision. MetaPose estimates 3D pose from multiple cameras with unknown calibration, models uncertainty in the input 2D keypoints, and requires only 2D keypoint data for training~\cite{usman2022metapose}. FLEX removes the need for extrinsic parameters by predicting view-invariant skeletal rotations and bone lengths from multiple video streams and fusing their learned features into one temporally coherent motion~\cite{gordon2022flex}. These methods substantially reduce camera requirements, but they still couple cross-view fusion to the multi-view reconstruction network. The setting studied here is complementary: the upstream estimators have already produced two monocular 3D sequences, and the refinement stage receives neither images nor 2D detections, camera parameters, or epipolar geometry.
+
+Takahashi et al.~\cite{takahashi2018human} address the additional problem of temporal synchronization. Their method uses detected 2D human joints as correspondences and estimates camera extrinsics, inter-camera time offsets, and 3D joint positions through optimization with relaxed reprojection errors and human-body constraints. It therefore tackles unsynchronized, uncalibrated reconstruction directly. CanonFuse3D instead receives two already-estimated 3D streams and learns a pose-space correction without recovering camera parameters; it still requires approximately corresponding times. This narrower input setting does not subsume the synchronization capability of Takahashi et al. The temporal perturbation experiments and auxiliary synchronization diagnostic below characterize the remaining timing requirement, rather than establish equivalent reconstruction capability or a quantitative comparison with that method.
+
+\subsection{Pose-Space Refinement, Reliability, and Generalization}
+Post-estimation refinement provides another way to improve predictions without replacing the upstream estimator. STRIDE is a model-agnostic test-time training method that fits a motion prior to each video and refines noisy initial 3D estimates into temporally coherent poses under occlusion~\cite{lal2025stride}. Its objective is single-video temporal refinement rather than the reconciliation of synchronized viewpoints. Reliability weighting also appears within multi-view estimators: Learnable Triangulation predicts confidence weights for algebraic triangulation, and AdaFuse estimates adaptive weights for camera-view features~\cite{iskakov2019learnable,zhang2021adafuse}. In contrast, the reliability gate in this study acts after monocular 3D estimation and selects between aligned 3D pose candidates at the joint--frame level. The distinction is important because upstream confidence, image-feature quality, and residual pose-space reliability are not interchangeable signals.
+
+Robust deployment also depends on how an estimator responds to a changed pose or camera distribution. PoseAug learns differentiable changes to posture, body size, viewpoint, and position to diversify paired 2D--3D training poses and improve cross-dataset generalization~\cite{gong2021poseaug}. AdaptPose instead generates target-like 3D motions and camera orientations from source poses and uses target-domain 2D poses without requiring target 3D labels or camera information~\cite{gholami2022adaptpose}. Both approaches adapt the training distribution of a 3D pose estimator. Our experiments address a different transfer boundary: they hold the pose-space fusion architecture fixed, replace the upstream monocular estimator, and then compare frozen transfer with target-specific adaptation of the refinement model.
+
+These studies leave a complementary problem: fusing independently estimated 3D pose streams after monocular inference. CanonFuse3D addresses this problem through human-centric pose alignment, cross-view temporal reasoning, and joint-frame gating. The supporting experiments examine the conditions under which this refinement remains useful.
+
+\section{Proposed Method}
+\label{sec:method}
+
+\subsection{Overview}
+\label{subsec:method_overview}
+
+CanonFuse3D takes independently estimated pose sequences \(P^L,P^R\in\mathbb{R}^{T\times J\times3}\) from two approximately synchronized views, where \(T\) is the number of frames and \(J\) the number of joints. It predicts a refined canonical pose sequence \(P^F\) of the same shape without camera parameters. Figure~\ref{fig:feature_construction} shows the five stages: human-centric canonicalization, bidirectional pose alignment, geometric-motion feature encoding, cross-view and temporal refinement, and gated pose fusion.
+
+\subsection{Human-Centric Landmark Canonicalization}
+\label{subsec:canonicalization}
+
+Independent monocular estimates can differ in global position and orientation. We express each stream relative to a fixed reference pose \(A\) using the hip midpoint, hip direction, and neck direction. Let \(h_L,h_R,n\) denote the left hip, right hip, and neck, and let \(\operatorname{nrm}(v)=v/(\|v\|_2+\epsilon)\). The origin and body axes are
+\[
+\begin{aligned}
+c&=\tfrac12(A_{h_L}+A_{h_R}), &
+e_x&=\operatorname{nrm}(A_{h_R}-A_{h_L}),\\
+e_y&=\operatorname{nrm}(A_n-c), &
+e_z&=\operatorname{nrm}(e_x\times e_y).
+\end{aligned}
+\]
+An additional landmark-direction cue resolves the sign of \(e_z\). With the axis matrix \(R=[e_x,e_y,e_z]\), the transformed coordinates are
+\[
+\tilde{P}_{t,j}=(P_{t,j}-c)R.
+\]
+The left stream, right stream, and supervision reference use separate body references. Each origin and axis matrix remains fixed over the sequences to which it is applied; the representation is therefore not a per-frame root-relative pose. Skeleton scale is not normalized, and the constructed axes need not be orthogonal. In the evaluated protocol, the reference is shared within each batch. Its exact selection and landmark conventions are specified in Supplementary Section~\ref{S-sec:implementation_record}.
+
+\subsection{Pose-Level Cross-View Alignment}
+\label{subsec:pose_alignment}
+
+Because the independently anchored streams can retain residual translation, orientation, and scale mismatch, we apply pose-level cross-view alignment in both directions. Specifically, the left pose sequence is aligned to the right pose sequence, and the right pose sequence is aligned to the left pose sequence:
+\[
+\tilde{P}^{L \rightarrow R} = \mathcal{A}(\tilde{P}^{L}, \tilde{P}^{R}),
+\qquad
+\tilde{P}^{R \rightarrow L} = \mathcal{A}(\tilde{P}^{R}, \tilde{P}^{L}),
+\]
+where \(\mathcal{A}(\cdot)\) denotes sequence-level pose alignment.
+
+For each sample, let \(X,Y\in\mathbb{R}^{N\times3}\) contain the source and destination joint coordinates in row-vector form, with \(N=TJ\). We estimate one uniform scale \(s\), proper rotation \(Q\), and translation \(d\) for the whole sequence:
+\[
+(s^\star,Q^\star,d^\star)=
+\underset{s\geq0,\;Q\in SO(3),\;d\in\mathbb{R}^{3}}{\arg\min}
+\frac{1}{N}\left\|sXQ^\top+\mathbf{1}d^\top-Y\right\|_F^2.
+\]
+We solve this unweighted least-squares problem by singular value decomposition, excluding reflections. Each direction uses one transform for all frames and joints in the sequence. These auxiliary pose-space transforms do not estimate camera extrinsics; they are also distinct from the per-frame reference alignment used only for evaluation.
+
+The model requires dense, finite pose tensors and receives no joint-validity mask. Missing detections are represented by zero-filled raw poses, and the controlled pose-corruption study replaces or perturbs selected raw entries before canonicalization. All transformed entries participate equally in alignment and training, including corrupted or zero-filled entries; missing joints are neither interpolated nor omitted. Detection-failure flags are used only for reporting, and supervision references remain uncorrupted. Supplementary Section~\ref{S-sec:controlled_details} gives the intervention rules.
+
+We further compute cross-view residuals:
+\[
+D^{L} = \tilde{P}^{R \rightarrow L} - \tilde{P}^{L},
+\qquad
+D^{R} = \tilde{P}^{L \rightarrow R} - \tilde{P}^{R}.
+\]
+These residuals encode disagreement between the two pose streams and provide cues about view-specific errors.
+
+\subsection{Geometric-Motion Feature Construction}
+\label{subsec:feature_construction}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{figures/journal/method_pipeline.pdf}
+  \caption{CanonFuse3D architecture. Human-centric coordinates and sequence-level alignment provide geometric-motion features for cross-view attention and temporal refinement. A joint-frame gate and residual head produce the refined pose. The feature construction in stage 4 is detailed in Figure~\ref{fig:feature_details}.}
+  \label{fig:feature_construction}
+\end{figure}
+
+As shown in Figure~\ref{fig:feature_construction}, for each view, we construct joint-level geometric-motion features by concatenating pose, cross-view, and temporal cues. For the left-view stream, the feature is defined as
+\[
+X^{L}
+=
+\left[
+\tilde{P}^{L},
+\tilde{P}^{R \rightarrow L},
+D^{L},
+V^{L},
+r^{R \rightarrow L}
+\right],
+\]
+and for the right-view stream,
+\[
+X^{R}
+=
+\left[
+\tilde{P}^{R},
+\tilde{P}^{L \rightarrow R},
+D^{R},
+V^{R},
+r^{L \rightarrow R}
+\right].
+\]
+
+The velocity terms \(V^L,V^R\) describe frame-to-frame canonical pose changes, and \(r^{R \rightarrow L},r^{L \rightarrow R}\) encode the corresponding alignment rotations. As shown in Figure~\ref{fig:feature_details}, the five three-dimensional cues are concatenated into a 15-dimensional feature for each joint and frame.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/journal/feature_details.pdf}
+\caption{Geometric-motion feature construction for the left stream. Five three-dimensional cues are concatenated at each joint and frame: the own-view pose, aligned opposite-view pose, their difference, temporal velocity, and alignment rotation. The right stream uses the same construction with the view roles reversed.}
+\label{fig:feature_details}
+\end{figure}
+
+\subsection{Joint Feature Encoding}
+\label{subsec:joint_feature_encoding}
+
+The left and right geometric-motion features are passed through a shared joint-wise encoder:
+\[
+H^{L} = \phi(X^{L}),
+\qquad
+H^{R} = \phi(X^{R}),
+\]
+where \(\phi(\cdot)\) is a multilayer perceptron with layer normalization and GELU activation. The encoder maps the 15-dimensional input feature into a hidden representation for each joint and frame.
+
+Because the encoder is applied at the joint-feature level, it preserves the temporal and skeletal structure of the input sequence while producing a richer representation for subsequent cross-view interaction.
+
+\subsection{Bidirectional Cross-View Attention}
+\label{subsec:cross_view_attention}
+
+To exchange complementary information between the two pose streams, we use bidirectional cross-view attention. For each frame, the left-view joint features attend to the right-view joint features, and the right-view joint features attend to the left-view joint features:
+\[
+\hat{H}^{L}
+=
+\mathrm{Attn}(Q=H^{L}, K=H^{R}, V=H^{R}),
+\]
+\[
+\hat{H}^{R}
+=
+\mathrm{Attn}(Q=H^{R}, K=H^{L}, V=H^{L}).
+\]
+
+The attention is applied over joints within each frame. This allows the network to compare corresponding and related joint features across the two views. When a joint is unreliable in one view, the other view may provide complementary information. Residual connections and layer normalization are used to stabilize the cross-view feature update.
+
+\subsection{Temporal Refinement}
+\label{subsec:temporal_refinement}
+
+Frame-wise fusion alone may reduce spatial error but can still produce temporally unstable pose trajectories. To address this issue, we apply a temporal refinement module after cross-view attention.
+
+The temporal refiner uses depthwise one-dimensional convolution along the time dimension. For each joint, the hidden feature sequence is normalized and passed through a temporal convolution block:
+\[
+\bar{H} = \hat{H} + \mathrm{TempConv}(\mathrm{LN}(\hat{H})).
+\]
+This residual formulation preserves the original cross-view representation while adding local temporal context. The temporal module is lightweight and targets short-range motion consistency, which is important for reducing jitter in sports pose sequences.
+
+\subsection{Reliability-Gated Fusion and Residual Correction}
+\label{subsec:reliability_fusion}
+
+After cross-view attention and temporal refinement, the left and right hidden features are concatenated:
+\[
+Z = [\bar{H}^{L}, \bar{H}^{R}].
+\]
+A gate head predicts a joint-frame reliability gate:
+\[
+\alpha = \sigma(g_{\theta}(Z)),
+\]
+where \(\alpha \in [0,1]^{T \times J \times 1}\). The gate controls the relative contribution of the two view-specific pose candidates for each joint and frame.
+
+The two streams have separate body references. The network combines their view-specific candidates through a learned pose-space mapping; this combination does not imply a shared physical coordinate frame.
+
+We construct two base pose candidates:
+\[
+B^{L} = \frac{1}{2}(\tilde{P}^{L} + \tilde{P}^{R \rightarrow L}),
+\]
+\[
+B^{R} = \frac{1}{2}(\tilde{P}^{R} + \tilde{P}^{L \rightarrow R}).
+\]
+The reliability-gated base fusion is then computed as
+\[
+P^{base}
+=
+\alpha B^{L}
++
+(1-\alpha)B^{R}.
+\]
+
+Finally, a residual head predicts a pose correction:
+\[
+\Delta P = h_{\theta}(Z),
+\]
+and the final refined pose is
+\[
+P^{F} = P^{base} + \Delta P.
+\]
+
+The gate \(\alpha\) is interpreted as a learned reliability signal rather than a calibrated probabilistic uncertainty estimate. This distinction is important because the model is trained to improve fusion accuracy and temporal stability, not to produce calibrated uncertainty values.
+
+\subsection{Training Objective}
+\label{subsec:training_objective}
+
+The model is trained with a supervised pose loss and lightweight regularization terms:
+\[
+\mathcal{L}
+=
+\mathcal{L}_{sup}
++
+\lambda_{view}\mathcal{L}_{view}
++
+\lambda_{bal}\mathcal{L}_{bal}
++
+\lambda_{ent}\mathcal{L}_{ent}
++
+\lambda_{temp}\mathcal{L}_{temp}.
+\]
+The supervised term is \(\mathcal{L}_{sup}=\|P^F-\tilde{G}\|_1\), where \(\tilde{G}\) is the independently canonicalized supervision reference. The view reconstruction term preserves the discrepancy between the two independently canonicalized inputs. Let \(\delta=\tilde{P}^{L}-\tilde{P}^{R}\). The view-consistency objective reconstructs \(\hat{P}^{L}=P^{F}+(1-\alpha)\delta\) and \(\hat{P}^{R}=P^{F}-\alpha\delta\), and averages their \(L_1\) errors to \(\tilde{P}^{L}\) and \(\tilde{P}^{R}\), respectively. This term constrains the gate and fused estimate without treating the sequence-level similarity transforms as physical camera geometry. To avoid degenerate fusion, \(\mathcal{L}_{bal}=|\mathrm{mean}(\alpha)-0.5|\) discourages collapse to a single view, while an entropy term discourages overconfident gates during training. Finally, \(\mathcal{L}_{temp}\) penalizes excessive second-order temporal variation of \(P^{F}\), encouraging stable motion trajectories without removing the supervised accuracy objective.
+
+The supervised and view-reconstruction \(L_1\) terms are means over all batch, frame, joint, and coordinate entries. The gate penalties average over all joint-frame weights, and the temporal penalty averages the Euclidean norm of the second difference over all joints and valid three-frame windows. No term uses an input-visibility mask to omit or reweight missing joints: an available reference still supervises the output at every joint, while a zero-filled input remains part of the view-reconstruction target. 
+
+\section{Experimental Protocol}
+
+\subsection{Experimental Setup}
+
+Each video view is processed independently by an upstream monocular pose estimator. CanonFuse3D and the pose-only baselines receive the resulting 3D sequences without images, 2D keypoints, or camera parameters. A separate geometric comparison group additionally receives estimated 2D joints and supplied camera calibration. All comparisons use matched sequences, joint conventions, and the stated human-centric coordinate protocol within each dataset.
+
+\subsection{Data Sources and Annotation}
+\label{subsec:dataset_annotation}
+
+We use three skiing datasets with complementary roles: two for quantitative evaluation and one for qualitative deployment. Table~\ref{tab:dataset_summary} summarizes their inputs and reference regimes; Figure~\ref{fig:dataset_examples} shows paired-view examples.
+
+\begin{table*}[t]
+\centering
+\caption{Summary of the data sources used in this study. Only Unity and Ski-PTZ-Pose are used for quantitative evaluation.}
+\label{tab:dataset_summary}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.22\linewidth}
+                >{\raggedright\arraybackslash}p{0.17\linewidth}
+                >{\raggedright\arraybackslash}p{0.27\linewidth}
+                >{\raggedright\arraybackslash}p{0.24\linewidth}@{}}
+\hline
+Data source & Provider & Item & Role / Reference \\
+\hline
+\multirow{2}{*}{Unity synthetic}
+& \multirow{2}{*}{Ours}
+& Dual-view videos and monocular 3D poses
+& Training / testing inputs \\
+& & Avatar 3D skeleton
+& Avatar ground truth \\
+\hline
+\multirow{2}{*}{Ski-PTZ-Pose}
+& \multirow{2}{*}{EPFL/CVLab}
+& Real skiing videos and 2D/3D poses
+& Real-world evaluation \\
+& & PTZ metadata
+& Constructed canonical reference \\
+\hline
+\multirow{2}{=}{Author-collected videos}
+& \multirow{2}{*}{Ours}
+& Indoor/outdoor dual-view recordings
+& Qualitative deployment only \\
+& & Estimated pose streams
+& No metric 3D reference \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/journal/dataset_examples.pdf}
+\caption{Representative synchronized dual-view examples from the three data sources. Columns show (a,b) Unity synthetic data, (c,d) Ski-PTZ-Pose, and (e,f) author-collected videos; rows show the two input views. Unity and Ski-PTZ-Pose support quantitative evaluation under the reference regimes stated in the text. The author-collected recordings have no independent metric 3D annotations and are used only for qualitative illustration. The Unity panels are foreground-cropped for legibility; the other panels retain their original field of view.}
+\label{fig:dataset_examples}
+\end{figure*}
+
+\paragraph{Unity synthetic dataset}
+We rendered a virtual skiing scene in Unity~\cite{juliani2020} with one female and one male avatar performing 12 actions each, including steady skiing, falls, and transitions. Each action is observed from 180 synchronized viewpoints arranged in five layers, each with 36 azimuths at 10-degree intervals. An experimental sample comprises one camera pair; the model always receives two pose streams. The avatar skeleton supplies 3D ground truth independently of the monocular predictions.
+
+\paragraph{Ski-Pose PTZ-Camera dataset}
+The public Ski-Pose PTZ-Camera dataset, denoted Ski-PTZ-Pose, contains competitive alpine skiers performing giant slalom runs~\cite{rhodin2018learning,ski_poseptz_dataset}. It provides 3D poses, projected 2D annotations in approximately 20K images, and per-frame pan-tilt-zoom camera calibration. For this study, view-specific 3D annotations are aligned to a selected reference camera by similarity transforms fitted on an initial segment; the coordinate-wise median of the aligned annotations on the remaining frames defines the supervision and evaluation reference. Errors therefore measure agreement with this constructed canonical reference, rather than independent physical 3D accuracy. Neither camera calibration nor the annotation-derived transforms enter CanonFuse3D.
+
+\paragraph{Author-collected qualitative videos}
+Six indoor and outdoor dual-view skiing recordings provide a third dataset for qualitative deployment. A pose estimator processes each view independently. These videos have no independent metric 3D annotations and are excluded from training and quantitative evaluation; they illustrate the visual coherence of the refined motion relative to its input estimates and direct averaging.
+
+\paragraph{Joint convention}
+Unity uses a 15-joint skeleton, and Ski-PTZ-Pose uses a common 13-joint subset. Unity comparisons across upstream estimators additionally use this common subset, excluding the two eye landmarks. The main Unity comparison reports both subsets; the controlled native-input Unity studies use the full skeleton. These conventions apply throughout the method and evaluation.
+
+\subsection{Implementation Details}
+\label{subsec:implementation_details}
+
+Each camera-pair sample is uniformly resampled to 30 shared frames. The refinement model uses a shared joint encoder, bidirectional attention, a depthwise temporal convolution, and linear gate and residual heads, and is trained with AdamW. Unity uses action-disjoint training, validation, and test splits; Ski-PTZ-Pose uses its predefined training and test partitions. Unity model selection uses validation error, while Ski-PTZ-Pose uses predeclared checkpoints because no independent validation partition is available. Test errors do not determine model selection. Complete architectures, optimization settings, split sizes, and checkpoint selection details are provided in Supplementary Section~\ref{S-sec:implementation_record}.
+
+Pose-only comparisons include single views, canonical and aligned averaging, quality-weighted fusion, a framewise multilayer perceptron (MLP), a temporal convolutional network (TCN), and SmoothNet~\cite{zeng2022smoothnet} applied to canonical averaging. The separate geometric group includes direct linear triangulation (DLT), reprojection-filtered DLT, and DLT with a learned residual correction. Its additional 2D observations and calibration are stated explicitly in the main comparison tables.
+
+\subsection{Evaluation Metrics}
+
+All errors are reported in dataset coordinate units after the stated body-coordinate transformation, without conversion to millimeters. Lower values indicate better agreement with the dataset's reference. The two reference regimes are analyzed separately.
+
+\subsubsection{Mean per-joint position error}
+Mean per-joint position error (MPJPE) averages Euclidean distances between predicted and reference joint positions:
+\[
+E_{\mathrm{MPJPE}}=\frac{1}{TJ}\sum_{t,j}\|P^F_{t,j}-\tilde{G}_{t,j}\|_2.
+\]
+Dataset-level results aggregate all evaluated joint-frame points. No additional reference alignment is applied for this metric.
+
+\subsubsection{Procrustes-aligned position error}
+Procrustes-aligned MPJPE (PA-MPJPE) evaluates pose shape after fitting a least-squares similarity transform from prediction to reference independently in each frame. The fit allows translation, a nonnegative uniform scale, and a proper rotation, with no reflection. Each reported joint subset is aligned separately. Collapsed predictions are mapped to the reference centroid and retained in the average. This reference fit is used only for PA-MPJPE and does not change model inputs, selection, or other metrics.
+
+\subsubsection{Acceleration error}
+Acceleration error measures agreement between second-order pose differences:
+\[
+E_{\mathrm{acc}}=\frac{1}{(T-2)J}\sum_{t=2}^{T-1}\sum_j
+\|\Delta^2 P^F_{t,j}-\Delta^2\tilde{G}_{t,j}\|_2,
+\]
+where \(\Delta^2 P_{t,j}=P_{t+1,j}-2P_{t,j}+P_{t-1,j}\). It measures temporal agreement at the evaluated sampling interval, in coordinate units per sampled frame squared.
+
+\subsection{Controlled Evaluation Matrix}
+\label{subsec:controlled_protocol}
+
+The following studies assess the same dual-view refinement framework on held-out Unity data. The reference model remains frozen except during the explicitly identified adaptation experiments. Full intervention and aggregation rules are given in Supplementary Section~\ref{S-sec:controlled_details}.
+\begin{itemize}
+    \item Viewpoint: six 30-degree bins of circular camera-azimuth separation, testing whether complementary-view gains depend on camera placement.
+    \item Timing: seven offsets spanning \(-2\) to \(+2\) frames and seven sampling-rate errors spanning \(-2\%\) to \(+2\%\), testing approximate synchronization. A separate auxiliary diagnostic estimates larger offsets up to five frames.
+    \item Pose corruption: three affected-view modes, three spatial or temporal patterns, and five corruption ratios, yielding 45 conditions. Image occlusion: the same view modes and pattern names at two ratios, yielding 18 conditions before the native pose estimator. These ratios specify different interventions and do not imply equal physical severity.
+    \item Upstream estimator: three alternative 3D lifting models, followed by frozen transfer, target-specific adaptation, and mixed-front-end adaptation. All alternatives lift the same ground-truth 2D tracks to isolate the lifting stage; this does not compare image detectors.
+    \item Additional views: nested groups of one to four cameras, testing accuracy and computational cost when the frozen dual-view model is composed over all camera pairs. This is a pairwise extension of the refinement model.
+\end{itemize}
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Primary performance and cross-dataset evidence}
+
+The expanded Unity comparison covers all 64,440 camera-pair sequences in the held-out action split. Table~\ref{tab:native_reference} reports both the full 15-joint output and the common 13-joint subset. CanonFuse3D reduces common-13 MPJPE from 0.2792 for canonical averaging to 0.1551 (44.5\%); its all-15 result is 0.1541 versus 0.2868 (46.3\%). However, the left-view baseline already achieves 0.1624 and aligned averaging achieves 0.1622, making the corresponding improvements substantially smaller. The cross-view MLP obtains lower common-13 MPJPE, 0.1361, while the TCN gives 0.1610. SmoothNet produces the lowest acceleration error in the pose-only group, 0.0113, at a higher MPJPE of 0.2925. The MLP also has lower common-13 PA-MPJPE than CanonFuse3D, 0.0561 versus 0.0637. In the additional-input group, the DLT-residual MLP reaches MPJPE 0.0964 and PA-MPJPE 0.0535; this row uses estimated 2D observations and camera calibration and is not a common-input comparison with CanonFuse3D.
+
+The complete-split gate-error correlation is 0.650, and the gate assigns the larger weight to the lower-error view in 91.7\% of common-13 joint-frame comparisons. These diagnostics indicate that the gate carries reliability information, although its balance and entropy regularization preclude interpreting it as calibrated uncertainty or inferring that this architecture is necessary for the clean-input accuracy gain.
+
+\input{tables/native_reference.tex}
+
+Table~\ref{tab:ski_poseptz_reference} uses all 30 fixed Ski-PTZ-Pose test camera-pair sequences, each uniformly sampled to 30 frames on the common 13-joint representation. CanonFuse3D reduces constructed-reference MPJPE from 0.3487 for canonical averaging to 0.1794 (48.6\%), with acceleration error decreasing from 0.0392 to 0.0311. The added MLP and TCN attain lower MPJPE, 0.1423 and 0.1581, respectively. Their PA-MPJPE values, 0.1045 and 0.1144, are also lower than CanonFuse3D at 0.1269. SmoothNet achieves acceleration error 0.0151 with MPJPE 0.3227, showing that the lowest temporal error does not imply the lowest positional error. After the dataset-defined predicted-pelvis conversion, the geometric references yield MPJPE 0.3984 for DLT, 0.3996 for reprojection-gated DLT, and 0.1643 for the DLT-residual MLP. The gated variant does not improve MPJPE, PA-MPJPE, or acceleration error here. These values measure agreement with the aligned and aggregated annotation reference, not independent physical 3D accuracy.
+
+\input{tables/ski_poseptz_reference.tex}
+
+Across both datasets, the expanded clean-input comparison supports an improvement over canonical averaging but does not identify CanonFuse3D as the most accurate pose-only model. The framewise MLP has lower MPJPE on both datasets, while SmoothNet gives the lowest acceleration error in the direct-input groups. These results separate positional accuracy from temporal regularity and limit what can be attributed to the proposed attention and gating design. The geometric rows use additional information, and their results remain dependent on each dataset's stated reference construction.
+
+
+\FloatBarrier
+\subsection{Mechanism and component analysis}
+
+\subsubsection{Reliability-gate behavior}
+
+To examine whether the learned gate collapses to a single view or preserves local fusion flexibility, Table~\ref{tab:gate_region_summary} summarizes the predicted fusion weights on the complete held-out Unity split without input masking. The reported value is the mean left-candidate weight \(\alpha\), averaged over frames and joints within each body region; \(1-\alpha\) is the corresponding right-candidate weight. The learned gates remain close to balanced on average, which is consistent with the balance regularization in the training objective, while retaining small region-dependent variations. Together with the 0.650 gate--error correlation and 91.7\% view-preference accuracy reported above, this indicates that the gate carries local reliability information without constituting calibrated uncertainty.
+
+\begin{table}[t]
+\centering
+\caption{Region-wise reliability-gate statistics on the complete Unity test split without masking.}
+\label{tab:gate_region_summary}
+\footnotesize
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{tabular}{lccc}
+\toprule
+Region & Joints & \(\alpha\) & \(1-\alpha\) \\
+\midrule
+Upper limbs & 6 & \(0.497 \pm 0.004\) & 0.503 \\
+Lower limbs & 6 & \(0.502 \pm 0.014\) & 0.498 \\
+All joints & 15 & \(0.497 \pm 0.011\) & 0.503 \\
+\bottomrule
+\end{tabular}
+\vspace{0.4em}
+\begin{minipage}{0.94\linewidth}
+\footnotesize
+\textit{Note.} Values report the mean and across-joint standard deviation of per-joint mean \(\alpha\). Balance and entropy regularization act on the gate, so these statistics must not be interpreted as probabilistic calibration.
+\end{minipage}
+\end{table}
+
+\FloatBarrier
+\subsection{Robustness to capture perturbations}
+
+
+The controlled studies vary one capture condition at a time while keeping the checkpoint, held-out split, and evaluation path fixed. We first test whether camera separation changes the benefit of complementary views, then measure sensitivity to short temporal and clock perturbations, and finally examine direct pose corruption and image occlusion propagated through the native pose estimator.
+
+\subsubsection{Camera-pair separation}
+
+The camera-angle breakdown in Table~\ref{tab:view_angle} does not reveal a failure regime. CanonFuse3D MPJPE decreases from 0.1563 in the 0--30 degree bin to 0.1528 around 120--150 degrees, while the gain over canonical averaging stays between 45.9\% and 46.6\%. Wider azimuth separation therefore supplies slightly more complementary evidence in this synthetic setup, but the narrow range cautions against claiming a strong optimum. The bins contain 8,640--12,600 mutually exclusive test camera-pair sequences and together cover the complete 64,440-sequence test split.
+
+\input{tables/view_angle_combined.tex}
+
+To account for the four action-specific observations associated with each camera geometry, we collapse results by unordered camera pair before inference. Every angle bin retains a positive fusion gain under paired Wilcoxon testing (all Holm-adjusted \(p<0.001\); rank-biserial correlation 0.994--1.000). The across-bin Kruskal--Wallis test is statistically significant (\(p=0.025\)) but has a negligible effect size (\(\epsilon^2=0.00049\)). Of 15 Holm-adjusted post-hoc comparisons, only 90--120 versus 150--180 degrees remains significant (\(p=0.0064\)), again with a small rank-biserial effect (\(r_{rb}=0.053\)). Thus, the fusion benefit is reliable within every tested bin, whereas camera separation explains little of its magnitude.
+
+Detailed paired-test statistics are provided in Supplementary Table~\ref{S-tab:view_angle_significance}; Supplementary Fig.~\ref{S-fig:view_angle_extension} shows the corresponding absolute-error curves.
+
+
+
+\subsubsection{Temporal offset and sampling-rate drift}
+
+Figure~\ref{fig:temporal_sampling} summarizes two synchronization stress tests as relative MPJPE changes from each method's unperturbed value. Supplementary Table~\ref{S-tab:temporal_sampling} provides the absolute errors and gate diagnostics. At zero perturbation, all-15 MPJPE is 0.1541. Across \(\pm2\) frame offsets, it ranges from 0.1537 to 0.1555; the worst case, a two-frame positive offset, is only 0.91\% above zero. Gate-error correlation stays between 0.646 and 0.650 and view-preference accuracy remains above 91.4\%. The modest variation suggests that sequence-level alignment and the five-frame temporal refiner tolerate short local disagreement, but this experiment does not establish robustness to long delays or unsynchronized action phases.
+
+Clock-rate perturbations are even smaller. At \(+2\%\), MPJPE increases by 0.23\%; negative perturbations up to \(-2\%\) change MPJPE by less than 0.02\%. Acceleration error is not monotonic because temporal resampling smooths as well as misaligns trajectories. Consequently, MPJPE is the cleaner measure of rate-drift sensitivity in this controlled test.
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/extension/temporal_sampling.pdf}
+\caption{Relative MPJPE change under right-stream temporal offset and sampling-rate error on the complete held-out split. Each curve is normalized by its own method-specific unperturbed MPJPE; positive values indicate increased error. Dotted horizontal lines mark zero change.}
+\label{fig:temporal_sampling}
+\end{figure}
+
+\subsubsection{Missing-pose evidence}
+
+Figure~\ref{fig:masking_extension} reports all 45 conditions of the complete held-out-split missing-pose study; Supplementary Table~\ref{S-tab:masking_extension} gives exact errors and gains at the representative ratios 0.5 and 1.0. Corrupted entries use a fixed mixture of zero replacement (35\%) and Gaussian perturbation (65\%, standard deviation 0.08 in raw input coordinate units, before canonicalization). For random masking, the ratio is the independent joint-frame probability; in the both-view condition, masks and corruption noise are sampled separately for the two streams. Distal-subset masking applies that probability only to the same eight filtered joint indices used by the executable masking protocol. Temporal masking selects the stated fraction of joints and corrupts one independently positioned contiguous 10-frame interval for each selected joint within every 30-frame sequence; its ratio therefore denotes selected joints rather than the global fraction of tensor entries.
+
+Single-view corruption tests whether the complementary stream can rescue degraded evidence, whereas both-view corruption probes the method when redundancy is removed. The curves compare fused and canonical-average MPJPE, making explicit where learned fusion retains an advantage and where both methods fail together. At ratio 0.5, single-view temporal masking retains gains of 37.0\% for left corruption and 37.9\% for right corruption; distal masking retains 28.0\% and 31.5\%, respectively. The advantage narrows for unstructured random corruption. Most importantly, when random corruption affects both streams at ratio 0.5, fusion is 3.3\% worse than canonical averaging, whereas bilateral temporal and distal corruption still retain gains of 26.9\% and 12.5\%. Thus, the checkpoint can exploit a clean complementary stream and structured missingness, but dense independent corruption in both inputs lies outside its reliable regime.
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/extension/masking_robustness.pdf}
+\caption{Complete held-out-split masking robustness for left-, right-, and both-view corruption.}
+\label{fig:masking_extension}
+\end{figure}
+
+\FloatBarrier
+\subsubsection{Image-level occlusion through the pose front end}
+
+Table~\ref{tab:image_occlusion} reports all 18 conditions after the masked RGB frames pass through SAM3D and the frozen fusion model. CanonFuse3D improves on canonical averaging in 15 conditions. At random ratio 0.5, gains are 31.9\%, 34.3\%, and 20.9\% for left-, right-, and both-view occlusion, respectively. All twelve distal and temporal conditions retain positive gains, ranging from 14.6\% to 43.4\% for distal masks and from 42.3\% to 45.9\% for temporal masks. These results extend the controlled robustness evidence to errors produced by the image-to-pose front end.
+
+Random occlusion at ratio 1.0 reverses the advantage in all three affected-view modes: fused MPJPE exceeds canonical averaging by 18.0\%, 9.2\%, and 28.4\% for left, right, and both views. In the bilateral case, MPJPE is 0.6311 versus 0.4914, and the pair-aligned SAM3D detection-failure rate is 36.36\%. Failure rates for the corresponding left- and right-view conditions are 40.51\% and 32.22\%. Failed detections remain in the evaluation as zero poses, so these results include complete upstream detection loss. The aggregate measurements do not isolate how much of the degradation comes from failed detections, errors in detected poses, or the fusion response. An unoccluded complementary view therefore does not guarantee a fusion advantage under this severe intervention.
+
+Figure~\ref{fig:image_occlusion_extension} compares fused MPJPE for image-level and direct pose-stream interventions. Their matching ratios control different perturbations. For example, bilateral random corruption at ratio 0.5 retains a 20.9\% gain in the image-level experiment but gives a 3.3\% disadvantage in the pose-level experiment (Table~\ref{tab:image_occlusion} and Supplementary Table~\ref{S-tab:masking_extension}). This difference shows that the two protocols probe distinct error distributions; it does not establish an ordering of physical occlusion severity. The condition counts describe one frozen checkpoint, rather than independent training repetitions.
+
+\input{tables/image_occlusion_summary.tex}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/extension/image_occlusion_robustness.pdf}
+\caption{Fused MPJPE under image-level occlusion propagated through SAM3D and direct pose-stream corruption, for left-, right-, and both-view interventions. Solid lines with filled markers denote image-level masks; dashed lines with open markers denote pose-stream corruption. Matching protocol ratios do not imply equal physical occlusion severity. Errors use dataset coordinate units.}
+\label{fig:image_occlusion_extension}
+\end{figure}
+
+\FloatBarrier
+\subsection{Front-end generalization and adaptation}
+
+Frozen transfer is not uniform across upstream estimators. Table~\ref{tab:frontend_generalization} shows that MotionBERT retains a positive gain from 0.4766 to 0.4385 (8.0\%), whereas PoseFormer and VideoPose3D degrade by 18.0\% and 12.8\%, respectively, relative to their own canonical averages. The batch-referenced transform changes translation and landmark-axis coordinates but does not normalize skeleton scale or remove estimator-specific limb bias and temporal statistics. The frozen checkpoint is therefore coupled to the native front end's error distribution, and transfer to a new estimator requires validation rather than an estimator-agnostic assumption.
+
+\input{tables/frontend_generalization.tex}
+
+\input{sections/p1_results.tex}
+
+\FloatBarrier
+\subsection{Qualitative evaluation}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/journal/realworld_qualitative.pdf}
+\caption{Qualitative outputs on author-collected outdoor and indoor skiing videos. Panels (a), (b), (d), and (e) show the synchronized input views; panels (c) and (f) compare the two single-view predictions, canonical average, and CanonFuse3D output. These videos have no independent metric 3D annotations and are not used for training or quantitative evaluation. These examples were also included in the earlier conference manuscript.}
+\label{fig:real_world_comparison}
+\end{figure}
+
+
+Figure~\ref{fig:real_world_comparison} illustrates deployment on the author-collected skiing videos, where left- and right-view poses are estimated independently and no camera calibration is used during inference. The proposed result remains more coherent than either single-view prediction or direct averaging, especially when the two views disagree around arms, knees, and feet. Because no independent 3D ground truth is available, this comparison is qualitative and is not included in any reported accuracy metric. The examples also show the main limitation: if both upstream predictions contain similar errors, the refinement can still inherit part of that error.
+
+Qualitatively, the refined skeleton tends to preserve the more stable limb configuration while avoiding abrupt compromises caused by direct averaging. This is particularly visible in poses with strong torso rotation, occluded lower limbs, or large differences between left- and right-view predictions. For sports analysis, such behavior is useful because downstream measures such as joint-angle trajectories, limb extension timing, and motion smoothness are sensitive to frame-level outliers. At the same time, the examples should be read as a post-estimation refinement result rather than as full 3D reconstruction from images; the method improves the consistency of available pose streams but does not recover information that is absent from both inputs.
+
+\FloatBarrier
+\section{Discussion}
+
+The expanded main comparisons qualify the clean-input accuracy claim. A simple framewise MLP outperforms CanonFuse3D in MPJPE on both datasets, and SmoothNet gives lower acceleration error. The present evidence therefore supports the measured operating behavior of this refinement design, not a general claim that cross-view attention or reliability gating is required to obtain the best clean-input result. The added baselines were evaluated on the clean fixed indices. The perturbation, transfer, and view-scaling studies retain their stated comparison methods, principally canonical averaging; they do not establish robustness superiority over the newly added MLP, TCN, SmoothNet, or calibrated pipelines.
+\label{sec:discussion}
+
+The combined evidence supports a narrower claim than generic calibration-free multi-view reconstruction. CanonFuse3D is effective as a pose-space refinement layer when its two inputs are approximately synchronized, share the training front end's error distribution, and contain complementary evidence. It requires no camera parameters and retains a large advantage across the tested Unity angle bins. Pairwise composition extends the frozen dual-view model to larger camera groups, but it does not learn a joint representation over more than two views. Under the evaluated serial implementation, the number of forwards grows from one pair at two views to three and six pairs at three and four views, increasing latency from 2.02~ms to 6.02 and 12.06~ms. Because two views capture the largest accuracy gain over a single view while additional views provide smaller improvements at approximately threefold and sixfold latency, the dual-view configuration is the main accuracy--cost operating point. This timing conclusion is implementation-specific: batching or parallelizing independent pairs could reduce wall-clock latency without changing the pair count. Likewise, tolerance to small time and clock perturbations does not establish robustness to unknown long delays, dropped frames, or independently varying frame rates.
+
+The frozen front-end comparison identifies the main deployment limitation. MotionBERT preserves a modest positive gain, whereas VideoPose3D and PoseFormer do not. This result rules out an estimator-agnostic interpretation of the current checkpoint. The adaptation matrix therefore tests heads-only, full-model, and mixed-front-end updating while retaining native-SAM3D evaluation as a forgetting check. The alternative-front-end transfer and adaptation experiments still use ground-truth Unity 2D tracks to isolate 3D lifting; comparisons that include image-detection noise for those estimators remain necessary.
+
+The image-level study broadens the native-SAM3D evidence to include synthetic RGB occlusion and upstream detection failures. Gains in 15 of 18 conditions support a useful operating range, while the three random ratio-1.0 failures show that an unoccluded second view alone is insufficient to ensure an improvement over averaging. The masking study uses Unity projections to place artificial patches and one frozen SAM3D front end. It does not establish robustness to natural occluders, weather, motion blur, or image-level errors from alternative estimators. Those settings require separate evaluation, and the observed association between detection failures and fusion degradation does not identify a causal mechanism.
+
+Motion blur can affect the refinement through a different error process. During an exposure, fast limb motion or camera motion spreads image evidence along a trajectory, which can reduce joint-localization reliability or cause the front end to miss the person. The resulting 3D errors may persist across adjacent frames, altering both velocity features and cross-view disagreement. A clearer second view may provide useful evidence, but similar blur-induced errors in both streams can leave the gate with little reliable information to select. Errors in the hip or neck landmarks used for the batch anchor can additionally perturb the coordinate transform. These are expected mechanisms, not measured blur effects in this study. Temporal refinement may suppress isolated jitter, but neither temporal smoothing nor the reported patch-occlusion results establish robustness to exposure-induced motion blur.
+
+The reference regimes constrain interpretation. Unity provides an avatar skeleton in dataset coordinates that is transformed using the same batch-referenced rule; it is not a metric motion-capture measurement. Ski-PTZ-Pose is evaluated against a transformed fused reference derived from view-specific annotations; its result measures agreement with that constructed reference rather than independent physical 3D accuracy. Raw-space and transformed-space errors are therefore not interchangeable, no skeleton-scale normalization is performed, and none of these values should be relabeled as millimeters.
+
+The body reference is shared within each evaluated batch, so changing its composition can change the representation. The results do not establish invariance to regrouping or single-sequence deployment. A sample-independent variant would require retraining and evaluation; the exact reference convention is documented in Supplementary Section~\ref{S-sec:implementation_record}.
+
+The reliability gate is informative but not calibrated uncertainty. Its mean is explicitly shaped by balance and entropy regularization, so high gate-error correlation and preference accuracy do not establish probabilistic calibration. Because the frozen-checkpoint stress tests reuse one trained checkpoint, they do not quantify variation across independent training runs. Between-dataset uncertainty also remains unresolved. External sports datasets, metric 3D references, longer asynchronous sequences, and naturally occurring image degradation remain necessary directions.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+CanonFuse3D shows that human-centric fusion can refine two independently estimated 3D pose streams without camera parameters. Pose alignment, cross-view temporal features, and gated residual correction improve agreement with the evaluated references over canonical averaging when the inputs provide complementary evidence. The benefit is conditional: severe corruption and a changed upstream error distribution can reverse it, and simple learned baselines achieve lower clean-input position or acceleration errors. The findings support calibration-free post-estimation dual-view refinement as a useful component for difficult moving-subject capture, while emphasizing the need to validate the chosen pose estimator and capture conditions.
+
+\section*{Acknowledgments}
+We thank the dataset providers and the open-source research community for making this work possible. This research, in part, used computational resources of Pegasus provided by the Multidisciplinary Cooperative Research Program in the Center for Computational Sciences, University of Tsukuba. This work used computational resources of Pegasus provided by University of Tsukuba through the HPCI System Research Project (Project ID: hp260146).
+
+\section*{Declaration of competing interest}
+\textbf{Author confirmation required before submission.} The authors must approve the final declaration wording.
+
+\section*{CRediT authorship contribution statement}
+\textbf{Author confirmation required before submission.} Contributions must be approved by all seven authors.
+
+\section*{Data and code availability}
+Ski-PTZ-Pose is available from the dataset provider~\cite{ski_poseptz_dataset}. The release status and repository URL for the Unity data, trained checkpoint, evaluation manifests, and evaluation scripts must be confirmed by the authors before submission. The author-collected indoor and outdoor videos are used only for qualitative illustration; their sharing conditions must also be confirmed before submission. The local reproducibility package records exact checkpoint and estimator hashes.
+
+\section*{Ethics and generative-AI disclosure}
+The quantitative study uses a synthetic dataset and a previously released research dataset. The author-collected indoor and outdoor videos are used solely for qualitative illustration and do not contribute training samples or quantitative measurements. The authors must confirm and report any applicable institutional-review and participant-consent requirements for these recordings before submission. Journal-required disclosure of generative-AI assistance must also be reviewed and approved by the authors before submission.
+
+\setlength{\bibsep}{4pt}
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

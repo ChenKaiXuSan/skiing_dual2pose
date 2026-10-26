@@ -1,0 +1,14 @@
+joint,average_error,fused_error,reference_kind,unit
+Shoulder L,0.21979287,0.06077938,Constructed canonical reference,dataset canonical coordinate units
+Shoulder R,0.15898062,0.1267564,Constructed canonical reference,dataset canonical coordinate units
+Elbow L,0.1437359,0.24026717,Constructed canonical reference,dataset canonical coordinate units
+Elbow R,0.33729827,0.25774053,Constructed canonical reference,dataset canonical coordinate units
+Hip L,0.025342902,0.027706826,Constructed canonical reference,dataset canonical coordinate units
+Hip R,0.044552673,0.030897347,Constructed canonical reference,dataset canonical coordinate units
+Knee L,0.3767241,0.119355656,Constructed canonical reference,dataset canonical coordinate units
+Knee R,0.5676028,0.20874244,Constructed canonical reference,dataset canonical coordinate units
+Ankle L,0.6858424,0.12719446,Constructed canonical reference,dataset canonical coordinate units
+Ankle R,0.886564,0.20809919,Constructed canonical reference,dataset canonical coordinate units
+Wrist R,0.60680115,0.42740256,Constructed canonical reference,dataset canonical coordinate units
+Wrist L,0.3947761,0.33656403,Constructed canonical reference,dataset canonical coordinate units
+Neck,0.16356021,0.06772594,Constructed canonical reference,dataset canonical coordinate units

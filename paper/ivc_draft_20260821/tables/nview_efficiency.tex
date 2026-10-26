@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering
+\caption{Accuracy--cost trade-off for deployable frozen pairwise composition. Latency is the serial fusion time per 30-frame camera group; reduction is relative to the two-view MPJPE.}
+\label{tab:nview_efficiency}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}rrrrrrrr@{}}
+\toprule
+Views & Pairs & MPJPE & Red. (\%) & Latency (ms) & Rel. & Groups/s & Peak MiB \\
+\midrule
+2 & 1 & 0.1295 & -- & 2.02 & 1.00$\times$ & 494.7 & 12.28 \\
+3 & 3 & 0.1177 & 9.1 & 6.02 & 2.98$\times$ & 166.1 & 12.31 \\
+4 & 6 & 0.1158 & 10.6 & 12.06 & 5.96$\times$ & 83.0 & 12.33 \\
+\bottomrule
+\end{tabular}
+\vspace{0.3em}
+\begin{minipage}{0.97\linewidth}\footnotesize Serial latency is the synchronized mean over 44 accepted 30-frame camera groups after 10 warm-up executions on one NVIDIA RTX A6000. It includes pose canonicalization, all unique pair forwards, and output averaging, but excludes monocular front-end inference, data loading, and oracle selection.\end{minipage}
+\end{table}

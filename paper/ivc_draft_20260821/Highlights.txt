@@ -1,0 +1,5 @@
+Calibration-free fusion of two monocular 3D pose streams after estimation.
+Human-centric alignment and joint-frame gating beat every averaging-based fusion.
+Gains hold across camera angles, timing errors, and pose or image occlusion.
+Lightweight adaptation transfers the fusion model to three other pose estimators.
+Pairwise composition extends the dual-view model to three and four cameras.

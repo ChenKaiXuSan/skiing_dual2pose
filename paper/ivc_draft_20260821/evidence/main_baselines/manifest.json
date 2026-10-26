@@ -1,0 +1,16 @@
+{
+  "source_run": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/main_baselines/20260906",
+  "files_sha256": {
+    "reference_reproduction_unity.json": "c5d0f96760ec078a8ca9015c8df2e0ba3b57131bcd3bef6f3fb077dc59be0a34",
+    "reference_reproduction_ski.json": "59441e0c0ef01c59804fcb584d830dec18dd8d595e8fc2b8e8ba29194b2df542",
+    "ski_training_coverage.json": "fd93aa408f8c851b47cf3e35d0f8052a4a5f63eb5b0c0429d4fafd9f1c264be4",
+    "ski_geometry_coordinate_audit.md": "d007b10125aea02403623decb942bbb019d83d09af98118609479228b0dd1974",
+    "geometry_implementation.md": "b39b7f3bcbe393a105177174f323e3114c790f7b4bcc55d5b3cbdffd879c878a",
+    "pose_implementation.md": "8963a3f90b4f69bb19000ceeb2f9cd24dd84b989ec1a15552cc9900e5a848de8",
+    "dlt_training.md": "8069872379dc6fa1e01c0a34c0878c66a9db85d6b551498b81d7d779a9fb090c",
+    "initial_review.md": "b00cb387db1faa602dbc0d4cf43a1a0a2dfc54036b12e789d752a6d1e1c8076d",
+    "final_review.md": "bca4f516f0c34eac82a6a7e3e5224969816f0bd9f71806ce350f09933be39d19",
+    "final_tests.log": "430ba50df93d382aee3aed4cef9245bc3f1ecfd8de50409833b63d94771b0681",
+    "verify_final_artifacts.py": "4d437df79035c15a7561b84a306f383c7df6388ad19f1ea373c714d608ec9f19"
+  }
+}

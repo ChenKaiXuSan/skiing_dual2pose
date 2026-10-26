@@ -1,0 +1,65 @@
+{
+  "id": "U02",
+  "dataset": "unity",
+  "index": 16115,
+  "azimuth_gap_degrees": 60,
+  "sample": {
+    "index": 16115,
+    "person_id": "male",
+    "action_id": "Anim_Male_Skier_Braking",
+    "cam1_id": "capture_L0_A000",
+    "cam2_id": "capture_L0_A060",
+    "num_aligned_frames": 30
+  },
+  "batch_size": 256,
+  "batch_start_index": 15872,
+  "reference_kind": "Unity avatar GT",
+  "cache_manifest_sha256": "992be1c97f2f71cf6ecd189ef3b917962b039eed0d468cacd995640beb6cd700",
+  "rgb_sources": [
+    "/home/kaixu_chen/skiing/data/skiing_unity_dataset/data_pole_ski/male/Anim_Male_Skier_Braking/frames/capture_L0_A000/frame_000015.png",
+    "/home/kaixu_chen/skiing/data/skiing_unity_dataset/data_pole_ski/male/Anim_Male_Skier_Braking/frames/capture_L0_A060/frame_000015.png"
+  ],
+  "rgb_source_sha256": [
+    "4e124a885203d8a7419ac4d7aead34d4fdc525ab5c05fa210a73291923f4758f",
+    "336e95b1dc72f17e15999b127802968bd6f1b9781287b1e6371d480fe5d6456b"
+  ],
+  "window_index_0based": 14,
+  "source_frame": 15,
+  "checkpoint": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt",
+  "checkpoint_sha256": "869a2217f8676c0ada75ed3c9a3c82a9b8efbb105749f6ffb8bef71e9172f50f",
+  "inference": "New frozen-checkpoint CPU inference, float32, eval mode; not retraining.",
+  "num_joints": 15,
+  "reconstruction_max_abs_error": 1.1920928955078125e-07,
+  "alpha_min": 0.10292087495326996,
+  "alpha_max": 0.6700994968414307,
+  "projection": "Canonical: u=x+0.45z,v=y+0.15z; raw display flips v. Display only, not RGB projection.",
+  "limitations": [
+    "Selected illustration, not aggregate or independently sampled evidence.",
+    "Reference is never a model input.",
+    "No 2D skeleton overlay exported."
+  ],
+  "frame_errors": {
+    "canonical_average": 0.5772936940193176,
+    "fused": 1.7999670505523682
+  },
+  "assets": [
+    "raw_left",
+    "raw_right",
+    "left",
+    "right_to_left",
+    "base_left",
+    "base_right",
+    "fused",
+    "reference",
+    "alignment_before_after",
+    "cross_view_difference",
+    "temporal_velocity",
+    "residual_correction",
+    "alignment_rotation",
+    "temporal_poses",
+    "gate_heatmap",
+    "attention_heatmap",
+    "output_comparison",
+    "sample_preview"
+  ]
+}

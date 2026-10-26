@@ -1,0 +1,32 @@
+{
+  "metapose_repo": "/tmp/ivc-table-citations-20260910-hc8JTg/metapose_source",
+  "train_dir": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/external_baselines/20260911/metapose_data/unity/train",
+  "test_dir": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/external_baselines/20260911/metapose_data/unity/test",
+  "output_dir": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/external_baselines/20260911/metapose_unity_full_seed42",
+  "val_dir": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/external_baselines/20260911/metapose_data/unity/val",
+  "seed": 42,
+  "stages": 3,
+  "epochs": 10,
+  "batch_size": 1024,
+  "timeout_hours": 24.0,
+  "evaluation_python": "/home/kaixu_chen/miniforge3/envs/dual2pose/bin/python",
+  "control_metrics": "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/ivc_mmsports_extension/external_baselines/20260910/stride_unity_test_full_seed42/metrics.json",
+  "source_commit": "08a8d6736475776f42ffac23b2c13111a28e5795",
+  "main_mlp": [
+    512,
+    512,
+    "ccat",
+    512,
+    512,
+    "ccat",
+    512
+  ],
+  "dtype": "float64",
+  "method": "MetaPose common13 adapted, 2D-supervised, additional estimated 2D",
+  "no_3d_supervision": true,
+  "no_supplied_calibration": true,
+  "code_sha256": {
+    "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/dual2pose/experiments/run_metapose.py": "20586ea0a9d7020aff984323858609042ec0ca41798989073803f72c9ee87a36",
+    "dual2pose/eval/metapose_inputs.py": "32af983d53de5af48203d8280d40215f07f0aef721d4ba4e28e0b4aeabb9bb1e"
+  }
+}

@@ -1,0 +1,16 @@
+joint,canonical_average_error,fused_error,coordinate_units
+Eye L,0.09196914,0.026851040651912673,canonical coordinate units
+Eye R,0.0971152,0.03467481399241862,canonical coordinate units
+Shoulder L,0.072567955,0.04612852442897362,canonical coordinate units
+Shoulder R,0.05623991,0.03541887119029081,canonical coordinate units
+Elbow L,0.09352166,0.030698610098626983,canonical coordinate units
+Elbow R,0.09865037,0.025845574503317044,canonical coordinate units
+Hip L,0.06093461,0.04221499007105153,canonical coordinate units
+Hip R,0.07074066,0.01605250573792294,canonical coordinate units
+Knee L,0.044461742,0.014191919562883801,canonical coordinate units
+Knee R,0.10760823,0.08994337763962144,canonical coordinate units
+Ankle L,0.07655092,0.049712989279888514,canonical coordinate units
+Ankle R,0.24414247,0.16898362912622897,canonical coordinate units
+Wrist R,0.09471534,0.06835740443980674,canonical coordinate units
+Wrist L,0.12489799,0.07197960568770764,canonical coordinate units
+Neck,0.047569092,0.016971442167017615,canonical coordinate units

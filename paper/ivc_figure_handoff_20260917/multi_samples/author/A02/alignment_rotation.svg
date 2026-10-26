@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="225.05pt" height="224.310062pt" viewBox="0 0 225.05 224.310062" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-09-17T14:38:47.403095</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.9, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 224.310062 
+L 225.05 224.310062 
+L 225.05 0 
+L 0 0 
+L 0 224.310062 
+z
+" style="fill: none"/>
+  </g>
+  <g id="patch_2">
+   <path d="M 7.2 215.446312 
+L 201.24 215.446312 
+L 201.24 21.406312 
+L 7.2 21.406312 
+L 7.2 215.446312 
+z
+" style="fill: none"/>
+  </g>
+  <g id="axes_1">
+   <g id="Line3DCollection_1">
+    <path d="M 136.724352 89.925415 
+L 106.842162 115.80415 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #5c9488; stroke-width: 1.5"/>
+    <path d="M 136.724352 89.925415 
+L 128.295233 100.27198 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #5c9488; stroke-width: 1.5"/>
+    <path d="M 136.724352 89.925415 
+L 128.367433 94.105731 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #5c9488; stroke-width: 1.5"/>
+   </g>
+   <g id="text_1">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start" x="7.2" y="215.446312" transform="rotate(-0 7.2 215.446312)">3D rotation vector; broadcast over frames and joints</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 10.8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="104.22" y="15.406312" transform="rotate(-0 104.22 15.406312)">Alignment rotation (R to L)</text>
+   </g>
+   <g id="Line3DCollection_2">
+    <path d="M 130.1965 78.336882 
+L 106.842162 115.80415 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke: #5c9488; stroke-width: 2"/>
+    <path d="M 130.1965 78.336882 
+L 124.11076 91.28895 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke: #5c9488; stroke-width: 2"/>
+    <path d="M 130.1965 78.336882 
+L 123.10738 86.504357 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke: #5c9488; stroke-width: 2"/>
+   </g>
+   <g id="Line3DCollection_3">
+    <path d="M 165.235247 133.321471 
+L 106.842162 115.80415 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke: #587c9e; stroke-width: 2"/>
+    <path d="M 165.235247 133.321471 
+L 147.374008 131.175612 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke: #587c9e; stroke-width: 2"/>
+    <path d="M 165.235247 133.321471 
+L 148.886407 125.192101 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke: #587c9e; stroke-width: 2"/>
+   </g>
+   <g id="Line3DCollection_4">
+    <path d="M 106.842162 74.327273 
+L 106.842162 115.80415 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #d18b47; stroke-width: 1.5"/>
+    <path d="M 106.842162 74.327273 
+L 102.585039 85.370422 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #d18b47; stroke-width: 1.5"/>
+    <path d="M 106.842162 74.327273 
+L 111.116635 87.714262 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #d18b47; stroke-width: 1.5"/>
+   </g>
+   <g id="Line3DCollection_5">
+    <path d="M 162.340685 131.825194 
+L 106.842162 115.80415 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #587c9e; stroke-width: 1.5"/>
+    <path d="M 162.340685 131.825194 
+L 145.889625 130.277857 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #587c9e; stroke-width: 1.5"/>
+    <path d="M 162.340685 131.825194 
+L 146.027744 123.903053 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #587c9e; stroke-width: 1.5"/>
+   </g>
+   <g id="Line3DCollection_6">
+    <path d="M 108.586254 86.294887 
+L 106.842162 115.80415 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke: #d18b47; stroke-width: 2"/>
+    <path d="M 108.586254 86.294887 
+L 108.466755 98.413393 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke: #d18b47; stroke-width: 2"/>
+    <path d="M 108.586254 86.294887 
+L 107.669821 91.770495 
+" clip-path="url(#p8ed320f61a)" style="fill: none; stroke: #d18b47; stroke-width: 2"/>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p8ed320f61a">
+   <rect x="7.2" y="21.406312" width="194.04" height="194.04"/>
+  </clipPath>
+ </defs>
+</svg>

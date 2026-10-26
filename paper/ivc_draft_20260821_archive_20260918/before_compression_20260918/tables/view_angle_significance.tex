@@ -1,0 +1,20 @@
+\begin{table*}[t]
+\centering
+\caption{Cluster-aware inference for fusion gain by camera separation.}
+\label{tab:view_angle_significance}
+\footnotesize
+\begin{tabular}{lrrrrr}
+\toprule
+Angle (deg) & Pairs & Mean gain & 95\% CI & $r_{rb}$ & $p_{\mathrm{Holm}}$ \\
+\midrule
+0--30 & 2,160 & 0.1328 & [0.1313, 0.1343] & 0.994 & \(<0.001\) \\
+30--60 & 2,700 & 0.1334 & [0.1321, 0.1347] & 0.995 & \(<0.001\) \\
+60--90 & 2,700 & 0.1332 & [0.1318, 0.1345] & 0.997 & \(<0.001\) \\
+90--120 & 2,700 & 0.1337 & [0.1324, 0.1349] & 1.000 & \(<0.001\) \\
+120--150 & 2,700 & 0.1325 & [0.1314, 0.1336] & 1.000 & \(<0.001\) \\
+150--180 & 3,150 & 0.1312 & [0.1303, 0.1322] & 1.000 & \(<0.001\) \\
+\bottomrule
+\end{tabular}
+\vspace{0.3em}
+\parbox{0.96\textwidth}{\footnotesize \textit{Note.} Positive gain favors CanonFuse3D. Confidence intervals use camera-pair bootstrap resampling; reported $p$ values are Holm-adjusted across six paired Wilcoxon tests. The Kruskal--Wallis angle effect is $p=0.0251$ with $\epsilon^2=0.00049$.}
+\end{table*}

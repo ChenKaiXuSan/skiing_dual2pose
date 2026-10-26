@@ -1,0 +1,36 @@
+\begin{thebibliography}{1}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\expandafter\ifx\csname href\endcsname\relax
+  \def\href#1#2{#2} \def\path#1{#1}\fi
+
+\bibitem{umeyama1991least}
+S.~Umeyama, Least-squares estimation of transformation parameters between two point patterns, IEEE Transactions on Pattern Analysis and Machine Intelligence 13~(4) (1991) 376--380.
+\newblock \href {https://doi.org/10.1109/34.88573} {\path{doi:10.1109/34.88573}}.
+
+\bibitem{bai2018empirical}
+S.~Bai, J.~Z. Kolter, V.~Koltun, An empirical evaluation of generic convolutional and recurrent networks for sequence modeling, arXiv preprint arXiv:1803.01271 (2018).
+\newblock \href {https://doi.org/10.48550/arXiv.1803.01271} {\path{doi:10.48550/arXiv.1803.01271}}.
+
+\bibitem{zeng2022smoothnet}
+A.~Zeng, L.~Yang, X.~Ju, J.~Li, J.~Wang, Q.~Xu, {SmoothNet}: A plug-and-play network for refining human poses in videos, in: Computer Vision -- ECCV 2022, Springer, 2022, pp. 625--642.
+\newblock \href {https://doi.org/10.1007/978-3-031-20065-6_36} {\path{doi:10.1007/978-3-031-20065-6_36}}.
+
+\bibitem{hartley2004multiple}
+R.~Hartley, A.~Zisserman, Multiple View Geometry in Computer Vision, 2nd Edition, Cambridge University Press, 2004.
+\newblock \href {https://doi.org/10.1017/CBO9780511811685} {\path{doi:10.1017/CBO9780511811685}}.
+
+\bibitem{lal2025stride}
+R.~Lal, S.~Bachu, Y.~Garg, A.~Dutta, C.-K. Ta, H.~D. Cruz, D.~S. Raychaudhuri, M.~S. Asif, A.~K. Roy-Chowdhury, {STRIDE}: Single-video based temporally continuous occlusion-robust {3D} pose estimation, in: Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV), 2025, pp. 794--803.
+\newblock \href {https://doi.org/10.1109/WACV61041.2025.00087} {\path{doi:10.1109/WACV61041.2025.00087}}.
+
+\bibitem{zeng2022deciwatch}
+A.~Zeng, X.~Ju, L.~Yang, R.~Gao, X.~Zhu, B.~Dai, Q.~Xu, {DeciWatch}: A simple baseline for {10x} efficient {2D} and {3D} pose estimation, in: Computer Vision -- ECCV 2022, Springer, 2022, pp. 607--624.
+\newblock \href {https://doi.org/10.1007/978-3-031-20065-6_35} {\path{doi:10.1007/978-3-031-20065-6_35}}.
+
+\bibitem{usman2022metapose}
+B.~Usman, A.~Tagliasacchi, K.~Saenko, A.~Sud, {MetaPose}: Fast {3D} pose from multiple views without {3D} supervision, in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), 2022, pp. 6759--6770.
+\newblock \href {https://doi.org/10.1109/CVPR52688.2022.00664} {\path{doi:10.1109/CVPR52688.2022.00664}}.
+
+\end{thebibliography}

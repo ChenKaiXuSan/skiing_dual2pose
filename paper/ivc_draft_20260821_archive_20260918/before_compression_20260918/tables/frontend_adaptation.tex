@@ -1,0 +1,21 @@
+\begin{table*}[t]
+\centering
+\caption{Common-13 MPJPE after front-end-specific or mixed adaptation. Each row is one frozen model evaluated on all four front ends; lower is better.}
+\label{tab:frontend_adaptation}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Adaptation model & SAM3D & VideoPose3D & PoseFormer & MotionBERT \\
+\midrule
+Frozen reference & 0.1551 & 0.5389 & 0.5360 & 0.4385 \\
+\midrule
+VideoPose3D/heads & 0.2120 & 0.2621 & 0.3297 & 0.3567 \\
+VideoPose3D/full & 0.2442 & 0.2290 & 0.2954 & 0.4403 \\
+PoseFormer/heads & 0.1822 & 0.2833 & 0.3234 & 0.3521 \\
+PoseFormer/full & 0.2033 & 0.2447 & 0.2741 & 0.3381 \\
+MotionBERT/heads & 0.1976 & 0.4667 & 0.5100 & 0.2744 \\
+MotionBERT/full & 0.2117 & 0.5050 & 0.6036 & 0.2393 \\
+Mixed/full & 0.1809 & 0.2363 & 0.2751 & 0.2464 \\
+\bottomrule
+\end{tabular}
+\end{table*}

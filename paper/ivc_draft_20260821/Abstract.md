@@ -1,0 +1,9 @@
+# CanonFuse3D: Reliability-Gated Fusion of Uncalibrated Dual-View 3D Human Pose Streams for Fast-Moving Athletes
+
+## Abstract
+
+Monocular three-dimensional (3D) human pose estimates remain vulnerable to depth ambiguity, self-occlusion, and temporal jitter. A second camera can provide complementary evidence, but exploiting it through calibrated reconstruction is difficult when cameras follow a distant, fast-moving athlete or are installed temporarily. We present CanonFuse3D, a calibration-free post-estimation framework that fuses two independently estimated, approximately synchronized monocular 3D pose streams without requiring images, 2D observations, or camera parameters at the fusion stage. Human-centric canonicalization and sequence-level alignment expose cross-view agreement and disagreement; a shared joint encoder, bidirectional cross-view attention, and temporal refinement then drive joint-frame gating with residual correction. We evaluate the framework quantitatively on a synthetic Unity dataset with avatar ground truth and the real-world Ski-PTZ-Pose dataset with a constructed reference, and qualitatively on author-collected dual-view recordings. Relative to canonical averaging, CanonFuse3D reduces the mean per-joint position error by 44.5% on Unity and 48.6% on Ski-PTZ-Pose, while comparisons with learned and geometric references reveal metric- and input-dependent trade-offs rather than universal superiority. Controlled studies characterize the useful range across camera separations, small timing and sampling-rate errors, and pose or image occlusion, including failures under severe corruption. The same architecture supports alternative pose estimators through lightweight adaptation and additional cameras through pairwise composition.
+
+## Keywords
+
+3D human pose estimation; dual-view fusion; post-estimation pose fusion; calibration-free refinement; human-centric representation; front-end generalization

@@ -1,0 +1,97 @@
+{
+  "date": "2026-09-06",
+  "scope": "Four reviewer-requested manuscript clarifications",
+  "main_pdf_pages": 47,
+  "main_figures": 9,
+  "main_tables": 9,
+  "abstract_word_count": 240,
+  "review_mapping": [
+    {
+      "review_item": "R2-unsynchronized-literature",
+      "pages": [
+        7
+      ],
+      "evidence": "Takahashi 2018 positioning and timing-scope distinction"
+    },
+    {
+      "review_item": "R3-abstract-coordinates",
+      "pages": [
+        1,
+        9,
+        10
+      ],
+      "evidence": "Batch anchor and world-space/per-frame-root-relative distinction"
+    },
+    {
+      "review_item": "R3-alignment-and-missing-joints",
+      "pages": [
+        10,
+        11,
+        15,
+        31
+      ],
+      "evidence": "Sequence-level unweighted SVD fit, constraints, dense input and loss rules, pre-canonicalization corruption units"
+    },
+    {
+      "review_item": "R3-motion-blur",
+      "pages": [
+        41
+      ],
+      "evidence": "Exposure-related error propagation explained as expected mechanisms, with no claimed blur experiment"
+    }
+  ],
+  "build": {
+    "exit_code": 0,
+    "undefined_references_or_citations": false,
+    "overfull_boxes": false,
+    "existing_bibtex_warnings": [
+      "empty pages in zeng2022smoothnet",
+      "empty pages in chen2026canonfuse3dconference"
+    ]
+  },
+  "visual_check_pages": [
+    1,
+    7,
+    10,
+    11,
+    15,
+    41
+  ],
+  "protected_source_and_figure_count": 29,
+  "protected_artifacts_unchanged": true,
+  "supplementary_pdf_unchanged": true,
+  "patch_apply_report": "logs/ivc_mmsports_extension/reviewer_text_revision/20260906/draft.rev1.formatted.md.apply-report.json",
+  "patch_counters": {
+    "blocks_total": 152,
+    "blocks_touched": 4,
+    "blocks_preserved_byte_identical": 148,
+    "preserved_ratio": 0.9737
+  },
+  "backup_directory": "logs/ivc_mmsports_extension/reviewer_text_revision/20260906/before",
+  "code_evidence": [
+    "dual2pose/trainer/canonicalize.py",
+    "dual2pose/models/sim3.py",
+    "dual2pose/models/crossview_fusion.py",
+    "dual2pose/trainer/train_crossview_fusion.py",
+    "dual2pose/eval/eval_unity_masking.py",
+    "dual2pose/eval/eval_unity_image_occlusion.py"
+  ],
+  "reference_evidence": {
+    "doi": "10.1109/CVPRW.2018.00230",
+    "paper_url": "https://openaccess.thecvf.com/content_cvpr_2018_workshops/papers/w34/Takahashi_Human_Pose_As_CVPR_2018_paper.pdf",
+    "metadata_url": "https://openaccess.thecvf.com/content_cvpr_2018_workshops/w34/html/Takahashi_Human_Pose_As_CVPR_2018_paper.html",
+    "pagination_note": "Uses CVF catalogue pages 1775-1782; Crossref returns malformed pages 1856-18567, which were not copied.",
+    "read_sections": [
+      "3.1 Problem Formulation",
+      "3.1.1 Relaxed Reprojection Error",
+      "3.1.2 Constraints on Human Joints",
+      "3.2 Optimization"
+    ]
+  },
+  "file_hashes": {
+    "main.tex": "10104ee3ecca6fdcc76185ff9343e23ffc88ca90670d0dfa2044e4c1532b2cbc",
+    "references.bib": "cac7228b5fe406f03fc057ac9d374da6afe2900d31b9a07e0e8b5abf29bf59ba",
+    "main.pdf": "eb0ae00998fbd1e9a249595ad6b42ab53d00c23156b21566902738b3d80bd64f",
+    "supplementary.pdf": "caf14f5c5cf5385289ecad11f3e0d5913b6548c0871daf1cb7a0646eb8dd1db0"
+  }
+}
