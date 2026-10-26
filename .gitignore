@@ -143,5 +143,4 @@ paper/**/*.blg
 paper/**/*.spl
 paper/**/*.synctex.gz
 !paper/**/evidence/**/*.log
-paper/ivc_figure_handoff_20260917.zip
 paper/mmsports_reference/.git_overleaf/

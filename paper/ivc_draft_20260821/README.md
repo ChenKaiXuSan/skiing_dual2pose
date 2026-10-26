@@ -67,5 +67,5 @@ Tracked-changes files are only requested at the revision stage. Open items are l
 
 ## Notes
 
-- `paper/` is tracked in the private GitHub repository. LaTeX build artifacts and the figure-handoff zip are excluded via `.gitignore`. `../mmsports_reference/` is tracked as plain files; its Overleaf git history is kept locally in `.git_overleaf/` (rename it back to `.git` to pull from Overleaf again).
+- `paper/` is tracked in the private GitHub repository. LaTeX build artifacts are excluded via `.gitignore`. `../mmsports_reference/` is tracked as plain files; its Overleaf git history is kept locally in `.git_overleaf/` (rename it back to `.git` to pull from Overleaf again).
 - The MMSports source under `../mmsports_reference/` is read-only reference material.
