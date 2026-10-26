@@ -133,7 +133,8 @@ ckpt/
 6a33ba78cba883c26fb3823f
 # Manuscripts are tracked (repository is private). Skip LaTeX build artifacts,
 # the redundant figure-handoff zip (its contents are tracked unpacked), and the
-# Overleaf-synced conference source, which is its own git repository.
+# Overleaf history of the conference source (its .git was renamed .git_overleaf
+# so the files can be tracked here).
 paper/**/*.aux
 paper/**/*.fls
 paper/**/*.fdb_latexmk
@@ -143,4 +144,4 @@ paper/**/*.spl
 paper/**/*.synctex.gz
 !paper/**/evidence/**/*.log
 paper/ivc_figure_handoff_20260917.zip
-paper/mmsports_reference/
+paper/mmsports_reference/.git_overleaf/
