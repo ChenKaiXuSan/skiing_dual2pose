@@ -317,3 +317,8 @@ The complete annotation mapping, reference audit, source backup, patch report, a
 ## 2026-09-18: Title changed
 
 - New title: "CanonFuse3D: Reliability-Gated Fusion of Uncalibrated Dual-View 3D Human Pose Streams for Fast-Moving Athletes". The method name is retained; the subtitle now states the gating mechanism, the post-estimation input, and the application, and no longer enumerates study areas. Updated in main.tex (title and PDF metadata), supplementary.tex, cover_letter.md, and the journal-visuals test. Earlier snapshots under evidence/*/pre_revision keep the previous title as historical record.
+
+## 2026-10-26: Desk rejection and transfer to PLOS ONE
+
+- The 2026-09-26 submission to Image and Vision Computing was desk-rejected on 2026-10-26. This directory is kept unchanged as the record of the submitted version.
+- A new submission package for PLOS ONE was started in `../plos_one_20261026/` from these sources; see its README for the conversion checklist.
