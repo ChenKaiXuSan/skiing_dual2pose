@@ -116,7 +116,78 @@ class CanonicalizeModeTest(unittest.TestCase):
             canonicalize_pose_torch(_pose_batch(), mode="per_sequence")
 
 
+    def _tilted(self, batch=3, frames=8, angle_deg=70.0):
+        """Poses whose spine is not perpendicular to the hip line."""
+        poses = _pose_batch(batch=batch, frames=frames)
+        angle = math.radians(angle_deg)
+        poses[..., NECK, :] = torch.tensor([0.5 * math.cos(angle), 0.5 * math.sin(angle), 0.0])
+        return poses
+
+    def test_per_frame_frame_is_orthonormal_and_rigid(self):
+        poses = self._tilted()
+        canon, transform = canonicalize_pose_torch(poses, mode="per_frame")
+        R = transform["R"]
+        torch.testing.assert_close(R.transpose(-1, -2) @ R, torch.eye(3).expand_as(R), atol=1e-5, rtol=0)
+        torch.testing.assert_close(torch.linalg.det(R).abs(), torch.ones(R.shape[:2]), atol=1e-5, rtol=0)
+        # joint-to-joint distances survive in every frame
+        flat_raw, flat_canon = poses.reshape(-1, 15, 3), canon.reshape(-1, 15, 3)
+        torch.testing.assert_close(torch.cdist(flat_canon, flat_canon), torch.cdist(flat_raw, flat_raw), atol=1e-4, rtol=1e-4)
+        # hip line on the x axis, spine in the x-y plane pointing up
+        torch.testing.assert_close(canon[..., RIGHT_HIP, 1:], torch.zeros_like(canon[..., RIGHT_HIP, 1:]), atol=1e-5, rtol=0)
+        self.assertTrue((canon[..., NECK, 1] > 0).all())
+        torch.testing.assert_close(canon[..., NECK, 2], torch.zeros_like(canon[..., NECK, 2]), atol=1e-5, rtol=0)
+        self.assertFalse(transform["degenerate"].any())
+
+    def test_first_frame_construction_is_unchanged(self):
+        """The archived manuscript axes stay normalised but not orthogonalised."""
+        poses = self._tilted(batch=1, frames=1)
+        canon, transform = canonicalize_pose_torch(poses, mode="first_frame")
+        R = transform["R"]
+        self.assertGreater((R.T @ R - torch.eye(3)).abs().max().item(), 0.1)
+        frame = poses[0, 0]
+        pelvis = 0.5 * (frame[LEFT_HIP] + frame[RIGHT_HIP])
+        x_axis = frame[RIGHT_HIP] - frame[LEFT_HIP]
+        x_axis = x_axis / x_axis.norm()
+        y_axis = frame[NECK] - pelvis
+        y_axis = y_axis / y_axis.norm()
+        z_axis = torch.linalg.cross(x_axis, y_axis)
+        z_axis = z_axis / z_axis.norm()
+        if float((z_axis * (0.5 * (frame[0] + frame[1]) - frame[NECK])).sum()) < 0:
+            z_axis = -z_axis
+        expected = (frame - pelvis) @ torch.stack([x_axis, y_axis, z_axis], dim=-1)
+        torch.testing.assert_close(canon[0, 0], expected, atol=1e-5, rtol=0)
+
+    def test_degenerate_frames_reuse_a_neighbouring_rotation(self):
+        poses = _pose_batch(batch=2, frames=6)
+        poses[0, 3] = 0.0  # failed detection in the middle of a sequence
+        poses[0, 0] = 0.0  # and a leading one
+        poses[1] = 0.0  # a sequence without any valid frame
+        canon, transform = canonicalize_pose_torch(poses, mode="per_frame")
+        degenerate = transform["degenerate"]
+        self.assertEqual(degenerate[0].tolist(), [True, False, False, True, False, False])
+        self.assertTrue(degenerate[1].all())
+        R = transform["R"]
+        torch.testing.assert_close(R[0, 3], R[0, 2], atol=0, rtol=0)  # previous valid frame
+        torch.testing.assert_close(R[0, 0], R[0, 1], atol=0, rtol=0)  # leading frame: next valid one
+        torch.testing.assert_close(R[1], torch.eye(3).expand(6, 3, 3), atol=0, rtol=0)
+        self.assertTrue(torch.isfinite(canon).all())
+        torch.testing.assert_close(canon[0, 3], torch.zeros(15, 3), atol=0, rtol=0)  # a zero pose stays at the origin
+        # valid frames are unaffected by their degenerate neighbours
+        alone, _ = canonicalize_pose_torch(poses[0:1, 1:3], mode="per_frame")
+        torch.testing.assert_close(canon[0, 1:3], alone[0], atol=0, rtol=0)
+
+
 class TrainingProtocolTest(unittest.TestCase):
+    def test_degenerate_input_frames_are_logged(self):
+        left, right, gt = _pose_batch(seed=3), _pose_batch(seed=4), _pose_batch(seed=5)
+        left[0, 2] = 0.0  # one failed detection among the 2 x 24 input frames
+        model = _trainer()
+        logged = {}
+        model.log = lambda name, value, *args, **kwargs: logged.__setitem__(name, float(value))
+        with torch.no_grad():
+            model._shared_step(_batch(left, right, gt), stage="val")
+        self.assertAlmostEqual(logged["val/degenerate_input_frames"], 1 / 48, places=6)
+
     def test_protocol_is_per_frame_and_not_configurable(self):
         self.assertEqual(CANONICAL_MODE, "per_frame")
         self.assertEqual(_trainer().canonical_mode, "per_frame")

@@ -69,7 +69,7 @@ Each pose is transformed into a canonical coordinate system using anatomical lan
 
 This makes left/right predictions more comparable without using camera extrinsics.
 
-The training protocol is fixed to per-frame canonicalization: every frame of both input streams and of the supervision target is centred at its own pelvis and rotated into its own body frame, so the representation does not depend on batch composition and carries no global motion. Checkpoints record this protocol and the trainer rejects checkpoints of the manuscript's batch-referenced first-frame protocol. `canonicalize_pose_torch(mode="first_frame")` remains only for the archived baseline and native-output analyses.
+The training protocol is fixed to per-frame canonicalization: every frame of both input streams and of the supervision target is centred at its own pelvis and rotated into its own body frame, so the representation does not depend on batch composition and carries no global motion. That body frame is orthonormal: the hip line is the first axis and the spine is projected onto its orthogonal complement, so the transform is rigid and bone lengths are preserved; frames whose landmarks cannot define a frame (failed detections) reuse the rotation of a neighbouring frame and their share is logged as `degenerate_input_frames`. The archived `first_frame` construction keeps the manuscript's non-orthogonalised axes. Checkpoints record this protocol and the trainer rejects checkpoints of the manuscript's batch-referenced first-frame protocol. `canonicalize_pose_torch(mode="first_frame")` remains only for the archived baseline and native-output analyses.
 
 ### 3. Cross-view canonical fusion
 

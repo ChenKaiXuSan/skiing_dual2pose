@@ -309,9 +309,14 @@ def per_frame_canonical(P: np.ndarray) -> np.ndarray:
     """
     import torch
     from dual2pose.trainer.canonicalize import canonicalize_pose_torch
+    import warnings
     W, T = P.shape[:2]
-    c, _ = canonicalize_pose_torch(torch.from_numpy(np.ascontiguousarray(P.reshape(W * T, 15, 3))).float(),
-                                   left_hip=LEFT_HIP, right_hip=RIGHT_HIP, neck=NECK, mode="per_frame")
+    c, transform = canonicalize_pose_torch(torch.from_numpy(np.ascontiguousarray(P.reshape(W, T, 15, 3))).float(),
+                                           left_hip=LEFT_HIP, right_hip=RIGHT_HIP, neck=NECK, mode="per_frame")
+    n_degenerate = int(transform["degenerate"].sum())
+    if n_degenerate:
+        warnings.warn(f"{n_degenerate} of {W * T} frames had degenerate landmarks; "
+                      "their rotation was taken from a neighbouring frame of the same window")
     return c.numpy().reshape(W, T, 15, 3)
 
 

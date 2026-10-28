@@ -183,9 +183,14 @@ class CrossViewFusionTrainer(LightningModule):
             )
 
         # Per-frame body frame for both streams and the target (fixed protocol).
-        left_canonical, _ = self.canonicalize(p_left)
-        right_canonical, _ = self.canonicalize(p_right)
+        left_canonical, left_transform = self.canonicalize(p_left)
+        right_canonical, right_transform = self.canonicalize(p_right)
         gt_canonical = self.canonicalize(p_gt)[0] if p_gt is not None else None
+        # Input frames whose landmarks could not define a body frame (failed
+        # detections) reuse a neighbouring rotation; keep their share visible.
+        degenerate_inputs = torch.cat(
+            [left_transform["degenerate"].flatten(), right_transform["degenerate"].flatten()]
+        )
 
         # Forward pass
         fused, aux = self.models(
@@ -295,6 +300,13 @@ class CrossViewFusionTrainer(LightningModule):
         self.log(
             f"{stage}/cross_view_gap",
             cv_gap,
+            on_step=False,
+            on_epoch=True,
+            batch_size=fused.shape[0],
+        )
+        self.log(
+            f"{stage}/degenerate_input_frames",
+            degenerate_inputs.float().mean(),
             on_step=False,
             on_epoch=True,
             batch_size=fused.shape[0],
