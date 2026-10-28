@@ -34,18 +34,16 @@ if str(REPO_ROOT) not in sys.path:
 @lru_cache(maxsize=1)
 def _repo_symbols():
     fusion_module = importlib.import_module("dual2pose.trainer.train_crossview_fusion")
-    dual_module = importlib.import_module("dual2pose.trainer.train_dual2pose")
     map_module = importlib.import_module("map_config")
     return (
         fusion_module.CrossViewFusionTrainer,
-        dual_module.Dual2PoseTrainer,
         map_module.FILTERED_KPTS_MAPPING,
         map_module.filter_sam3d_body_kpts,
     )
 
 
 def _get_joint_names() -> List[str]:
-    _, _, FKM, _ = _repo_symbols()
+    _, FKM, _ = _repo_symbols()
     try:
         return [FKM[j] for j in sorted(FKM)]
     except Exception:
@@ -54,7 +52,7 @@ def _get_joint_names() -> List[str]:
 
 
 def _filter_to_15(kp3d: np.ndarray) -> np.ndarray:
-    _, _, _, fsk = _repo_symbols()
+    _, _, fsk = _repo_symbols()
     try:
         return fsk(kp3d)
     except Exception as e:
@@ -219,22 +217,17 @@ def _realworld_collate(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def _load_model_and_config(ckpt_path: Path, backbone: str) -> Tuple[Any, Any]:
-    crossview_fusion_cls, dual2pose_cls, _, _ = _repo_symbols()
+def _load_model_and_config(ckpt_path: Path) -> Tuple[Any, Any]:
+    crossview_fusion_cls, _, _ = _repo_symbols()
     config_path = REPO_ROOT / "configs" / "dual2pose.yaml"
     config = load_config(config_path)
-    config.model.backbone = backbone
+    config.model.backbone = "crossview_fusion"
     config.data.load_frames = False
     config.data.load_2d_kpt = False
     config.data.load_3d_kpt = True
     config.log_path = str(ckpt_path.parent)
 
-    if backbone == "crossview_fusion":
-        model = crossview_fusion_cls(config)
-    elif backbone == "dual2pose":
-        model = dual2pose_cls(config)
-    else:
-        raise ValueError(f"Unsupported backbone: {backbone}")
+    model = crossview_fusion_cls(config)
 
     if hasattr(model, "test_outputs"):
         model.test_outputs = []
@@ -256,11 +249,11 @@ ALL_RUNS = ["pro_1", "pro_2", "run_3", "run_4", "run_5", "run_6"]
 
 def evaluate_checkpoint(ckpt_path: Path, runs: List[str], args: argparse.Namespace) -> Dict[str, Dict[str, Any]]:
     print(f"\n{'='*60}")
-    print(f"Checkpoint: {ckpt_path.name} (backbone={args.backbone}, tw={args.time_window})")
+    print(f"Checkpoint: {ckpt_path.name} (tw={args.time_window})")
     print(f"Runs:      {runs}")
     print(f"{'='*60}\n")
 
-    model, config = _load_model_and_config(ckpt_path, backbone=args.backbone)
+    model, config = _load_model_and_config(ckpt_path)
     use_gpu = torch.cuda.is_available() and not args.cpu
     trainer = Trainer(
         accelerator="gpu" if use_gpu else "cpu",
@@ -443,7 +436,6 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Evaluate dual-view fusion on real-world SAM3D-body data")
     p.add_argument("--data-root", type=Path, default=Path(os.environ.get("DUAL2POSE_RAW_ROOT", "/home/kaixu_chen/data/skiing")) / "sam3d_body_results/person")
     p.add_argument("--ckpt-path", type=Path, default=None)
-    p.add_argument("--backbone", type=str, default="crossview_fusion", choices=["crossview_fusion", "dual2pose"])
     p.add_argument("--gpu", type=int, default=0)
     p.add_argument("--cpu", action="store_true")
     p.add_argument("--batch-size", type=int, default=1)

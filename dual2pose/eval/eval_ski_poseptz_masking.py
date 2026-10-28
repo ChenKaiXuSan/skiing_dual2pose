@@ -42,13 +42,11 @@ def _repo_symbols():
     )
     map_module = importlib.import_module("dual2pose.map_config")
     fusion_module = importlib.import_module("dual2pose.trainer.train_crossview_fusion")
-    dual_module = importlib.import_module("dual2pose.trainer.train_dual2pose")
     return (
         dataset_module.LabeledSkiPosePTZDataset,
         map_module.filter_filtered_kpts_to_common,
         map_module.filter_h36m_kpts,
         fusion_module.CrossViewFusionTrainer,
-        dual_module.Dual2PoseTrainer,
     )
 
 
@@ -74,13 +72,6 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_CONFIG,
         help="Config file used to build the data module and model.",
-    )
-    parser.add_argument(
-        "--backbone",
-        type=str,
-        default="crossview_fusion",
-        choices=["crossview_fusion", "dual2pose"],
-        help="Model backbone to instantiate.",
     )
     parser.add_argument(
         "--split",
@@ -176,7 +167,7 @@ def _parse_args() -> argparse.Namespace:
 
 def _build_config(args: argparse.Namespace):
     config = load_config(args.config_path)
-    config.model.backbone = args.backbone
+    config.model.backbone = "crossview_fusion"
     config.data.left_hip_idx = 4
     config.data.right_hip_idx = 5
     config.data.neck_idx = 12
@@ -192,12 +183,8 @@ def _build_config(args: argparse.Namespace):
 
 
 def _build_model(config):
-    _, _, _, crossview_fusion_cls, dual2pose_cls = _repo_symbols()
-    if config.model.backbone == "crossview_fusion":
-        return crossview_fusion_cls(config)
-    if config.model.backbone == "dual2pose":
-        return dual2pose_cls(config)
-    raise ValueError(f"Unsupported backbone: {config.model.backbone}")
+    _, _, _, crossview_fusion_cls = _repo_symbols()
+    return crossview_fusion_cls(config)
 
 
 def _build_mask_random(
@@ -278,7 +265,7 @@ def _apply_corruption(
 
 
 def _collate_ski_poseptz_batch(batch, mask_cfg: Dict[str, Any] | None = None):
-    _, filter_filtered_kpts_to_common, filter_h36m_kpts, _, _ = _repo_symbols()
+    _, filter_filtered_kpts_to_common, filter_h36m_kpts, _ = _repo_symbols()
     collated = default_collate(batch)
     mask_cfg = mask_cfg or {}
     _masks: dict[str, torch.Tensor] = {}
@@ -573,7 +560,7 @@ def _export_alpha_visualization(
 
 
 def main() -> None:
-    LabeledSkiPosePTZDataset, _, _, _, _ = _repo_symbols()
+    LabeledSkiPosePTZDataset, _, _, _ = _repo_symbols()
     args = _parse_args()
     if not args.ckpt_path.exists():
         raise FileNotFoundError(f"Checkpoint not found: {args.ckpt_path}")

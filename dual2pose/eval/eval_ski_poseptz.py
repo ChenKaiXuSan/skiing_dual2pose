@@ -37,13 +37,11 @@ def _repo_symbols():
     dataset_module = importlib.import_module("dual2pose.dataloader.ski_poseptz_dataset_dual_view")
     map_module = importlib.import_module("dual2pose.map_config")
     fusion_module = importlib.import_module("dual2pose.trainer.train_crossview_fusion")
-    dual_module = importlib.import_module("dual2pose.trainer.train_dual2pose")
     return (
         dataset_module.LabeledSkiPosePTZDataset,
         map_module.filter_filtered_kpts_to_common,
         map_module.filter_h36m_kpts,
         fusion_module.CrossViewFusionTrainer,
-        dual_module.Dual2PoseTrainer,
     )
 
 
@@ -60,7 +58,6 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--ckpt-path", type=Path, default=DEFAULT_CKPT, help="Checkpoint path to evaluate.")
     parser.add_argument("--config-path", type=Path, default=DEFAULT_CONFIG, help="Config file used to build the data module and model.")
-    parser.add_argument("--backbone", type=str, default="crossview_fusion", choices=["crossview_fusion", "dual2pose"], help="Model backbone to instantiate.")
     parser.add_argument("--split", type=str, default="test", choices=["train", "val", "test"], help="Dataset split to evaluate.")
     parser.add_argument("--batch-size", type=int, default=4, help="Test batch size.")
     parser.add_argument("--num-workers", type=int, default=4, help="DataLoader worker count.")
@@ -78,7 +75,7 @@ def _parse_args() -> argparse.Namespace:
 
 def _build_config(args: argparse.Namespace):
     config = load_config(args.config_path)
-    config.model.backbone = args.backbone
+    config.model.backbone = "crossview_fusion"
     config.data.left_hip_idx = 4
     config.data.right_hip_idx = 5
     config.data.neck_idx = 12
@@ -96,16 +93,12 @@ def _build_config(args: argparse.Namespace):
 
 
 def _build_model(config):
-    _, _, _, crossview_fusion_cls, dual2pose_cls = _repo_symbols()
-    if config.model.backbone == "crossview_fusion":
-        return crossview_fusion_cls(config)
-    if config.model.backbone == "dual2pose":
-        return dual2pose_cls(config)
-    raise ValueError(f"Unsupported backbone: {config.model.backbone}")
+    _, _, _, crossview_fusion_cls = _repo_symbols()
+    return crossview_fusion_cls(config)
 
 
 def _collate_ski_poseptz_batch(batch):
-    _, filter_filtered_kpts_to_common, filter_h36m_kpts, _, _ = _repo_symbols()
+    _, filter_filtered_kpts_to_common, filter_h36m_kpts, _ = _repo_symbols()
     collated = default_collate(batch)
 
     def _filter_pose_tensor_batch(pose_batch: torch.Tensor, filter_fn):
@@ -259,7 +252,7 @@ def _format_float(value: float) -> str:
 
 
 def main() -> None:
-    LabeledSkiPosePTZDataset, _, _, _, _ = _repo_symbols()
+    LabeledSkiPosePTZDataset, _, _, _ = _repo_symbols()
     args = _parse_args()
     if not args.ckpt_path.exists():
         raise FileNotFoundError(f"Checkpoint not found: {args.ckpt_path}")

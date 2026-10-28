@@ -69,12 +69,7 @@ Each pose is transformed into a canonical coordinate system using anatomical lan
 
 This makes left/right predictions more comparable without using camera extrinsics.
 
-The reference frame is selected by `model.arch.canonical_mode` in `configs/model/cross_view_fusion.yaml`:
-
-- `per_frame` (default): every frame is centred at its own pelvis and rotated into its own body frame, so training and evaluation see per-frame person-centred poses that do not depend on batch composition;
-- `first_frame`: the legacy protocol of the manuscript, one reference frame (the first frame of the batch) shared by every sequence in it.
-
-Checkpoints saved before this option existed carry no value and are loaded as `first_frame`; the trainer adopts the mode recorded in a checkpoint, so evaluating an older checkpoint under the new default stays consistent with its training.
+The training protocol is fixed to per-frame canonicalization: every frame of both input streams and of the supervision target is centred at its own pelvis and rotated into its own body frame, so the representation does not depend on batch composition and carries no global motion. Checkpoints record this protocol and the trainer rejects checkpoints of the manuscript's batch-referenced first-frame protocol. `canonicalize_pose_torch(mode="first_frame")` remains only for the archived baseline and native-output analyses.
 
 ### 3. Cross-view canonical fusion
 
@@ -99,18 +94,6 @@ base_l = 0.5 * (left_canon + right_to_left_canon)
 base_r = 0.5 * (right_canon + left_to_right_canon)
 fused = alpha * base_l + (1 - alpha) * base_r + residual
 ```
-
-### 4. Alternative Dual2Pose branch
-
-The repository also contains `dual2pose/models/dual2pose_net.py`, an alternative uncertainty-aware fusion model with:
-
-- velocity-based confidence proxy,
-- joint-wise view gating,
-- rich per-joint motion/bone/discrepancy features,
-- temporal SSM-style residual refinement,
-- optional DINO image features.
-
-This branch is selectable with `model=dual2pose`, which swaps the whole config group; the default group is `model=cross_view_fusion`.
 
 ---
 
@@ -211,7 +194,7 @@ which `dual2pose/path_rewrite.py` maps onto the roots above.
 
 ### 2. Train on Unity
 
-Default training uses `crossview_fusion`:
+Training uses the fixed CanonFuse3D protocol (per-frame body frame, supervised L1 on the Unity ground truth, two action-disjoint folds):
 
 ```bash
 python dual2pose/train_unity.py
@@ -220,8 +203,7 @@ python dual2pose/train_unity.py
 Useful overrides:
 
 ```bash
-python dual2pose/train_unity.py data.load_frames=false
-python dual2pose/train_unity.py model=dual2pose
+python dual2pose/train_unity.py train.fold=1 train.seed=13
 
 # Every model hyperparameter lives in configs/model/<group>.yaml and can be
 # overridden on the command line:
@@ -255,7 +237,7 @@ Skiing_Canonical_DualView_3D_Pose_PyTorch/
 ├── dual2pose/
 │   ├── dataloader/              # Unity and Ski-PosePTZ dataset loaders
 │   ├── eval/                    # Evaluation and visualization scripts
-│   ├── models/                  # Cross-view fusion, Dual2Pose, Sim3, baseline modules
+│   ├── models/                  # Cross-view fusion, Sim3, baseline modules
 │   ├── trainer/                 # PyTorch Lightning trainers and canonicalization
 │   └── utils/                   # Utility functions
 ├── configs/                     # Hydra configuration files

@@ -10,26 +10,27 @@ import torch
 from pytorch_lightning import LightningModule
 
 from dual2pose.models.crossview_fusion import CrossViewCanonicalFusion
-from .canonicalize import canonicalize_pose_torch, validate_canonical_mode
+from .canonicalize import canonicalize_pose_torch
 
 logger = logging.getLogger(__name__)
 
-# Checkpoints written before `model.arch.canonical_mode` existed were trained
-# with the batch-referenced first-frame protocol.
-LEGACY_CANONICAL_MODE = "first_frame"
-
-
-def _cfg_get(node: Any, key: str, default: Any = None) -> Any:
-    """Read ``key`` from a dict, an OmegaConf node or a namespace."""
-    if node is None:
-        return default
-    if isinstance(node, Mapping):
-        return node.get(key, default)
-    return getattr(node, key, default)
+# The training protocol is fixed.  Both input streams and the supervision
+# target are expressed in the per-frame body frame (every frame centred at its
+# own pelvis and rotated into its own hip/neck frame), and the model is trained
+# with an L1 loss against the ground-truth pose in that frame.  Checkpoints
+# record the mode so that weights from the manuscript's batch-referenced
+# first-frame protocol are rejected instead of being fed a representation they
+# were never trained on.
+CANONICAL_MODE = "per_frame"
 
 
 class CrossViewFusionTrainer(LightningModule):
-    """Pose fusion trainer for character variant using CrossViewFusion."""
+    """CanonFuse3D trainer: per-frame body-frame canonicalization, supervised L1.
+
+    Every batch must carry the two SAM 3D Body streams (``kpt3d_sam``) and, for
+    training and validation, the ground-truth pose (``kpt3d_gt``).  Test-time
+    inference on unlabeled recordings carries no target.
+    """
 
     def __init__(self, hparams) -> None:
         super().__init__()
@@ -48,15 +49,15 @@ class CrossViewFusionTrainer(LightningModule):
         optim_cfg = getattr(model_cfg, "optim", None)
         loss_cfg = getattr(model_cfg, "loss", None)
 
-        # Body-frame canonicalization applied to both input streams and to the
-        # supervision target.  "per_frame" expresses every frame in its own
-        # body frame (per-frame person centering).  "first_frame" is the legacy
-        # protocol: one reference frame, the first frame of the batch, shared
-        # by every sequence in it.  Configs and checkpoints that predate this
-        # option carry no value and are treated as "first_frame".
-        self.canonical_mode = validate_canonical_mode(
-            _cfg_get(arch_cfg, "canonical_mode", LEGACY_CANONICAL_MODE)
-        )
+        # The body-frame protocol is not a hyperparameter; refuse stale configs
+        # that still try to select another mode.
+        configured_mode = getattr(arch_cfg, "canonical_mode", None)
+        if configured_mode is not None and str(configured_mode) != CANONICAL_MODE:
+            raise ValueError(
+                f"The training protocol is fixed to canonical_mode={CANONICAL_MODE!r}; "
+                f"model.arch.canonical_mode={configured_mode!r} is not supported"
+            )
+        self.canonical_mode = CANONICAL_MODE
 
         self.lr = float(getattr(optim_cfg, "lr", 0.001))
         self.weight_decay = float(getattr(optim_cfg, "weight_decay", 0.01))
@@ -128,11 +129,11 @@ class CrossViewFusionTrainer(LightningModule):
     def canonicalize(
         self, pose: torch.Tensor
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        """Express ``pose`` (B, T, J, 3) in the body frame this model works in.
+        """Express ``pose`` (B, T, J, 3) in the per-frame body frame of the protocol.
 
         Every consumer that feeds the fusion network must go through this
         method so that inputs match the representation the weights were
-        trained on (``self.canonical_mode``).
+        trained on.
         """
         return canonicalize_pose_torch(
             pose,
@@ -143,63 +144,28 @@ class CrossViewFusionTrainer(LightningModule):
         )
 
     @staticmethod
-    def canonical_mode_from_checkpoint(checkpoint: Mapping[str, Any]) -> str:
-        """Return the canonicalization mode a Lightning checkpoint was trained with.
+    def check_checkpoint_protocol(
+        checkpoint: Mapping[str, Any], source: str = "checkpoint"
+    ) -> None:
+        """Raise unless ``checkpoint`` was written by this per-frame training protocol.
 
-        Checkpoints saved before the option existed carry no value; they were
-        trained with the first-frame protocol.
+        Checkpoints of the manuscript's batch-referenced first-frame protocol
+        carry no ``canonical_mode`` entry; their weights expect a different
+        input representation and can be neither evaluated nor fine-tuned here.
         """
-        hparams = _cfg_get(checkpoint, "hyper_parameters", None) or {}
-        hparams = _cfg_get(hparams, "hparams", hparams)
-        arch_cfg = _cfg_get(_cfg_get(hparams, "model", None), "arch", None)
-        mode = _cfg_get(arch_cfg, "canonical_mode", None)
-        if mode is None:
-            return LEGACY_CANONICAL_MODE
-        return validate_canonical_mode(mode)
+        recorded = checkpoint.get("canonical_mode")
+        if recorded != CANONICAL_MODE:
+            raise ValueError(
+                f"{source} was not trained with the per-frame protocol "
+                f"(recorded canonical_mode={recorded!r}, expected {CANONICAL_MODE!r}). "
+                "Train a checkpoint with dual2pose/train_unity.py on this branch."
+            )
 
-    def _record_canonical_mode_in_hparams(self) -> None:
-        """Best effort: keep the hparams that Lightning saves in sync with ``self.canonical_mode``.
-
-        The config object passed to ``__init__`` is shared with the caller, so
-        it is copied rather than mutated in place.
-        """
-        try:
-            import copy
-
-            from omegaconf import DictConfig, OmegaConf
-
-            cfg = _cfg_get(self.hparams, "hparams", None)
-            if isinstance(cfg, DictConfig):
-                updated = copy.deepcopy(cfg)
-                OmegaConf.set_struct(updated, False)
-                OmegaConf.update(updated, "model.arch.canonical_mode", self.canonical_mode, merge=True)
-            elif isinstance(cfg, dict):
-                updated = copy.deepcopy(cfg)
-                updated.setdefault("model", {}).setdefault("arch", {})["canonical_mode"] = self.canonical_mode
-            else:
-                return
-            self.hparams["hparams"] = updated
-        except Exception:  # pragma: no cover - metadata only
-            logger.debug("Could not record canonical_mode in hparams", exc_info=True)
+    def on_save_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+        checkpoint["canonical_mode"] = CANONICAL_MODE
 
     def on_load_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
-        """Adopt the canonicalization mode the weights were trained with.
-
-        ``Trainer.test(ckpt_path=...)`` builds the module from the current
-        config and only restores the weights, so a config that selects a
-        different mode would silently feed the network a representation it
-        has never seen.
-        """
-        mode = self.canonical_mode_from_checkpoint(checkpoint)
-        if mode != self.canonical_mode:
-            logger.warning(
-                "Checkpoint was trained with canonical_mode=%s but the current "
-                "config selects %s; using the checkpoint's mode.",
-                mode,
-                self.canonical_mode,
-            )
-            self.canonical_mode = mode
-            self._record_canonical_mode_in_hparams()
+        self.check_checkpoint_protocol(checkpoint)
 
     def _shared_step(self, batch: Dict[str, Any], stage: str) -> torch.Tensor:
         """Process character variant with dual-view SAM 3D poses.
@@ -210,18 +176,16 @@ class CrossViewFusionTrainer(LightningModule):
         total_loss = torch.tensor(0.0, device=self.device)
         variant_results: Dict[str, Any] = {}
 
-        # ===== CHARACTER: Dual2PoseNet with SAM =====
         p_left, p_right, p_gt = self._get_character_data(batch)
+        if p_gt is None and stage != "test":
+            raise RuntimeError(
+                "The training protocol is supervised: train/val batches must carry kpt3d_gt"
+            )
 
-        # Canonicalize both streams and the target with the model's body-frame
-        # rule (per-frame person centering by default, see `canonical_mode`).
-        left_canonical, left_transform = self.canonicalize(p_left)
-        right_canonical, right_transform = self.canonicalize(p_right)
-
-        if p_gt is not None:
-            gt_canonical, _ = self.canonicalize(p_gt)
-        else:
-            gt_canonical = None
+        # Per-frame body frame for both streams and the target (fixed protocol).
+        left_canonical, _ = self.canonicalize(p_left)
+        right_canonical, _ = self.canonicalize(p_right)
+        gt_canonical = self.canonicalize(p_gt)[0] if p_gt is not None else None
 
         # Forward pass
         fused, aux = self.models(
@@ -245,13 +209,13 @@ class CrossViewFusionTrainer(LightningModule):
         # Reliability diagnostics: cross-view discrepancy and temporal stability.
         cv_gap = torch.norm(left_canonical - right_canonical, dim=-1).mean()
 
-        # Compute loss
+        # Supervised term: L1 against the ground truth in the per-frame body
+        # frame.  Test-time inference on unlabeled data has no target and
+        # contributes no supervised term.
         mpjpe = fused.new_tensor(float("nan"))
-        if p_gt is not None:
+        loss_sup = fused.new_zeros(())
+        if gt_canonical is not None:
             loss_sup = torch.nn.functional.l1_loss(fused, gt_canonical)
-            loss_dict = {
-                "loss": loss_sup,
-            }
             mpjpe = torch.norm(fused - gt_canonical, dim=-1).mean()
             accel_err = self._safe_accel_err(fused, gt_canonical)[1]
             self.log(
@@ -270,12 +234,6 @@ class CrossViewFusionTrainer(LightningModule):
                 prog_bar=False,
                 batch_size=fused.shape[0],
             )
-        else:
-            pseudo_gt = 0.5 * (left_canonical + right_canonical)
-            loss_self = torch.nn.functional.l1_loss(fused, pseudo_gt)
-            loss_dict = {
-                "loss": loss_self,
-            }
 
         # Prevent gating collapse to one side.
         eps = 1e-6
@@ -292,7 +250,7 @@ class CrossViewFusionTrainer(LightningModule):
         acc = fused[:, 2:] - 2.0 * fused[:, 1:-1] + fused[:, :-2]
         temporal_smooth_loss = torch.norm(acc, dim=-1).mean()
         loss = (
-            loss_dict["loss"]
+            loss_sup
             + self.lambda_view_recon * loss_view_recon
             + self.lambda_alpha_balance * loss_alpha_balance
             + self.lambda_alpha_entropy * loss_alpha_entropy

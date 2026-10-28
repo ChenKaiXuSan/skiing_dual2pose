@@ -37,12 +37,7 @@ REPO_ROOT = THIS_DIR.parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from dual2pose.dataloader.data_loader import UnityDataModule, SkiPosePTZDataModule
-
-#####################################
-# select different experiment trainer
-#####################################
-from dual2pose.trainer.train_dual2pose import Dual2PoseTrainer
+from dual2pose.dataloader.data_loader import UnityDataModule
 from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
 
 logger = logging.getLogger(__name__)
@@ -58,14 +53,7 @@ def init_params(config):
 
     seed_everything(42, workers=True)
 
-    if config.model.backbone == "dual2pose":
-        classification_module = Dual2PoseTrainer(config)
-
-    elif config.model.backbone == "crossview_fusion":
-        classification_module = CrossViewFusionTrainer(config)
-
-    # * prepare data module
-    # ski_pose_ptz_data_module = SkiPosePTZDataModule(hparams)
+    classification_module = CrossViewFusionTrainer(config)
     unity_data_module = UnityDataModule(config)
 
     # for the tensorboard

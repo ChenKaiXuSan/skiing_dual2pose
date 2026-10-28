@@ -12,14 +12,8 @@ arch:
   num_heads: 4
   dropout: 0.1
   temporal_kernel_size: 5
-  # Body-frame canonicalization of the two input streams and of the target.
-  #   per_frame   every frame is centred at its own pelvis and rotated into its
-  #               own hip/neck body frame (per-frame person centering).
-  #   first_frame legacy protocol of the IVC manuscript: one reference frame,
-  #               the first frame of the batch, shared by all its sequences.
-  # Checkpoints saved before this key existed are loaded as first_frame; the
-  # trainer adopts the mode recorded in a checkpoint when it loads one.
-  canonical_mode: per_frame
+  # The body-frame protocol is fixed in the trainer (per-frame canonicalization
+  # of both input streams and of the target); it is not a hyperparameter.
 
 optim:
   lr: 0.001

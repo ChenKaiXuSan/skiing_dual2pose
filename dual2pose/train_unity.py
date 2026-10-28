@@ -42,12 +42,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from dual2pose.dataloader.data_loader import UnityDataModule, SkiPosePTZDataModule
-
-#####################################
-# select different experiment trainer
-#####################################
-from dual2pose.trainer.train_dual2pose import Dual2PoseTrainer
+from dual2pose.dataloader.data_loader import UnityDataModule
 from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
 from dual2pose.training_protocol import resolve_fold_index_path, validate_fold_metadata
 from dual2pose.eval.multiseed_metrics import summarize_test_outputs_by_action
@@ -69,26 +64,14 @@ def init_params(config: DictConfig):
     config.data.unity.index_mapping_path = str(fold_index_path)
     seed_everything(int(config.train.seed), workers=True)
 
-    # * select experiment
-    monitor_metric = "val/video_acc"
-    monitor_mode = "max"
-    ckpt_filename = "{epoch}-{val/loss:.2f}-{val/video_acc:.4f}"
+    # Fixed protocol: CanonFuse3D with per-frame body-frame canonicalization,
+    # supervised on the Unity ground truth and selected on the validation MPJPE
+    # in that frame.
+    classification_module = CrossViewFusionTrainer(config)
+    monitor_metric = "val/mpjpe"
+    monitor_mode = "min"
+    ckpt_filename = "{epoch}-{val/loss:.4f}-{val/mpjpe:.4f}"
 
-    if config.model.backbone == "dual2pose":
-        classification_module = Dual2PoseTrainer(config)
-        # dual2pose 当前验证阶段记录的是 val/character/mpjpe 与 val/loss。
-        monitor_metric = "val/character/mpjpe"
-        monitor_mode = "min"
-        ckpt_filename = "{epoch}-{val/loss:.4f}-{val/character/mpjpe:.4f}"
-    elif config.model.backbone == "crossview_fusion":
-        classification_module = CrossViewFusionTrainer(config)
-        # crossview_fusion 当前验证阶段记录的是 val/mpjpe 与 val/loss。
-        monitor_metric = "val/mpjpe"
-        monitor_mode = "min"
-        ckpt_filename = "{epoch}-{val/loss:.4f}-{val/mpjpe:.4f}"
-
-    # * prepare data module
-    # ski_pose_ptz_data_module = SkiPosePTZDataModule(hparams)
     unity_data_module = UnityDataModule(config)
 
     # for the tensorboard
@@ -150,33 +133,33 @@ def init_params(config: DictConfig):
         unity_data_module,
         ckpt_path=str(config.train.test_ckpt_path),
     )
-    if config.model.backbone == "crossview_fusion":
-        action_metrics = summarize_test_outputs_by_action(
-            list(getattr(classification_module, "test_outputs", []))
-        )
-        result_path = Path(str(config.log_path)) / "test_metrics_by_action.json"
-        result_path.parent.mkdir(parents=True, exist_ok=True)
-        result_path.write_text(
-            json.dumps(
-                {
-                    "fold": int(config.train.fold),
-                    "seed": int(config.train.seed),
-                    "index_mapping_path": str(config.data.unity.index_mapping_path),
-                    "test_checkpoint_policy": str(config.train.test_ckpt_path),
-                    "best_model_path": model_check_point.best_model_path,
-                    "best_model_score": (
-                        float(model_check_point.best_model_score.item())
-                        if model_check_point.best_model_score is not None
-                        else None
-                    ),
-                    "last_model_path": model_check_point.last_model_path,
-                    "trainer_test_metrics": test_metrics,
-                    **action_metrics,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
+    action_metrics = summarize_test_outputs_by_action(
+        list(getattr(classification_module, "test_outputs", []))
+    )
+    result_path = Path(str(config.log_path)) / "test_metrics_by_action.json"
+    result_path.parent.mkdir(parents=True, exist_ok=True)
+    result_path.write_text(
+        json.dumps(
+            {
+                "fold": int(config.train.fold),
+                "seed": int(config.train.seed),
+                "canonical_mode": classification_module.canonical_mode,
+                "index_mapping_path": str(config.data.unity.index_mapping_path),
+                "test_checkpoint_policy": str(config.train.test_ckpt_path),
+                "best_model_path": model_check_point.best_model_path,
+                "best_model_score": (
+                    float(model_check_point.best_model_score.item())
+                    if model_check_point.best_model_score is not None
+                    else None
+                ),
+                "last_model_path": model_check_point.last_model_path,
+                "trainer_test_metrics": test_metrics,
+                **action_metrics,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

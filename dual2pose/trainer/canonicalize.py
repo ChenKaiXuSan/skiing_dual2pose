@@ -20,7 +20,19 @@ Date      	By	Comments
 ----------	---	---------------------------------------------------------
 """
 
-import numpy as np
+"""Body-frame canonicalization of 3-D poses.
+
+The CanonFuse3D training protocol is fixed to ``mode="per_frame"``: every frame
+of both input streams and of the supervision target is centred at its own
+pelvis and rotated into its own hip/neck body frame, so the representation is
+independent of batch composition and carries no global motion.
+
+``mode="first_frame"`` (the default of this library function) is kept only for
+the archived manuscript analyses, which share one reference frame per batch:
+the non-learned baselines and the native-output audit.  It is not a training
+option; the trainer always passes ``mode="per_frame"``.
+"""
+
 import torch
 
 CANONICAL_MODES = ("first_frame", "per_frame")
@@ -36,102 +48,8 @@ def validate_canonical_mode(mode) -> str:
     return mode_str
 
 
-def normalize(v, eps=1e-8):
-    return v / (np.linalg.norm(v, axis=-1, keepdims=True) + eps)
-
-
 def _normalize_torch(v: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
     return v / (v.norm(dim=-1, keepdim=True) + eps)
-
-
-def canonicalize_pose_numpy(
-    x,
-    left_hip=6,
-    right_hip=7,
-    neck=14,
-    mode="first_frame",
-    eps=1e-8,
-    enforce_face_z_positive=True,
-    left_eye=0,
-    right_eye=1,
-):
-    """
-    x: (J, 3) or (T, J, 3) or (B, T, J, 3)
-    left_hip, right_hip, neck: joint indices for pelvis canonicalization
-    mode:
-        "per_frame"
-        "first_frame"
-    enforce_face_z_positive:
-        当提供 left_eye/right_eye 且为 True 时，强制 +Z 与(双眼中点-颈部)同向
-    return:
-        x_canon: same shape as x
-        transform dict with pelvis and R
-    """
-
-    x = np.asarray(x, dtype=np.float32)
-
-    squeeze_time = False
-    if x.ndim == 2:
-        x = x[None, ...]
-        squeeze_time = True
-    elif x.ndim == 3 and x.shape[1] != 3:
-        pass
-    elif x.ndim == 4:
-        b, t, j, c = x.shape
-        x = x.reshape(b * t, j, c)
-    elif x.ndim != 3 and x.ndim != 4:
-        raise ValueError("x must have shape (J, 3) or (T, J, 3) or (B, T, J, 3)")
-
-    left_hip_pos = x[:, left_hip]
-    right_hip_pos = x[:, right_hip]
-    neck_pos = x[:, neck]
-
-    pelvis = (left_hip_pos + right_hip_pos) / 2.0
-    x_centered = x - pelvis[:, None, :]
-
-    x_axis = normalize(right_hip_pos - left_hip_pos, eps)  # body right
-    y_axis = normalize(neck_pos - pelvis, eps)  # body up
-
-    z_axis = normalize(np.cross(x_axis, y_axis), eps)  # forward/back (unsigned)
-
-    if enforce_face_z_positive and left_eye is not None and right_eye is not None:
-        eye_mid = (x[:, left_eye] + x[:, right_eye]) / 2.0
-        face_dir = normalize(eye_mid - neck_pos, eps)
-        sign = np.sign(np.sum(z_axis * face_dir, axis=-1, keepdims=True))
-        sign[sign == 0] = 1.0
-        z_axis = z_axis * sign
-
-    # y_axis = normalize(np.cross(z_axis, x_axis), eps)      # re-orthogonalized up
-    R = np.stack([x_axis, y_axis, z_axis], axis=-1)
-
-    if mode == "first_frame":
-        ref_pelvis = pelvis[0]
-        ref_R = R[0]
-        x_canon = np.matmul(x - ref_pelvis[None, None, :], ref_R)
-        transform = {"pelvis": ref_pelvis, "R": ref_R}
-    elif mode == "per_frame":
-        x_canon = np.einsum("tjc,tck->tjk", x_centered, R)
-        transform = {"pelvis": pelvis, "R": R}
-    else:
-        raise ValueError("mode must be first_frame or per_frame")
-
-    if squeeze_time:
-        x_canon = x_canon[0]
-
-    x_canon = x_canon.reshape(b, t, j, c)
-
-    return x_canon, transform
-
-
-def apply_canonical_transform_numpy(points, pelvis, R):
-    """Apply a precomputed canonical transform to arbitrary 3D points."""
-    pts = np.asarray(points, dtype=np.float32)
-    return np.matmul(pts - pelvis[None, :], R)
-
-
-# ---------------------------------------------------------------------------
-# PyTorch version
-# ---------------------------------------------------------------------------
 
 
 def canonicalize_pose_torch(
@@ -145,23 +63,26 @@ def canonicalize_pose_torch(
     left_eye: int = 0,
     right_eye: int = 1,
 ):
-    """
-    PyTorch version of canonicalize_pose_numpy.
+    """Express poses in a body frame built from the hips, the neck and the eyes.
 
     x: (J, 3) or (T, J, 3) or (B, T, J, 3)
     mode:
         "first_frame": one reference, the pelvis and body axes of the first
             frame of the flattened input, shared by every frame.  With a
             (B, T, J, 3) batch that is the first frame of the FIRST sequence,
-            so the result depends on batch composition and order.
+            so the result depends on batch composition and order.  Archived
+            manuscript protocol only.
         "per_frame": every frame is centred at its own pelvis and rotated into
             its own body frame (per-frame person centering); independent of
-            batching.
+            batching.  The training protocol.
+    enforce_face_z_positive:
+        force +Z to point along (eye midpoint - neck) when eye indices are given.
     Returns:
         x_canon: (B, T, J, 3) for 3-D/4-D input, (J, 3) for 2-D input
         transform: dict with "pelvis" and "R".  For "per_frame" they carry one
             entry per frame, shaped like the input's leading dimensions.
     """
+    mode = validate_canonical_mode(mode)
     if not isinstance(x, torch.Tensor):
         x = torch.as_tensor(x, dtype=torch.float32)
     else:
@@ -170,7 +91,7 @@ def canonicalize_pose_torch(
     original_shape = x.shape
     squeeze_time = False
 
-    if x.ndim == 2:  # (J, 3) → (1, J, 3)
+    if x.ndim == 2:  # (J, 3) -> (1, J, 3)
         x = x.unsqueeze(0)
         squeeze_time = True
         b, t = 1, 1
@@ -192,9 +113,9 @@ def canonicalize_pose_torch(
     pelvis = (left_hip_pos + right_hip_pos) / 2.0  # (N, 3)
     x_centered = x - pelvis[:, None, :]  # (N, J, 3)
 
-    x_axis = _normalize_torch(right_hip_pos - left_hip_pos, eps)  # (N, 3)
-    y_axis = _normalize_torch(neck_pos - pelvis, eps)  # (N, 3)
-    z_axis = _normalize_torch(torch.linalg.cross(x_axis, y_axis), eps)  # (N, 3)
+    x_axis = _normalize_torch(right_hip_pos - left_hip_pos, eps)  # body right
+    y_axis = _normalize_torch(neck_pos - pelvis, eps)  # body up
+    z_axis = _normalize_torch(torch.linalg.cross(x_axis, y_axis), eps)  # forward/back
 
     if enforce_face_z_positive and left_eye is not None and right_eye is not None:
         eye_mid = (x[:, left_eye] + x[:, right_eye]) / 2.0  # (N, 3)
@@ -211,7 +132,7 @@ def canonicalize_pose_torch(
         ref_R = R[0]  # (3, 3)
         x_canon = (x - ref_pelvis[None, None, :]) @ ref_R  # (N, J, 3)
         transform = {"pelvis": ref_pelvis, "R": ref_R}
-    elif mode == "per_frame":
+    else:  # per_frame
         x_canon = torch.einsum("njc,nck->njk", x_centered, R)  # (N, J, 3)
         if squeeze_time:
             transform = {"pelvis": pelvis[0], "R": R[0]}
@@ -219,8 +140,6 @@ def canonicalize_pose_torch(
             transform = {"pelvis": pelvis.reshape(b, t, 3), "R": R.reshape(b, t, 3, 3)}
         else:
             transform = {"pelvis": pelvis, "R": R}
-    else:
-        raise ValueError("mode must be 'first_frame' or 'per_frame'")
 
     if squeeze_time:
         x_canon = x_canon[0]  # (J, 3)
@@ -228,17 +147,3 @@ def canonicalize_pose_torch(
         x_canon = x_canon.reshape(b, t, j, c)
 
     return x_canon, transform
-
-
-def apply_canonical_transform_torch(
-    points: torch.Tensor,
-    pelvis: torch.Tensor,
-    R: torch.Tensor,
-) -> torch.Tensor:
-    """Apply a precomputed canonical transform to arbitrary 3D points.
-
-    points: (..., 3)
-    pelvis: (3,)
-    R:      (3, 3)
-    """
-    return (points - pelvis) @ R

@@ -50,6 +50,7 @@ import json
 import subprocess
 import sys
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -66,7 +67,11 @@ from dual2pose.map_config import (  # noqa: E402
 )
 
 DEFAULT_ROOT = Path("/home/kaixu_chen/skiing/data/skiing_pocket3_20261012")
-DEFAULT_CKPT = REPO_ROOT / "logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt"
+# Override with DUAL2POSE_CKPT.  The archived manuscript checkpoint below was
+# trained under the first-frame protocol and is rejected by the protocol check;
+# point this at a checkpoint trained with dual2pose/train_unity.py on this branch.
+DEFAULT_CKPT = Path(os.environ.get(
+    "DUAL2POSE_CKPT", str(REPO_ROOT / "logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt")))
 FPS = 29.97
 LEFT_HIP, RIGHT_HIP, NECK = 6, 7, 14
 
@@ -341,31 +346,25 @@ def load_model(ckpt: Path, device):
     cfg.log_path = str(ckpt.parent)
     model = CrossViewFusionTrainer(cfg)
     state = torch.load(ckpt, map_location="cpu", weights_only=False)
-    # The weights fix the body-frame representation; legacy checkpoints carry
-    # no value and were trained with the first-frame protocol.
-    model.canonical_mode = CrossViewFusionTrainer.canonical_mode_from_checkpoint(state)
+    # Weights of the manuscript's first-frame protocol expect another input
+    # representation and are rejected.
+    CrossViewFusionTrainer.check_checkpoint_protocol(state, source=str(ckpt))
     missing, unexpected = model.load_state_dict(state["state_dict"], strict=True)
     assert not missing and not unexpected
     return model.eval().to(device)
 
 
 def model_inputs(model, left, right):
-    """Canonicalize raw (W,T,15,3) tensors the way ``model`` was trained (per-frame or first-frame)."""
+    """Canonicalize raw (W,T,15,3) tensors the way ``model`` was trained (per-frame body frame)."""
     return model.canonicalize(left)[0], model.canonicalize(right)[0]
-
-
-def reference_key(model) -> str:
-    """Name of the ``run_methods`` output holding the reference in ``model``'s own frame."""
-    return "gt_per_frame" if getattr(model, "canonical_mode", "first_frame") == "per_frame" else "gt"
 
 
 def run_methods(left: np.ndarray, right: np.ndarray, gt: np.ndarray, models: Dict[str, object], device,
                 reference: str = "window") -> Dict[str, np.ndarray]:
     """left/right/gt: (W,T,15,3) raw.  Returns canonical (W,T,15,3) per method plus gt and gate values.
 
-    ``gt`` is the first-frame canonical reference of the baselines; ``gt_per_frame`` is the
-    reference in the per-frame body frame, which is what a model trained with
-    ``canonical_mode=per_frame`` outputs (see ``reference_key``).
+    ``gt`` is the first-frame canonical reference of the non-learned baselines; ``gt_per_frame``
+    is the reference in the per-frame body frame, the frame the fusion models receive and output.
 
     ``reference="window"``: every window is canonicalized with its own first frame (deployment
     protocol).  ``reference="batch"``: all windows are canonicalized together, sharing the first
@@ -496,10 +495,11 @@ def evaluate(args: argparse.Namespace) -> Dict:
     methods = BASE_METHODS + fusion_methods(list(ckpts))
     out = run_methods(L, R, G, models, device, reference=args.reference)
 
-    # Every method is compared with the reference expressed in its own output frame.
-    ref = {m: "gt" for m in methods}
-    for lab, model in models.items():
-        ref[f"canonfuse3d[{lab}]"] = ref[f"canonfuse3d_gate_only[{lab}]"] = reference_key(model)
+    # Every method is compared with the reference expressed in its own output frame:
+    # the non-learned baselines use the first-frame window protocol, the fusion
+    # models the per-frame body frame of the training protocol.
+    learned = set(fusion_methods(list(models)))
+    ref = {m: ("gt_per_frame" if m in learned else "gt") for m in methods}
     pfc = {k: per_frame_canonical(out[k]) for k in methods + ["gt", "gt_per_frame"]}
     metrics = {}
     for m in methods:

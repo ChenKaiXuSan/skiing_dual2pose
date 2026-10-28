@@ -15,7 +15,6 @@ class GateAblationTrainingTests(unittest.TestCase):
     def test_loss_matches_original_trainer(self):
         module = self.module()
         from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
-        from dual2pose.eval.main_baseline_data import canonical_batch
         torch.manual_seed(42)
         torch.set_num_threads(1)
         trainer = CrossViewFusionTrainer(OmegaConf.create({"model": {"optim": {"lr": .001}}})).eval()
@@ -24,7 +23,7 @@ class GateAblationTrainingTests(unittest.TestCase):
         with warnings.catch_warnings(), torch.no_grad():
             warnings.simplefilter("ignore")
             original = trainer._shared_step(batch, "val")
-            left, right, truth = canonical_batch(*raw, dataset="unity")
+            left, right, truth = (trainer.canonicalize(a)[0] for a in raw)
             prediction, aux = trainer.models(left, right)
             actual = module.fusion_objective(prediction, aux["alpha"], left, right, truth)
         torch.testing.assert_close(actual, original, rtol=0, atol=0)

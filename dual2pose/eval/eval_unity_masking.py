@@ -48,15 +48,13 @@ if str(REPO_ROOT) not in sys.path:
 def _repo_symbols():
     data_module = importlib.import_module("dual2pose.dataloader.data_loader")
     fusion_module = importlib.import_module("dual2pose.trainer.train_crossview_fusion")
-    dual_module = importlib.import_module("dual2pose.trainer.train_dual2pose")
     return (
         data_module.UnityDataModule,
         fusion_module.CrossViewFusionTrainer,
-        dual_module.Dual2PoseTrainer,
     )
 
 
-UnityDataModule, CrossViewFusionTrainer, Dual2PoseTrainer = _repo_symbols()
+UnityDataModule, CrossViewFusionTrainer = _repo_symbols()
 
 logger = logging.getLogger(__name__)
 
@@ -441,11 +439,7 @@ def _configure_index_mapping_rewrite(config: DictConfig) -> None:
 
 
 def _build_model(config: DictConfig):
-    if config.model.backbone == "dual2pose":
-        return Dual2PoseTrainer(config)
-    if config.model.backbone == "crossview_fusion":
-        return CrossViewFusionTrainer(config)
-    raise ValueError(f"Unsupported backbone: {config.model.backbone}")
+    return CrossViewFusionTrainer(config)
 
 
 def _build_trainer(config: DictConfig, save_dir: Path) -> Trainer:

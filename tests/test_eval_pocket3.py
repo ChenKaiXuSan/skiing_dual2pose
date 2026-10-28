@@ -130,24 +130,23 @@ def test_per_frame_canonical_removes_global_motion():
     assert np.allclose(rr[..., [ep.LEFT_HIP, ep.RIGHT_HIP], :].mean(-2), 0, atol=1e-6)
 
 
-class _FakeFusion:
-    """Stands in for CrossViewFusionTrainer: canonical average in the model's own body frame."""
 
-    def __init__(self, mode):
-        import torch
-        self.canonical_mode = mode
-        self._torch = torch
+class _FakeFusion:
+    """Stands in for CrossViewFusionTrainer: canonical average in the per-frame body frame."""
+
+    canonical_mode = "per_frame"
 
     def canonicalize(self, x):
         from dual2pose.trainer.canonicalize import canonicalize_pose_torch
-        return canonicalize_pose_torch(x, left_hip=ep.LEFT_HIP, right_hip=ep.RIGHT_HIP, neck=ep.NECK, mode=self.canonical_mode)
+        return canonicalize_pose_torch(x, left_hip=ep.LEFT_HIP, right_hip=ep.RIGHT_HIP, neck=ep.NECK, mode="per_frame")
 
     def models(self, left, right, return_components=True):
+        import torch
         fused = 0.5 * (left + right)
-        return fused, {"output_residual": self._torch.zeros_like(fused), "alpha": self._torch.full(left.shape[:2] + (1,), 0.5)}
+        return fused, {"output_residual": torch.zeros_like(fused), "alpha": torch.full(left.shape[:2] + (1,), 0.5)}
 
 
-def test_run_methods_feeds_each_model_its_own_body_frame():
+def test_run_methods_feeds_the_model_the_per_frame_body_frame():
     import torch
     rng = np.random.default_rng(11)
     W, T = 2, 6
@@ -160,18 +159,14 @@ def test_run_methods_feeds_each_model_its_own_body_frame():
     G = L + rng.normal(scale=0.01, size=L.shape).astype(np.float32)
     for t in range(T):  # translate every frame somewhere else
         L[:, t] += np.array([t, -t, 2 * t], np.float32); R[:, t] += np.array([-t, 0, t], np.float32)
-    models = {"ff": _FakeFusion("first_frame"), "pf": _FakeFusion("per_frame")}
-    out = ep.run_methods(L, R, G, models, torch.device("cpu"))
-    # the first-frame model reproduces the first-frame canonical average
-    assert np.allclose(out["canonfuse3d[ff]"], out["canonical_average"], atol=1e-6)
-    # the per-frame model receives per-frame inputs, so its output is a per-frame body-frame pose
+    out = ep.run_methods(L, R, G, {"pf": _FakeFusion()}, torch.device("cpu"))
+    # the non-learned baselines keep the first-frame window protocol
+    assert not np.allclose(out["canonical_average"][..., [ep.LEFT_HIP, ep.RIGHT_HIP], :].mean(-2), 0, atol=1e-2)
+    # the model receives per-frame inputs, so its output is a per-frame body-frame pose
     expected = 0.5 * (ep.per_frame_canonical(L) + ep.per_frame_canonical(R))
     assert np.allclose(out["canonfuse3d[pf]"], expected, atol=1e-5)
-    assert not np.allclose(out["canonfuse3d[pf]"], out["canonical_average"], atol=1e-2)
-    pelvis = out["canonfuse3d[pf]"][..., [ep.LEFT_HIP, ep.RIGHT_HIP], :].mean(-2)
-    assert np.allclose(pelvis, 0, atol=1e-5)
-    # the matching reference is exposed and centred in every frame
-    assert ep.reference_key(models["pf"]) == "gt_per_frame" and ep.reference_key(models["ff"]) == "gt"
+    assert np.allclose(out["canonfuse3d[pf]"][..., [ep.LEFT_HIP, ep.RIGHT_HIP], :].mean(-2), 0, atol=1e-5)
+    # and the matching reference is exposed, centred in every frame
     assert np.allclose(out["gt_per_frame"], ep.per_frame_canonical(G), atol=1e-5)
     assert np.allclose(out["gt_per_frame"][..., [ep.LEFT_HIP, ep.RIGHT_HIP], :].mean(-2), 0, atol=1e-6)
     assert out["gt"].shape == out["gt_per_frame"].shape == (W, T, 15, 3)

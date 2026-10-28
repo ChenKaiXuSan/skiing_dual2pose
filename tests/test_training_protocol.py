@@ -1,18 +1,20 @@
-"""Per-frame person centering in training and evaluation.
+"""The fixed CanonFuse3D training protocol: per-frame person centering, supervised L1.
 
-Break caught: the fusion trainer canonicalized every batch with the first frame
-of its first sequence, so the representation depended on batch composition and
-carried the global motion of each sequence; evaluation scripts then fed a
-per-frame-trained model first-frame inputs.
+Break caught: the trainer canonicalized every batch with the first frame of its
+first sequence, so the representation depended on batch composition and carried
+the global motion of each sequence; checkpoints of that protocol could be fed a
+representation they were never trained on.
 """
 import math
+import tempfile
 import unittest
+from pathlib import Path
 
 import torch
 from omegaconf import OmegaConf
 
 from dual2pose.trainer.canonicalize import canonicalize_pose_torch, validate_canonical_mode
-from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
+from dual2pose.trainer.train_crossview_fusion import CANONICAL_MODE, CrossViewFusionTrainer
 
 LEFT_HIP, RIGHT_HIP, NECK = 6, 7, 14
 
@@ -48,11 +50,6 @@ def _rigid_per_frame(poses, seed=1):
     return out
 
 
-def _translate_per_frame(poses, seed=2):
-    gen = torch.Generator().manual_seed(seed)
-    return poses + 3.0 * torch.randn(poses.shape[0], poses.shape[1], 1, 3, generator=gen)
-
-
 def _config(**arch):
     return OmegaConf.create(
         {
@@ -73,8 +70,11 @@ def _trainer(**arch):
     return model.eval()
 
 
-def _batch(left, right, gt):
-    return {"kpt3d_sam": {"cam1": left, "cam2": right}, "kpt3d_gt": gt}
+def _batch(left, right, gt=None):
+    batch = {"kpt3d_sam": {"cam1": left, "cam2": right}}
+    if gt is not None:
+        batch["kpt3d_gt"] = gt
+    return batch
 
 
 class CanonicalizeModeTest(unittest.TestCase):
@@ -84,7 +84,7 @@ class CanonicalizeModeTest(unittest.TestCase):
         still, _ = canonicalize_pose_torch(poses, mode="per_frame")
         canon, _ = canonicalize_pose_torch(moved, mode="per_frame")
         torch.testing.assert_close(canon, still, atol=1e-4, rtol=0)
-        # first-frame mode keeps the per-frame motion relative to the reference frame
+        # the archived first-frame mode keeps the motion relative to its reference frame
         first, _ = canonicalize_pose_torch(moved, mode="first_frame")
         self.assertGreater((first - still).abs().max().item(), 1.0)
 
@@ -93,7 +93,7 @@ class CanonicalizeModeTest(unittest.TestCase):
         together, _ = canonicalize_pose_torch(poses, mode="per_frame")
         alone, _ = canonicalize_pose_torch(poses[1:2], mode="per_frame")
         torch.testing.assert_close(together[1:2], alone, atol=0, rtol=0)
-        # legacy behaviour, documented: the batch shares its first sequence's first frame
+        # archived behaviour, documented: the batch shares its first sequence's first frame
         together_ff, _ = canonicalize_pose_torch(poses, mode="first_frame")
         alone_ff, _ = canonicalize_pose_torch(poses[1:2], mode="first_frame")
         self.assertGreater((together_ff[1:2] - alone_ff).abs().max().item(), 1e-3)
@@ -116,24 +116,24 @@ class CanonicalizeModeTest(unittest.TestCase):
             canonicalize_pose_torch(_pose_batch(), mode="per_sequence")
 
 
-class TrainerCanonicalModeTest(unittest.TestCase):
-    def test_mode_comes_from_config_and_defaults_to_legacy(self):
+class TrainingProtocolTest(unittest.TestCase):
+    def test_protocol_is_per_frame_and_not_configurable(self):
+        self.assertEqual(CANONICAL_MODE, "per_frame")
+        self.assertEqual(_trainer().canonical_mode, "per_frame")
         self.assertEqual(_trainer(canonical_mode="per_frame").canonical_mode, "per_frame")
-        self.assertEqual(_trainer().canonical_mode, "first_frame")
         with self.assertRaises(ValueError):
-            _trainer(canonical_mode="bogus")
+            _trainer(canonical_mode="first_frame")
 
-    def test_repository_config_selects_per_frame(self):
+    def test_repository_config_builds_the_protocol(self):
         from dual2pose.config import load_config
 
         config = load_config()
-        self.assertEqual(config.model.arch.canonical_mode, "per_frame")
+        self.assertNotIn("canonical_mode", config.model.arch)
         self.assertEqual(CrossViewFusionTrainer(config).canonical_mode, "per_frame")
 
-    def test_per_frame_training_step_ignores_per_frame_person_motion(self):
-        torch.manual_seed(0)
+    def test_training_step_ignores_per_frame_person_motion(self):
         left, right, gt = _pose_batch(seed=3), _pose_batch(seed=4), _pose_batch(seed=5)
-        model = _trainer(canonical_mode="per_frame")
+        model = _trainer()
         with torch.no_grad():
             batch = _batch(left, right, gt)
             loss = model._shared_step(batch, stage="train")
@@ -143,28 +143,14 @@ class TrainerCanonicalModeTest(unittest.TestCase):
             fused_moved = moved["_variant_results"]["fused"]
         torch.testing.assert_close(loss_moved, loss, atol=1e-4, rtol=1e-4)
         torch.testing.assert_close(fused_moved, fused, atol=1e-3, rtol=1e-3)
-        pelvis = 0.5 * (fused[..., LEFT_HIP, :] + fused[..., RIGHT_HIP, :])
-        self.assertLess(pelvis.abs().mean().item(), 1.0)
         # the supervision target is centred in every frame
         target = batch["_variant_results"]["ground_truth_canonical"]
         target_pelvis = 0.5 * (target[..., LEFT_HIP, :] + target[..., RIGHT_HIP, :])
         torch.testing.assert_close(target_pelvis, torch.zeros_like(target_pelvis), atol=1e-6, rtol=0)
 
-    def test_legacy_first_frame_step_is_not_translation_invariant(self):
-        """Documents the behaviour the default no longer has."""
+    def test_step_does_not_depend_on_batch_order(self):
         left, right, gt = _pose_batch(seed=3), _pose_batch(seed=4), _pose_batch(seed=5)
-        model = _trainer(canonical_mode="first_frame")
-        with torch.no_grad():
-            loss = model._shared_step(_batch(left, right, gt), stage="train")
-            loss_moved = model._shared_step(
-                _batch(_translate_per_frame(left, 7), _translate_per_frame(right, 8), _translate_per_frame(gt, 9)),
-                stage="train",
-            )
-        self.assertGreater((loss_moved - loss).abs().item(), 1e-2)
-
-    def test_per_frame_step_does_not_depend_on_batch_order(self):
-        left, right, gt = _pose_batch(seed=3), _pose_batch(seed=4), _pose_batch(seed=5)
-        model = _trainer(canonical_mode="per_frame")
+        model = _trainer()
         with torch.no_grad():
             batch = _batch(left, right, gt)
             model._shared_step(batch, stage="val")
@@ -174,36 +160,53 @@ class TrainerCanonicalModeTest(unittest.TestCase):
             flipped["_variant_results"]["fused"].flip(0), batch["_variant_results"]["fused"], atol=1e-5, rtol=1e-5
         )
 
-    def test_canonicalize_method_uses_the_model_mode_and_indices(self):
+    def test_training_and_validation_require_ground_truth(self):
+        model = _trainer()
+        unlabeled = _batch(_pose_batch(seed=3), _pose_batch(seed=4))
+        for stage in ("train", "val"):
+            with self.assertRaises(RuntimeError):
+                model._shared_step(dict(unlabeled), stage=stage)
+        # test-time inference on unlabeled recordings still runs
+        with torch.no_grad():
+            loss = model._shared_step(unlabeled, stage="test")
+        self.assertTrue(torch.isfinite(loss))
+        self.assertIsNone(unlabeled["_variant_results"]["ground_truth_canonical"])
+        self.assertEqual(tuple(unlabeled["_variant_results"]["fused"].shape), (3, 8, 15, 3))
+
+    def test_canonicalize_method_uses_the_protocol_and_the_model_indices(self):
         poses = _pose_batch()
-        model = _trainer(canonical_mode="per_frame")
         expected, _ = canonicalize_pose_torch(poses, left_hip=6, right_hip=7, neck=14, mode="per_frame")
-        torch.testing.assert_close(model.canonicalize(poses)[0], expected, atol=0, rtol=0)
+        torch.testing.assert_close(_trainer().canonicalize(poses)[0], expected, atol=0, rtol=0)
 
 
-class CheckpointCanonicalModeTest(unittest.TestCase):
-    def test_legacy_checkpoint_without_key_means_first_frame(self):
-        legacy = {"hyper_parameters": {"hparams": OmegaConf.create({"model": {"backbone": "crossview_fusion"}})}}
-        self.assertEqual(CrossViewFusionTrainer.canonical_mode_from_checkpoint(legacy), "first_frame")
-        self.assertEqual(CrossViewFusionTrainer.canonical_mode_from_checkpoint({}), "first_frame")
+class CheckpointProtocolTest(unittest.TestCase):
+    def test_saved_checkpoints_record_the_protocol(self):
+        model = _trainer()
+        checkpoint = {"state_dict": model.state_dict()}
+        model.on_save_checkpoint(checkpoint)
+        self.assertEqual(checkpoint["canonical_mode"], "per_frame")
+        model.on_load_checkpoint(checkpoint)  # accepted
 
-    def test_recorded_mode_is_read_from_dictconfig_and_dict(self):
-        as_cfg = {"hyper_parameters": {"hparams": OmegaConf.create({"model": {"arch": {"canonical_mode": "per_frame"}}})}}
-        as_dict = {"hyper_parameters": {"hparams": {"model": {"arch": {"canonical_mode": "per_frame"}}}}}
-        self.assertEqual(CrossViewFusionTrainer.canonical_mode_from_checkpoint(as_cfg), "per_frame")
-        self.assertEqual(CrossViewFusionTrainer.canonical_mode_from_checkpoint(as_dict), "per_frame")
+    def test_first_frame_checkpoints_are_rejected(self):
+        model = _trainer()
+        with self.assertRaises(ValueError):
+            model.on_load_checkpoint({"state_dict": model.state_dict()})  # archived manuscript checkpoint
+        with self.assertRaisesRegex(ValueError, "legacy.ckpt"):
+            CrossViewFusionTrainer.check_checkpoint_protocol({"canonical_mode": "first_frame"}, source="legacy.ckpt")
 
-    def test_loading_a_legacy_checkpoint_adopts_its_mode(self):
-        model = _trainer(canonical_mode="per_frame")
-        model.on_load_checkpoint({"hyper_parameters": {"hparams": OmegaConf.create({"model": {}})}})
-        self.assertEqual(model.canonical_mode, "first_frame")
-        self.assertEqual(model.hparams.hparams.model.arch.canonical_mode, "first_frame")
+    def test_pocket3_loader_enforces_the_protocol(self):
+        from dual2pose.config import load_config
+        from dual2pose.eval import eval_pocket3 as ep
 
-    def test_new_checkpoint_records_per_frame(self):
-        model = _trainer(canonical_mode="per_frame")
-        checkpoint = {"hyper_parameters": dict(model.hparams)}
-        self.assertEqual(CrossViewFusionTrainer.canonical_mode_from_checkpoint(checkpoint), "per_frame")
-        model.on_load_checkpoint(checkpoint)
+        source = CrossViewFusionTrainer(load_config())  # same architecture as load_model builds
+        with tempfile.TemporaryDirectory() as directory:
+            legacy = Path(directory) / "legacy.ckpt"
+            torch.save({"state_dict": source.state_dict()}, legacy)
+            with self.assertRaises(ValueError):
+                ep.load_model(legacy, torch.device("cpu"))
+            current = Path(directory) / "per_frame.ckpt"
+            torch.save({"state_dict": source.state_dict(), "canonical_mode": "per_frame"}, current)
+            model = ep.load_model(current, torch.device("cpu"))
         self.assertEqual(model.canonical_mode, "per_frame")
 
 

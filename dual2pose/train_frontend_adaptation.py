@@ -93,9 +93,12 @@ def main(config: DictConfig) -> None:
     output_root.mkdir(parents=True, exist_ok=True)
 
     model = FrontendAdaptationTrainer(config)
-    load_report = load_model_weights_only(
-        model, Path(str(config.adaptation.source_checkpoint))
+    source_checkpoint = Path(str(config.adaptation.source_checkpoint))
+    CrossViewFusionTrainer.check_checkpoint_protocol(
+        torch.load(source_checkpoint, map_location="cpu", weights_only=False),
+        source=str(source_checkpoint),
     )
+    load_report = load_model_weights_only(model, source_checkpoint)
     scope_report = configure_trainable_scope(model, str(config.adaptation.scope))
     frontend = str(config.adaptation.frontend).lower()
     base_dm = UnityDataModule(config)
