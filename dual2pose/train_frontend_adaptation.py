@@ -173,6 +173,9 @@ def main(config: DictConfig) -> None:
         encoding="utf-8",
     )
     trainer.fit(model, datamodule=datamodule)
+    # Preserve the terminal optimizer/epoch state even without a final top-k
+    # improvement; best_model_path still controls downstream evaluation.
+    trainer.save_checkpoint(str(output_root / "checkpoints/last.ckpt"))
     (output_root / "adaptation_complete.json").write_text(
         json.dumps(
             {

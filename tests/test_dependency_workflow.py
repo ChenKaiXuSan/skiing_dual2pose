@@ -78,3 +78,60 @@ def test_worker_rejects_checkpoint_changed_after_upstream_verification(tmp_path)
     p=tmp_path/'source.ckpt';p.write_bytes(b'changed')
     with pytest.raises(ValueError,match='hash'):
         verify_checkpoint_tokens({'commands':[['eval','{unity_checkpoint}']]}, {'main_unity':{'checkpoint':str(p),'checkpoint_sha256':'old'}})
+
+
+@pytest.fixture
+def completed_unity_with_stale_last(tmp_path):
+    import csv
+    import json
+    import torch
+    from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
+    root = tmp_path / 'unity'
+    (root / 'checkpoints').mkdir(parents=True)
+    best = root / 'checkpoints/best.ckpt'
+    for path, epoch in [(best, 66), (root / 'checkpoints/last.ckpt', 72)]:
+        torch.save({'epoch': epoch, 'global_step': (epoch + 1) * 47,
+                    'loops': {'fit_loop': {'epoch_progress': {'total': {'processed': epoch + 1}}}},
+                    'canonical_mode': 'per_frame', 'evaluation_protocol': EVALUATION_PROTOCOL,
+                    'state_dict': {'weight': torch.ones(1)}}, path)
+    (tmp_path / 'unity_status.json').write_text(json.dumps({'return_code': 0}))
+    (tmp_path / 'unity.log').write_text('`Trainer.fit` stopped: `max_epochs=100` reached.\n')
+    rows = [{'epoch': i, 'step': (i+1)*47-1, 'train/loss_epoch': .1,
+             'val/mpjpe': .01 if i == 66 else .1} for i in range(100)]
+    rows.append({'epoch': 100, 'step': 4700, 'test/mpjpe': .02})
+    path = root / 'csv_logs/train/version_0/metrics.csv'
+    path.parent.mkdir(parents=True)
+    with path.open('w') as f:
+        w = csv.DictWriter(f, fieldnames=['epoch','step','train/loss_epoch','val/mpjpe','test/mpjpe'])
+        w.writeheader(); w.writerows(rows)
+    (root / 'test_metrics_by_action.json').write_text(json.dumps({
+        'evaluation_protocol': EVALUATION_PROTOCOL, 'canonical_mode': 'per_frame',
+        'test_checkpoint_policy': 'best', 'best_model_path': str(best),
+        'best_model_score': .01, 'sample_count': 64440, 'mpjpe': .02,
+        'per_action': {'action': {'sample_count': 64440, 'mpjpe': .02}}}))
+    return {'validation': {'dataset': 'unity'}}, {'main_root': str(tmp_path)}
+
+
+def test_unity_budget_uses_full_history_and_best_selection_not_stale_last(completed_unity_with_stale_last):
+    from dual2pose.experiments.run_dependency_workflow import verify_main
+    result = verify_main(*completed_unity_with_stale_last)
+    assert result['completed_epochs'] == 100
+    assert result['checkpoint'].endswith('best.ckpt')
+    assert result['terminal_checkpoint_epoch'] == 72
+
+
+@pytest.mark.parametrize('damage', ['step', 'missing_epoch', 'best_selection', 'coverage'])
+def test_unity_stale_last_does_not_bypass_completion_evidence(completed_unity_with_stale_last, damage):
+    import json
+    from pathlib import Path
+    from dual2pose.experiments.run_dependency_workflow import verify_main
+    job, ctx = completed_unity_with_stale_last
+    root = Path(ctx['main_root']) / 'unity'
+    csv = root / 'csv_logs/train/version_0/metrics.csv'
+    if damage == 'step': csv.write_text(csv.read_text().replace('100,4700', '100,3431'))
+    elif damage == 'missing_epoch': csv.write_text('\n'.join(x for x in csv.read_text().splitlines() if not x.startswith('99,')))
+    else:
+        p = root / 'test_metrics_by_action.json'; d = json.loads(p.read_text())
+        d['best_model_score' if damage == 'best_selection' else 'sample_count'] = .1 if damage == 'best_selection' else 1
+        p.write_text(json.dumps(d))
+    with pytest.raises(ValueError): verify_main(job, ctx)

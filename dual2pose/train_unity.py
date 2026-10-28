@@ -127,6 +127,10 @@ def init_params(config: DictConfig):
 
     trainer.fit(classification_module, unity_data_module)
 
+    # save_last may stay at the last top-k improvement in some Lightning
+    # versions. Persist the terminal fit state before test reloads best weights.
+    trainer.save_checkpoint(str(Path(config.log_path) / "checkpoints/last.ckpt"))
+
     # save the metrics to file
     test_metrics = trainer.test(
         classification_module,

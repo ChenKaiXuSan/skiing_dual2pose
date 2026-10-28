@@ -131,22 +131,54 @@ def verify_main(job, context):
     last = root / dataset / 'checkpoints/last.ckpt'
     saved = torch.load(last, map_location='cpu', weights_only=False)
     rows = list(csv.DictReader((root / dataset / 'csv_logs/train/version_0/metrics.csv').open()))
-    verify_budget(saved, rows, 100, 4700 if dataset == 'unity' else 3600)
+    if dataset != 'unity':
+        verify_budget(saved, rows, 100, 3600)
     protocol = 'common13_direct_per_frame_v1'
     if saved.get('evaluation_protocol', {}).get('name') != protocol: raise ValueError('Main checkpoint protocol mismatch')
     test = [r for r in rows if r.get('test/mpjpe')]
     if not test or not math.isfinite(float(test[-1]['test/mpjpe'])): raise ValueError('Missing finite final test result')
     checkpoint = last
     if dataset == 'unity':
+        # Some Lightning versions refresh save_last only when top-k changes.
+        # Prove the completed fit from every logged epoch/step, then verify the
+        # validation-selected weights independently; never relabel stale weights.
+        train = [r for r in rows if r.get('train/loss_epoch')]
+        val = [r for r in rows if r.get('val/mpjpe')]
+        for history, metric in ((train, 'train/loss_epoch'), (val, 'val/mpjpe')):
+            if [int(r['epoch']) for r in history] != list(range(100)):
+                raise ValueError('Incomplete Unity epoch history')
+            if any(int(r['step']) != (int(r['epoch']) + 1) * 47 - 1 or
+                   not math.isfinite(float(r[metric])) for r in history):
+                raise ValueError('Unity step budget or finite metrics mismatch')
+        if int(test[-1]['epoch']) != 100 or int(test[-1]['step']) != 4700:
+            raise ValueError('Unity test did not follow the full training budget')
+        if '`max_epochs=100` reached.' not in (root / 'unity.log').read_text():
+            raise ValueError('Missing Unity fit completion evidence')
         summary = json.loads((root / dataset / 'test_metrics_by_action.json').read_text())
         if summary['test_checkpoint_policy'] != 'best': raise ValueError('Unity must select validation-best')
         checkpoint = Path(summary['best_model_path'])
-        # Coverage is explicit in the per-action summary; validate its aggregate.
-        counts = [v for k, v in summary.items() if k == 'sample_count']
-        if counts and counts[0] != 64440: raise ValueError('Unity final-test coverage mismatch')
+        selected = torch.load(checkpoint, map_location='cpu', weights_only=False)
+        best = min(val, key=lambda r: float(r['val/mpjpe']))
+        if (selected['epoch'] != int(best['epoch']) or
+                selected['global_step'] != (int(best['epoch']) + 1) * 47 or
+                not math.isclose(summary['best_model_score'], float(best['val/mpjpe']), rel_tol=1e-6)):
+            raise ValueError('Unity checkpoint differs from validation minimum')
+        from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
+        if (selected.get('canonical_mode') != 'per_frame' or
+                selected.get('evaluation_protocol') != EVALUATION_PROTOCOL or
+                summary.get('evaluation_protocol') != EVALUATION_PROTOCOL):
+            raise ValueError('Unity selected checkpoint/test protocol mismatch')
+        if not selected.get('state_dict') or any(not torch.isfinite(v).all() for v in selected['state_dict'].values() if torch.is_tensor(v)):
+            raise ValueError('Missing or nonfinite selected Unity weights')
+        if (summary.get('sample_count') != 64440 or
+                sum(v['sample_count'] for v in summary['per_action'].values()) != 64440 or
+                not math.isclose(summary['mpjpe'], float(test[-1]['test/mpjpe']), rel_tol=1e-6, abs_tol=1e-8)):
+            raise ValueError('Unity final-test coverage/metric mismatch')
     if not checkpoint.is_file(): raise FileNotFoundError(checkpoint)
     return {'checkpoint': str(checkpoint), 'checkpoint_sha256': sha(checkpoint),
-            'completed_epochs': 100, 'test_mpjpe': float(test[-1]['test/mpjpe']), 'verified_at': now()}
+            'completed_epochs': 100, 'test_mpjpe': float(test[-1]['test/mpjpe']), 'verified_at': now(),
+            'terminal_checkpoint_epoch': saved['epoch'],
+            'metrics_csv_sha256': sha(root / dataset / 'csv_logs/train/version_0/metrics.csv')}
 
 
 def verify_core(job, context):
