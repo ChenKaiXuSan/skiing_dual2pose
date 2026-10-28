@@ -10,6 +10,8 @@ left canonical view.
 
 from __future__ import annotations
 
+from dual2pose.training_protocol import evaluation_checkpoint_from_env
+
 from dataclasses import dataclass
 import csv
 import importlib
@@ -27,6 +29,7 @@ import torch
 from pytorch_lightning import LightningDataModule, seed_everything
 from torch.utils.data import DataLoader, default_collate
 
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 from dual2pose.eval.extension_experiment_utils import (
     build_experiment_provenance,
     complete_test_dataloader,
@@ -315,7 +318,7 @@ def init_params(config: DictConfig | None = None) -> None:
     seed_everything(42, workers=True)
     config.train.gpu = int(getattr(config.train, "gpu", 0))
 
-    ckpt_path = os.environ.get("EVAL_CKPT_PATH", str(DEFAULT_CKPT_PATH))
+    ckpt_path = str(evaluation_checkpoint_from_env())
     failure_threshold = float(os.environ.get("FAILURE_THRESHOLD", "0.15"))
     view_mode = os.environ.get("TEMPORAL_OFFSET_VIEW", "right").strip().lower()
     if view_mode not in {"left", "right", "both"}:
@@ -325,7 +328,7 @@ def init_params(config: DictConfig | None = None) -> None:
     results_root = Path(
         os.environ.get(
             "EVAL_OUTPUT_ROOT",
-            str(REPO_ROOT / "logs" / "eval_unity_temporal_offset"),
+            str(REPO_ROOT / "logs" / "per_frame_common13_v1" / "eval_unity_temporal_offset"),
         )
     )
     results_root.mkdir(parents=True, exist_ok=True)
@@ -369,8 +372,9 @@ def init_params(config: DictConfig | None = None) -> None:
             sample_count=sample_count,
             fold=int(config.train.fold),
             seed=42,
-            joint_subset="all15",
+            joint_subset="common13",
             units="dataset_coordinate_units",
+            evaluation_protocol=EVALUATION_PROTOCOL,
         )
         metrics = eval_helpers._summarize_outputs(flat=flat, failure_threshold=failure_threshold)
         gate_stats = _summarize_gate_error_relationship(test_outputs)

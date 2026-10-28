@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from dual2pose.training_protocol import evaluation_checkpoint_from_env
+
 import csv
 from dataclasses import dataclass
 import hashlib
@@ -24,11 +26,12 @@ from dual2pose.eval.temporal_alignment import (
     velocity_descriptor,
 )
 from dual2pose.trainer.canonicalize import canonicalize_pose_torch
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL, common13_point_errors, common13_pose
 from dual2pose.training_protocol import resolve_fold_index_path, validate_fold_metadata
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OUTPUT_ROOT = REPO_ROOT / "logs/ivc_p1/temporal_alignment"
+OUTPUT_ROOT = REPO_ROOT / "logs/per_frame_common13_v1/temporal_alignment"
 DEFAULT_CHECKPOINT = REPO_ROOT / "logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt"
 INJECTED_OFFSETS = (-5.0, -3.0, -2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 3.0, 5.0)
 CANDIDATE_CORRECTIONS = tuple(value / 2 for value in range(-10, 11))
@@ -97,13 +100,13 @@ def _model_outputs(
     gt_canonical = _model_canonical(model, gt)
     fused, aux = model.models(left_canonical, right_canonical)
     metric_time_slice = metric_time_slice or slice(None)
-    fused_metric = fused[:, metric_time_slice]
-    gt_metric = gt_canonical[:, metric_time_slice]
-    left_metric = left_canonical[:, metric_time_slice]
-    right_metric = right_canonical[:, metric_time_slice]
+    fused_metric = common13_pose(fused[:, metric_time_slice])
+    gt_metric = common13_pose(gt_canonical[:, metric_time_slice])
+    left_metric = common13_pose(left_canonical[:, metric_time_slice])
+    right_metric = common13_pose(right_canonical[:, metric_time_slice])
     alpha_metric = aux["alpha"][:, metric_time_slice]
 
-    mpjpe = torch.norm(fused_metric - gt_metric, dim=-1).mean(dim=(1, 2))
+    mpjpe = common13_point_errors(fused_metric, gt_metric).mean(dim=(1, 2))
     if fused_metric.shape[1] >= 3:
         pred_acc = fused_metric[:, 2:] - 2.0 * fused_metric[:, 1:-1] + fused_metric[:, :-2]
         gt_acc = gt_metric[:, 2:] - 2.0 * gt_metric[:, 1:-1] + gt_metric[:, :-2]
@@ -202,12 +205,9 @@ def _sha256(path: Path) -> str:
 
 
 def _load_model(config: DictConfig, checkpoint: Path, device: torch.device) -> Any:
-    from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
+    from dual2pose.training_protocol import load_fusion_checkpoint
 
-    model = CrossViewFusionTrainer(config)
-    payload = torch.load(checkpoint, map_location="cpu", weights_only=False)
-    model.load_state_dict(payload.get("state_dict", payload), strict=True)
-    return model.to(device).eval()
+    return load_fusion_checkpoint(checkpoint, config=config, device=device)
 
 
 def _sample_labels(meta: Any, batch_size: int, start: int) -> list[str]:
@@ -230,6 +230,8 @@ def main(config: DictConfig) -> None:
     if not threshold_path.is_file():
         raise FileNotFoundError(f"Run validation calibration first: {threshold_path}")
     calibration = json.loads(threshold_path.read_text(encoding="utf-8"))
+    if calibration.get("descriptor_protocol") != "per_frame_body_velocity_v1":
+        raise ValueError("Recalibrate temporal alignment with the per-frame descriptor")
     threshold = float(calibration["selected_threshold"])
     quartiles = [float(value) for value in calibration["motion_speed_quartiles"]]
     metric_margin = int(math.ceil(max(abs(offset) for offset in INJECTED_OFFSETS)))
@@ -244,7 +246,7 @@ def main(config: DictConfig) -> None:
     datamodule.prepare_data()
     datamodule.setup("test")
     loader = datamodule.test_dataloader()
-    checkpoint = Path(os.environ.get("EVAL_CKPT_PATH", str(DEFAULT_CHECKPOINT))).resolve()
+    checkpoint = Path(str(evaluation_checkpoint_from_env())).resolve()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = _load_model(config, checkpoint, device)
     limit_batches = int(os.environ.get("ALIGN_LIMIT_BATCHES", "0"))
@@ -384,6 +386,7 @@ def main(config: DictConfig) -> None:
         json.dumps(
             {
                 "experiment": "ivc_p1_temporal_alignment",
+                "evaluation_protocol": dict(EVALUATION_PROTOCOL),
                 "checkpoint": str(checkpoint),
                 "checkpoint_sha256": _sha256(checkpoint),
                 "fold_json": str(fold_path),

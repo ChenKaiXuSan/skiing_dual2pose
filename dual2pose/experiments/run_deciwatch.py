@@ -5,6 +5,7 @@ unmodified official model on 31 frames, and crops predictions back to 30.
 """
 from __future__ import annotations
 import argparse
+from contextlib import nullcontext
 import json
 import os
 from pathlib import Path
@@ -20,6 +21,8 @@ from torch.utils.data import DataLoader, Dataset
 
 from dual2pose.eval.main_baseline_data import EXPECTED, batch_slices, sha256, write_json
 from dual2pose.eval.pa_mpjpe import PAMetricAccumulator, PA_PROTOCOL
+from dual2pose.eval.external_protocol import protocol_metadata, check_current_control
+from dual2pose.eval.main_baseline_data import require_current_protocol
 from dual2pose.trainer.canonicalize import canonicalize_pose_torch
 
 
@@ -95,7 +98,10 @@ class DeciWatchWindow(nn.Module):
         device = device or sequence.device
         sequence = sequence.to(device)
         padded, original_length = _pad_for_official_window(sequence, self.interval)
-        recovered, denoised = self.inner(padded, device)
+        # Official helpers call .cuda() without an index. Keep their allocations
+        # on the requested GPU while restoring the caller's current device.
+        with torch.cuda.device(sequence.device) if sequence.is_cuda else nullcontext():
+            recovered, denoised = self.inner(padded, device)
         self.encoder_mask = self.inner.encoder_mask
         self.decoder_mask = self.inner.decoder_mask
         self.input_seq_interp = self.inner.input_seq_interp
@@ -116,6 +122,18 @@ class DeciWatchWindow(nn.Module):
 
 class WindowDataset(Dataset):
     def __init__(self,input_path,target_path=None):
+        manifest_path=Path(input_path).parent/'manifest.json'
+        if not manifest_path.exists():
+            raise ValueError('Prepared cache needs a current protocol manifest; regenerate from raw')
+        manifest=json.loads(manifest_path.read_text())
+        require_current_protocol(manifest)
+        if manifest.get('canonicalizer_sha256') != protocol_metadata()['canonicalizer_sha256']:
+            raise ValueError('Prepared cache canonicalizer differs; regenerate from raw')
+        if manifest.get('preparer_sha256') != sha256(__file__):
+            raise ValueError('Prepared cache producer differs; regenerate from raw')
+        for path,key in ((input_path,'input_sha256'),(target_path,'target_sha256')):
+            if path and sha256(path)!=manifest.get(key):
+                raise ValueError('Prepared cache checksum mismatch; regenerate from raw')
         self.x=np.load(input_path,mmap_mode='r',allow_pickle=False)
         self.y=np.load(target_path,mmap_mode='r',allow_pickle=False) if target_path else None
     def __len__(self): return len(self.x)
@@ -136,20 +154,23 @@ def _canonical_average(cache, output, include_target):
     if target is not None and sha256(cache/'target.npy')!=m['files']['target.npy']: raise ValueError('target checksum mismatch')
     x=np.lib.format.open_memmap(output/'input.npy',mode='w+',dtype=np.float32,shape=(n,30,13,3))
     y=np.lib.format.open_memmap(output/'target.npy',mode='w+',dtype=np.float32,shape=(n,30,13,3)) if include_target else None
-    bs=256 if ds=='unity' else 4; kw={} if ds=='unity' else dict(left_hip=4,right_hip=5,neck=12)
+    bs=256 if ds=='unity' else 4; kw={} if ds=='unity' else dict(left_hip=4,right_hip=5,neck=12,enforce_face_z_positive=False)
     for start,stop in batch_slices(n,bs):
-        l,r=canonicalize_pose_torch(torch.tensor(np.array(left[start:stop])),**kw)[0],canonicalize_pose_torch(torch.tensor(np.array(right[start:stop])),**kw)[0]
+        l,r=canonicalize_pose_torch(torch.tensor(np.array(left[start:stop])),**kw, mode="per_frame")[0],canonicalize_pose_torch(torch.tensor(np.array(right[start:stop])),**kw, mode="per_frame")[0]
         x[start:stop]=((l[:,:,2:15] if ds=='unity' else l)+(r[:,:,2:15] if ds=='unity' else r)).mul(.5).numpy()
         if y is not None:
-            t=canonicalize_pose_torch(torch.tensor(np.array(target[start:stop])),**kw)[0]
+            t=canonicalize_pose_torch(torch.tensor(np.array(target[start:stop])),**kw, mode="per_frame")[0]
             y[start:stop]=(t[:,:,2:15] if ds=='unity' else t).numpy()
     x.flush();
     if y is not None:y.flush()
-    return dict(dataset=ds,split=split,sample_count=n,frames=n*30,input_sha256=sha256(output/'input.npy'),
+    metadata=dict(**protocol_metadata(),dataset=ds,split=split,sample_count=n,frames=n*30,input_sha256=sha256(output/'input.npy'),
                 target_sha256=sha256(output/'target.npy') if y is not None else None,
                 cache_manifest_sha256=sha256(cache/'manifest.json'),batch_size=bs,
-                canonicalization='independent archived left/right/target batch transforms; average common13',
+                preparer_sha256=sha256(__file__),
+                canonicalization='independent left/right/target per-frame transforms; average common13',
                 target_loaded=include_target)
+    write_json(output/'manifest.json',metadata)
+    return metadata
 
 
 @torch.no_grad()
@@ -170,7 +191,7 @@ def _run(args):
     repo=Path(args.deciwatch_repo).resolve()
     commit=subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip()
     if commit!='5afe2d67005441e2785a8d374d31a91f046a0da6': raise ValueError('Unexpected official DeciWatch commit')
-    start=time.time(); config={k:(str(v) if isinstance(v,Path) else v) for k,v in vars(args).items()}; config.update(method='DeciWatch official-protocol adaptation; common13 canonical average input; 4/30 observed source frames',source_commit=commit,seed=args.seed,official_reference_config='config_h36m_fcn_3D.yaml',boundary_policy='repeat last archived frame to length 31; official forward and loss; crop outputs to 30')
+    start=time.time(); config={k:(str(v) if isinstance(v,Path) else v) for k,v in vars(args).items()}; config.update(**protocol_metadata(),method='DeciWatch official-protocol adaptation; common13 canonical average input; 4/30 observed source frames',source_commit=commit,seed=args.seed,official_reference_config='config_h36m_fcn_3D.yaml',boundary_policy='repeat last archived frame to length 31; official forward and loss; crop outputs to 30')
     write_json(out/'config.json',config)
     os.environ['PYTHONHASHSEED']=str(args.seed)
     random.seed(args.seed)
@@ -192,6 +213,8 @@ def _run(args):
         path=prepared/role; path.mkdir()
         metas[role]=_canonical_average(cache,path,labels)
     write_json(out/'prepared_manifests.json',metas)
+    check_current_control(args.control_metrics,dataset=metas['test']['dataset'],
+                          cache_manifest_sha256=metas['test']['cache_manifest_sha256'])
     model=DeciWatchWindow(repo,39,args.interval,args.hidden,args.layers).to(device)
     opt=_make_optimizer(model.parameters(),lr=args.lr)
     train_loader=DataLoader(WindowDataset(prepared/'train/input.npy',prepared/'train/target.npy'),batch_size=args.batch_size,shuffle=True,num_workers=0,drop_last=False)
@@ -214,7 +237,7 @@ def _run(args):
             rec=dict(epoch=epoch,train_loss=total/points,val_loss=val_loss,selected_epoch=best_epoch,seconds=time.time()-epoch_start)
             log.write(json.dumps(rec)+'\n');log.flush(); print(json.dumps(rec),flush=True)
             for group in opt.param_groups: group['lr']*=args.lr_decay
-    checkpoint=torch.load(out/'best.pth',map_location=device,weights_only=False); model.load_state_dict(checkpoint['state_dict'],strict=True); model.eval()
+    checkpoint=torch.load(out/'best.pth',map_location=device,weights_only=False); require_current_protocol(checkpoint['config']); model.load_state_dict(checkpoint['state_dict'],strict=True); model.eval()
     # Save predictions before opening any test target.
     test_x=np.load(prepared/'test/input.npy',mmap_mode='r'); n=len(test_x)
     pred=np.lib.format.open_memmap(out/'recovered.npy',mode='w+',dtype=np.float32,shape=(n,30,13,3)); den=np.lib.format.open_memmap(out/'denoised.npy',mode='w+',dtype=np.float32,shape=(n,30,13,3))
@@ -225,26 +248,25 @@ def _run(args):
             x=x.to(device); a,b=model(x,device); size=len(x); pred[offset:offset+size]=a.cpu().numpy().reshape(size,30,13,3);den[offset:offset+size]=b.cpu().numpy().reshape(size,30,13,3);offset+=size
     pred.flush();den.flush()
     if not np.isfinite(pred).all() or not np.isfinite(den).all(): raise FloatingPointError('Nonfinite DeciWatch output')
-    report=dict(status='predictions_fixed',dataset=metas['test']['dataset'],windows=n,frames=n*30,best_epoch=best_epoch,finite_coverage=1.,prediction_sha256=sha256(out/'recovered.npy'),denoised_sha256=sha256(out/'denoised.npy'),checkpoint_sha256=sha256(out/'best.pth'))
+    report=dict(**protocol_metadata(),status='predictions_fixed',dataset=metas['test']['dataset'],windows=n,frames=n*30,best_epoch=best_epoch,finite_coverage=1.,prediction_sha256=sha256(out/'recovered.npy'),denoised_sha256=sha256(out/'denoised.npy'),checkpoint_sha256=sha256(out/'best.pth'))
     write_json(out/'report.json',report)
     # Evaluation opens targets only after predictions/checksum are fixed.
     cache=Path(args.test_cache); target=np.load(cache/'target.npy',mmap_mode='r'); raw_left=np.load(cache/'left.npy',mmap_mode='r');raw_right=np.load(cache/'right.npy',mmap_mode='r')
     if sha256(cache/'target.npy')!=json.loads((cache/'manifest.json').read_text())['files']['target.npy']: raise ValueError('test target checksum mismatch')
-    kwargs={} if report['dataset']=='unity' else dict(left_hip=4,right_hip=5,neck=12); acc={k:PAMetricAccumulator() for k in ('deciwatch','denoised','average_control')}; bs=256 if report['dataset']=='unity' else 4
+    kwargs={} if report['dataset']=='unity' else dict(left_hip=4,right_hip=5,neck=12,enforce_face_z_positive=False); acc={k:PAMetricAccumulator() for k in ('deciwatch','denoised','average_control')}; bs=256 if report['dataset']=='unity' else 4
     for s,e in batch_slices(n,bs):
-        l=canonicalize_pose_torch(torch.tensor(np.array(raw_left[s:e])),**kwargs)[0];r=canonicalize_pose_torch(torch.tensor(np.array(raw_right[s:e])),**kwargs)[0];t=canonicalize_pose_torch(torch.tensor(np.array(target[s:e])),**kwargs)[0]
+        l=canonicalize_pose_torch(torch.tensor(np.array(raw_left[s:e])),**kwargs, mode="per_frame")[0];r=canonicalize_pose_torch(torch.tensor(np.array(raw_right[s:e])),**kwargs, mode="per_frame")[0];t=canonicalize_pose_torch(torch.tensor(np.array(target[s:e])),**kwargs, mode="per_frame")[0]
         if report['dataset']=='unity': l,r,t=l[:,:,2:15],r[:,:,2:15],t[:,:,2:15]
         truth=t; acc['deciwatch'].update(torch.tensor(np.array(pred[s:e])),truth);acc['denoised'].update(torch.tensor(np.array(den[s:e])),truth);acc['average_control'].update((l+r)/2,truth)
     metrics={k:v.result() for k,v in acc.items()}
-    reference=json.loads(Path(args.control_metrics).read_text())['average_control']
-    control_delta={k:metrics['average_control'][k]-reference[k] for k in ('mpjpe','pa_mpjpe','acceleration_error')}
-    if any(abs(v)>1e-7 for v in control_delta.values()): raise ValueError(f'Average-control mismatch: {control_delta}')
-    metrics.update(pa_protocol=PA_PROTOCOL,method_label=f'DeciWatch (official-protocol adaptation, common13, 4/30 observed source frames, seed {args.seed})',boundary_policy='repeat frame 29 at token 30; official 31-frame forward/loss samples tokens 0/10/20/30; crop outputs to 30',compatibility_shim='official integer attention masks converted to bool for PyTorch 2.11 without changing mask values',selection='minimum validation official loss when validation exists; otherwise fixed final epoch',control_delta=control_delta,control_metrics_sha256=sha256(args.control_metrics),evaluator_sha256=sha256(Path(__file__)))
+    control_info=check_current_control(args.control_metrics,dataset=report['dataset'],
+        cache_manifest_sha256=metas['test']['cache_manifest_sha256'],measured=metrics['average_control'])
+    metrics.update(**protocol_metadata(),**control_info,dataset=report['dataset'],cache_manifest_sha256=metas['test']['cache_manifest_sha256'],pa_protocol=PA_PROTOCOL,method_label=f'DeciWatch (official-protocol adaptation, common13, 4/30 observed source frames, seed {args.seed})',boundary_policy='repeat frame 29 at token 30; official 31-frame forward/loss samples tokens 0/10/20/30; crop outputs to 30',compatibility_shim='official integer attention masks converted to bool for PyTorch 2.11 without changing mask values',selection='minimum validation official loss when validation exists; otherwise fixed final epoch',evaluator_sha256=sha256(Path(__file__)))
     write_json(out/'metrics.json',metrics); report.update(status='complete',metrics=metrics,elapsed_seconds=time.time()-start);write_json(out/'report.json',report);print(json.dumps(metrics,indent=2),flush=True)
 
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('deciwatch-repo','train-cache','test-cache','output-dir'):p.add_argument('--'+k,required=True,type=Path)
-    p.add_argument('--val-cache',type=Path);p.add_argument('--control-metrics',type=Path,required=True);p.add_argument('--device',default='cuda:1');p.add_argument('--interval',type=int,default=10);p.add_argument('--hidden',type=int,default=128);p.add_argument('--layers',type=int,default=5);p.add_argument('--batch-size',type=int,default=512);p.add_argument('--epochs',type=int,required=True);p.add_argument('--lr',type=float,default=1e-3);p.add_argument('--lr-decay',type=float,default=.95);p.add_argument('--seed',type=int,default=4321)
+    p.add_argument('--val-cache',type=Path);p.add_argument('--control-metrics',type=Path,help='Optional current per-frame common13 control; archived metrics are rejected');p.add_argument('--device',default='cuda:1');p.add_argument('--interval',type=int,default=10);p.add_argument('--hidden',type=int,default=128);p.add_argument('--layers',type=int,default=5);p.add_argument('--batch-size',type=int,default=512);p.add_argument('--epochs',type=int,required=True);p.add_argument('--lr',type=float,default=1e-3);p.add_argument('--lr-decay',type=float,default=.95);p.add_argument('--seed',type=int,default=4321)
     a=p.parse_args();_run(a)

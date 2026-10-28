@@ -21,9 +21,9 @@ class SkiPosePTZJournalEvaluationTest(unittest.TestCase):
 
     @staticmethod
     def _batch(batch_size: int, final_x: float) -> dict[str, torch.Tensor]:
-        ground_truth = torch.zeros((batch_size, 3, 1, 3), dtype=torch.float32)
+        ground_truth = torch.zeros((batch_size, 3, 13, 3), dtype=torch.float32)
         prediction = ground_truth.clone()
-        prediction[:, 2, 0, 0] = float(final_x)
+        prediction[:, 2, :, 0] = float(final_x)
         return {
             "fused": prediction,
             "p_left": prediction,

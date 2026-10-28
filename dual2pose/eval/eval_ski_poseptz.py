@@ -22,6 +22,7 @@ from typing import Any, Dict
 
 import torch
 from dual2pose.config import load_config
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL, common13_point_errors, common13_pose
 from omegaconf import OmegaConf
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import RichProgressBar
@@ -56,7 +57,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Evaluate a trained dual2pose/crossview_fusion checkpoint on Ski-PosePTZ test split."
     )
-    parser.add_argument("--ckpt-path", type=Path, default=DEFAULT_CKPT, help="Checkpoint path to evaluate.")
+    parser.add_argument("--ckpt-path", type=Path, required=True, help="Checkpoint path to evaluate.")
     parser.add_argument("--config-path", type=Path, default=DEFAULT_CONFIG, help="Config file used to build the data module and model.")
     parser.add_argument("--split", type=str, default="test", choices=["train", "val", "test"], help="Dataset split to evaluate.")
     parser.add_argument("--batch-size", type=int, default=4, help="Test batch size.")
@@ -79,6 +80,10 @@ def _build_config(args: argparse.Namespace):
     config.data.left_hip_idx = 4
     config.data.right_hip_idx = 5
     config.data.neck_idx = 12
+    # The 13-joint skeleton has no eyes: joints 0/1 are the shoulders, so the
+    # face-direction sign is disabled and the forward axis is x cross y (inputs
+    # and reference share the same handedness).
+    config.data.face_sign = False
     config.data.load_frames = False
     config.data.load_2d_kpt = False
     config.data.load_3d_kpt = True
@@ -123,12 +128,13 @@ def _collate_ski_poseptz_batch(batch):
 def _safe_mpjpe(pred: torch.Tensor | None, label: torch.Tensor | None) -> float:
     if pred is None or label is None or pred.numel() == 0 or label.numel() == 0:
         return float("nan")
-    return float(torch.norm(pred - label, dim=-1).mean().item())
+    return float(common13_point_errors(pred, label).mean().item())
 
 
 def _safe_accel_err(pred: torch.Tensor | None, label: torch.Tensor | None) -> float:
     if pred is None or label is None or pred.shape[1] < 3 or label.shape[1] < 3:
         return float("nan")
+    pred, label = common13_pose(pred), common13_pose(label)
     pred_acc = pred[:, 2:] - 2.0 * pred[:, 1:-1] + pred[:, :-2]
     label_acc = label[:, 2:] - 2.0 * label[:, 1:-1] + label[:, :-2]
     return float(torch.norm(pred_acc - label_acc, dim=-1).mean().item())
@@ -159,6 +165,9 @@ def _build_provenance(
     checkpoint_path = Path(checkpoint).resolve()
     index_mapping_path = Path(index_mapping).resolve()
     return {
+        "evaluation_protocol": EVALUATION_PROTOCOL["name"],
+        "canonical_mode": "per_frame",
+        "output_alignment": "none",
         "checkpoint": str(checkpoint_path),
         "checkpoint_sha256": _file_sha256(checkpoint_path),
         "index_mapping": str(index_mapping_path),
@@ -220,7 +229,8 @@ def _summarize_test_outputs(test_outputs: list[Dict[str, torch.Tensor]]) -> Dict
         for name, (pred, label) in pairs.items():
             if pred is None or label is None or pred.numel() == 0 or label.numel() == 0:
                 continue
-            point_error = torch.norm(pred - label, dim=-1)
+            pred, label = common13_pose(pred), common13_pose(label)
+            point_error = common13_point_errors(pred, label)
             stats[name]["mpjpe_sum"] += float(point_error.double().sum().item())
             stats[name]["mpjpe_count"] += int(point_error.numel())
             if pred.shape[1] >= 3 and label.shape[1] >= 3:

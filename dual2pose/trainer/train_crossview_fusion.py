@@ -10,6 +10,7 @@ import torch
 from pytorch_lightning import LightningModule
 
 from dual2pose.models.crossview_fusion import CrossViewCanonicalFusion
+from dual2pose.eval.pose_metrics import COMMON13_NAMES, EVALUATION_PROTOCOL, common13_point_errors, common13_pose
 from .canonicalize import canonicalize_pose_torch
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,13 @@ class CrossViewFusionTrainer(LightningModule):
         self.left_hip_idx = int(getattr(data_cfg, "left_hip_idx", 6))
         self.right_hip_idx = int(getattr(data_cfg, "right_hip_idx", 7))
         self.neck_idx = int(getattr(data_cfg, "neck_idx", 14))
+        # The eye pair fixes the sign of the forward axis.  Skeletons without
+        # eyes (the 13-joint Ski-PosePTZ subset) must set data.face_sign=false:
+        # the frame then takes z = x cross y, which is consistent as long as the
+        # inputs and the reference share the same handedness.
+        self.left_eye_idx = int(getattr(data_cfg, "left_eye_idx", 0))
+        self.right_eye_idx = int(getattr(data_cfg, "right_eye_idx", 1))
+        self.face_sign = bool(getattr(data_cfg, "face_sign", True))
 
         # Hyperparameters come from the `model` config group
         # (configs/model/cross_view_fusion.yaml). The fallbacks keep partial
@@ -141,6 +149,9 @@ class CrossViewFusionTrainer(LightningModule):
             right_hip=self.right_hip_idx,
             neck=self.neck_idx,
             mode=self.canonical_mode,
+            enforce_face_z_positive=self.face_sign,
+            left_eye=self.left_eye_idx,
+            right_eye=self.right_eye_idx,
         )
 
     @staticmethod
@@ -163,6 +174,7 @@ class CrossViewFusionTrainer(LightningModule):
 
     def on_save_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
         checkpoint["canonical_mode"] = CANONICAL_MODE
+        checkpoint["evaluation_protocol"] = dict(EVALUATION_PROTOCOL)
 
     def on_load_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
         self.check_checkpoint_protocol(checkpoint)
@@ -185,7 +197,23 @@ class CrossViewFusionTrainer(LightningModule):
         # Per-frame body frame for both streams and the target (fixed protocol).
         left_canonical, left_transform = self.canonicalize(p_left)
         right_canonical, right_transform = self.canonicalize(p_right)
-        gt_canonical = self.canonicalize(p_gt)[0] if p_gt is not None else None
+        gt_reliable = batch.get("kpt3d_gt_reliable")
+        if gt_reliable is not None:
+            if p_gt is None or gt_reliable.shape != p_gt.shape[:-1]:
+                raise ValueError("kpt3d_gt_reliable must match the native GT joint dimensions")
+            gt_reliable = gt_reliable.to(device=p_gt.device, dtype=torch.bool)
+            anchors = [self.left_hip_idx, self.right_hip_idx, self.neck_idx]
+            if self.face_sign:
+                anchors += [self.left_eye_idx, self.right_eye_idx]
+            if not gt_reliable[..., anchors].all():
+                raise ValueError("Every supervised frame requires reliable GT anchors")
+            if not torch.isfinite(p_gt[gt_reliable]).all():
+                raise ValueError("Reliable GT coordinates must be finite")
+            # Sanitize BEFORE geometry and subtraction; NaN * 0 still leaks NaNs.
+            p_gt = torch.where(gt_reliable[..., None], p_gt, torch.zeros_like(p_gt))
+        gt_canonical, gt_transform = self.canonicalize(p_gt) if p_gt is not None else (None, None)
+        if gt_reliable is not None and gt_transform["degenerate"].any():
+            raise ValueError("Reliable GT anchors must define a nondegenerate body frame")
         # Input frames whose landmarks could not define a body frame (failed
         # detections) reuse a neighbouring rotation; keep their share visible.
         degenerate_inputs = torch.cat(
@@ -220,9 +248,21 @@ class CrossViewFusionTrainer(LightningModule):
         mpjpe = fused.new_tensor(float("nan"))
         loss_sup = fused.new_zeros(())
         if gt_canonical is not None:
-            loss_sup = torch.nn.functional.l1_loss(fused, gt_canonical)
-            mpjpe = torch.norm(fused - gt_canonical, dim=-1).mean()
-            accel_err = self._safe_accel_err(fused, gt_canonical)[1]
+            if gt_reliable is None:
+                loss_sup = torch.nn.functional.l1_loss(fused, gt_canonical)
+                mpjpe = common13_point_errors(fused, gt_canonical).mean()
+                accel_err = self._safe_accel_err(fused, gt_canonical)[1]
+            else:
+                loss_sup = (fused - gt_canonical).abs()[gt_reliable].mean()
+                mask13 = common13_pose(gt_reliable[..., None].expand(*gt_reliable.shape, 3))[..., 0]
+                errors = common13_point_errors(fused, gt_canonical)
+                if not mask13.any() or not torch.isfinite(errors[mask13]).all():
+                    raise ValueError("Supervised common13 scoring requires finite valid points")
+                mpjpe = errors[mask13].mean()
+                delta = common13_pose(fused - gt_canonical)
+                accel = torch.linalg.vector_norm(delta[:, 2:] - 2 * delta[:, 1:-1] + delta[:, :-2], dim=-1)
+                triples = mask13[:, 2:] & mask13[:, 1:-1] & mask13[:, :-2]
+                accel_err = accel[triples].mean() if triples.any() else fused.new_tensor(float("nan"))
             self.log(
                 f"{stage}/mpjpe",
                 mpjpe,
@@ -253,7 +293,7 @@ class CrossViewFusionTrainer(LightningModule):
 
         # temporla smooth loss
         acc = fused[:, 2:] - 2.0 * fused[:, 1:-1] + fused[:, :-2]
-        temporal_smooth_loss = torch.norm(acc, dim=-1).mean()
+        temporal_smooth_loss = torch.norm(acc, dim=-1).mean() if acc.numel() else fused.new_zeros(())
         loss = (
             loss_sup
             + self.lambda_view_recon * loss_view_recon
@@ -405,8 +445,8 @@ class CrossViewFusionTrainer(LightningModule):
     ) -> tuple[torch.Tensor, float]:
 
         if label is None:
-            return pred.new_zeros(*pred.shape[:-1]), float("nan")
-        mpjpe_per_point = torch.norm(pred - label, dim=-1)
+            return pred.new_zeros(*common13_pose(pred).shape[:-1]), float("nan")
+        mpjpe_per_point = common13_point_errors(pred, label)
         _mean = mpjpe_per_point.mean().item()
         return mpjpe_per_point, _mean
 
@@ -415,6 +455,8 @@ class CrossViewFusionTrainer(LightningModule):
         pred: torch.Tensor, label: torch.Tensor
     ) -> tuple[torch.Tensor, float]:
         """Acceleration error against GT via second-order temporal differences."""
+        pred = common13_pose(pred)
+        label = common13_pose(label) if label is not None else None
         if pred.shape[1] < 3 or label is None or label.shape[1] < 3:
             empty = pred.new_zeros((*pred.shape[:1], 0, pred.shape[2]))
             return empty, float("nan")
@@ -624,9 +666,15 @@ class CrossViewFusionTrainer(LightningModule):
         with open(txt_file, "w", encoding="utf-8") as f:
             f.write("Cross-View Fusion Test Report\n")
             f.write("=" * 40 + "\n")
-            f.write(f"canonical_mode: {self.canonical_mode}\n")
+            f.write(f"evaluation_protocol: {EVALUATION_PROTOCOL['name']}\n")
+            f.write("joint_subset: common13\noutput_alignment: none\n")
+            f.write(f"joint_order: {', '.join(COMMON13_NAMES)}\n")
+            f.write(
+                f"canonical_mode: {self.canonical_mode} (hips={self.left_hip_idx},{self.right_hip_idx}; "
+                f"neck={self.neck_idx}; face_sign={self.face_sign}; eyes={self.left_eye_idx},{self.right_eye_idx})\n"
+            )
             f.write("[Canonical MPJPE vs Ground Truth]\n")
-            f.write("All values in this section compare canonicalized poses.\n")
+            f.write("Primary MPJPE compares common-13 outputs directly to per-frame canonical GT; no output alignment.\n")
             for k, v in gt_summary.items():
                 f.write(f"{k}: {v:.4f}\n")
 
@@ -699,6 +747,8 @@ class CrossViewFusionTrainer(LightningModule):
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "train/loss",
+                # T_max counts optimizer updates, including accumulation.
+                "interval": "step",
+                "frequency": 1,
             },
         }

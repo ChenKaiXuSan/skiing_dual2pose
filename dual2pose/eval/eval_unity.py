@@ -1,3 +1,4 @@
+from dual2pose.training_protocol import evaluation_checkpoint_from_env
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 """
@@ -39,6 +40,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from dual2pose.dataloader.data_loader import UnityDataModule
 from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 
 logger = logging.getLogger(__name__)
 
@@ -84,13 +86,12 @@ def init_params(config):
     )
 
     # save the metrics to file
-    ckpt_path = os.environ.get("EVAL_CKPT_PATH") or (
-        "/workspace/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt"
-    )
+    ckpt_path = str(evaluation_checkpoint_from_env())
     metrics = trainer.test(
         classification_module,
         unity_data_module,
         ckpt_path=ckpt_path,
+        weights_only=False,
     )
 
     logger.info(f"Test metrics: {metrics}")
@@ -107,7 +108,7 @@ def init_params(config):
         import json
 
         with open(out_json, "w", encoding="utf-8") as fp:
-            json.dump({"metrics": metrics}, fp, ensure_ascii=False, indent=2)
+            json.dump({"evaluation_protocol": dict(EVALUATION_PROTOCOL), "metrics": metrics}, fp, ensure_ascii=False, indent=2)
     except Exception:
         logger.exception("Failed to write JSON metrics")
 

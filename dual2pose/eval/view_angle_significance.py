@@ -21,6 +21,8 @@ from dual2pose.eval.extension_experiment_utils import (
 )
 
 
+from dual2pose.eval.pose_metrics import common13_pose
+
 DEFAULT_BIN_EDGES = (0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0)
 
 
@@ -71,7 +73,7 @@ def extract_angle_pair_rows(
     rows: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
     for output in test_outputs:
-        fused, left, right, ground_truth = _validated_output(output)
+        fused, left, right, ground_truth = map(common13_pose, _validated_output(output))
         batch_size = int(fused.shape[0])
         meta = output.get("meta")
         if not isinstance(meta, Mapping):

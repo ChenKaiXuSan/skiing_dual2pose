@@ -13,9 +13,19 @@ class MainBaselineHardeningTests(unittest.TestCase):
         for name in ('left','right','target'):
             np.save(p/f'{name}.npy',np.ones((2,30,13,3),dtype=np.float32))
         manifest={'sample_count':2,'time_window':30,'num_joints':13,
+                  'representation':'raw_pre_batch_canonicalization',
                   'files':{f'{name}.npy':sha256(p/f'{name}.npy') for name in ('left','right','target')}}
         (p/'manifest.json').write_text(json.dumps(manifest))
         return p,manifest
+
+    def test_rejects_canonical_or_untagged_cache(self):
+        for representation in (None, 'canonical_first_frame', 'canonical_per_frame'):
+            with tempfile.TemporaryDirectory() as root:
+                p, m = self.make_cache(root)
+                m['representation'] = representation
+                (p/'manifest.json').write_text(json.dumps(m))
+                with self.assertRaisesRegex(RuntimeError, 'raw'):
+                    load_cache(p)
 
     def test_rejects_same_shape_cache_tampering(self):
         with tempfile.TemporaryDirectory() as root:

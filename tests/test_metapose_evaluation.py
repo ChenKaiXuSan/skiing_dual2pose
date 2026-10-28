@@ -14,10 +14,10 @@ class MetaPoseEvaluationTest(unittest.TestCase):
             left = rng.normal(size=(3,30,j,3)).astype(np.float32)
             right = rng.normal(size=(3,30,j,3)).astype(np.float32)
             pred,avg = canonical_prediction_and_control(left[:,:,-13:],left,right,ds)
-            kw = {} if ds == 'unity' else dict(left_hip=4,right_hip=5,neck=12)
-            lc = canonicalize_pose_torch(torch.tensor(left),**kw)[0][:,:,-13:]
-            rc = canonicalize_pose_torch(torch.tensor(right),**kw)[0][:,:,-13:]
-            torch.testing.assert_close(pred,lc,rtol=0,atol=0)
+            kw = {} if ds == 'unity' else dict(left_hip=4,right_hip=5,neck=12,enforce_face_z_positive=False)
+            lc = canonicalize_pose_torch(torch.tensor(left),**kw, mode="per_frame")[0][:,:,-13:]
+            rc = canonicalize_pose_torch(torch.tensor(right),**kw, mode="per_frame")[0][:,:,-13:]
+            torch.testing.assert_close(pred,lc,rtol=1e-6,atol=1e-6)
             torch.testing.assert_close(avg,(lc+rc)/2,rtol=0,atol=0)
 
     def test_complete_saved_prediction_evaluation_keeps_partial_batch(self):
@@ -32,7 +32,7 @@ class MetaPoseEvaluationTest(unittest.TestCase):
             cache.mkdir(); run.mkdir()
             arrays={k:rng.normal(size=(5,30,13,3)).astype(np.float32) for k in ('left','right','target')}
             for name,a in arrays.items(): np.save(cache/f'{name}.npy',a)
-            m=dict(dataset='ski',split='test',sample_count=5,
+            m=dict(dataset='ski',split='test',sample_count=5,time_window=30,representation='raw_pre_batch_canonicalization',
                    files={f'{k}.npy':sha256(cache/f'{k}.npy') for k in arrays})
             (cache/'manifest.json').write_text(json.dumps(m))
             pred_hashes={}
@@ -42,19 +42,24 @@ class MetaPoseEvaluationTest(unittest.TestCase):
                         native_test_cache=str(cache),native_test_manifest_sha256=sha256(cache/'manifest.json'),
                         predictions=pred_hashes)
             (run/'report.json').write_text(json.dumps(report))
+            (run/'metrics.json').write_text('preserve archived metrics')
             control=PAMetricAccumulator()
             for sl in (slice(0,4),slice(4,5)):
-                l,r,t=[canonicalize_pose_torch(torch.tensor(arrays[k][sl]),left_hip=4,right_hip=5,neck=12)[0]
+                l,r,t=[canonicalize_pose_torch(torch.tensor(arrays[k][sl]),left_hip=4,right_hip=5,neck=12,enforce_face_z_positive=False, mode="per_frame")[0]
                        for k in ('left','right','target')]
                 control.update((l+r)/2,t)
             control_path=root/'control.json'
-            control_path.write_text(json.dumps(dict(average_control=control.result())))
+            from dual2pose.eval.external_protocol import protocol_metadata
+            control_path.write_text(json.dumps(dict(**protocol_metadata(),dataset='ski',
+                cache_manifest_sha256=sha256(cache/'manifest.json'),average_control=control.result())))
             with redirect_stdout(io.StringIO()): result=evaluate(run,control_path)
             self.assertEqual(result['metapose']['sample_count'],5)
             self.assertEqual(result['metapose']['pa_frame_count'],150)
             self.assertEqual(result['metapose']['point_count'],1950)
             self.assertEqual(result['metapose']['acceleration_point_count'],1820)
-            self.assertTrue(all(v==0 for v in result['archived_average_control_delta'].values()))
+            self.assertTrue(all(v==0 for v in result['current_average_control_delta'].values()))
+            self.assertEqual((run/'metrics.json').read_text(), 'preserve archived metrics')
+            self.assertTrue((run/'per_frame_common13_v1/metrics.json').is_file())
             with self.assertRaises(FileExistsError): evaluate(run,control_path)
 
 

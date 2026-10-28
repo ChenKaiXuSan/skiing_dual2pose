@@ -108,6 +108,17 @@ class DeciWatchAdapterTest(unittest.TestCase):
         self.assertTrue(np.isfinite(float(loss.detach())))
         self.assertEqual(model.last_observed_indices.tolist(), [0,10,20,30])
 
+    @unittest.skipUnless(torch.cuda.device_count() > 1, 'two CUDA devices required')
+    def test_requested_device_is_used_by_official_cuda_allocations(self):
+        from dual2pose.experiments.run_deciwatch import DeciWatchWindow
+        model = DeciWatchWindow(Path(os.environ['DECIWATCH_REPO']), 39, layers=1).to('cuda:1').eval()
+        torch.cuda.set_device(0)
+        with torch.no_grad():
+            output, _ = model(torch.randn(1, 30, 39, device='cuda:1'), torch.device('cuda:1'))
+        self.assertEqual(output.device, torch.device('cuda:1'))
+        self.assertEqual(torch.cuda.current_device(), 0)
+        self.assertTrue(torch.isfinite(output).all())
+
 
 if __name__ == '__main__':
     unittest.main()

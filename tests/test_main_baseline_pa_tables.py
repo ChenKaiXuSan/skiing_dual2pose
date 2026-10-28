@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 from dual2pose.eval.render_main_baseline_tables import DIRECT, GEOMETRY, load_records, render_table
 
 
@@ -21,7 +22,7 @@ class PATableTests(unittest.TestCase):
                         'pa_point_count': count*30*joints, 'pa_frame_count': count*30,
                         'pa_degenerate_prediction_frames': 0}
                 (self.root/dataset/f'{method}.json').write_text(json.dumps({'method': method,
-                    'metrics': metrics, 'provenance': {'ski_prediction_root_centered': dataset=='ski'}}))
+                    'metrics': metrics, 'provenance': {'canonical_mode': 'per_frame', 'evaluation_protocol': EVALUATION_PROTOCOL, 'ski_prediction_root_centered': dataset=='ski'}}))
 
     def tearDown(self): self.temp.cleanup()
 
@@ -31,6 +32,14 @@ class PATableTests(unittest.TestCase):
         if remove: del data['metrics']['common13'][key]
         else: data['metrics']['common13'][key] = value
         path.write_text(json.dumps(data))
+
+    def test_historical_records_are_rejected(self):
+        path = self.root / "unity/mlp.json"
+        record = json.loads(path.read_text())
+        record["provenance"].pop("evaluation_protocol")
+        path.write_text(json.dumps(record))
+        with self.assertRaisesRegex(ValueError, "protocol"):
+            load_records(self.root)
 
     def test_missing_pa_value_is_rejected(self):
         self.mutate('pa_mpjpe', remove=True)
@@ -49,10 +58,11 @@ class PATableTests(unittest.TestCase):
     def test_each_joint_group_has_three_metric_columns(self):
         records = load_records(self.root)
         unity, ski = render_table('unity', records), render_table('ski', records)
-        self.assertEqual(unity.count('PA-MPJPE'), 2)
+        self.assertEqual(unity.count('PA-MPJPE'), 1)
         self.assertEqual(ski.count('PA-MPJPE'), 1)
-        self.assertIn(r'\multicolumn{3}{c}{All 15 joints}', unity)
-        for text, count in [(unity, 6), (ski, 3)]:
+        self.assertNotIn('All 15 joints', unity)
+        self.assertIn('common 13 joints', unity)
+        for text, count in [(unity, 3), (ski, 3)]:
             row = next(x for x in text.splitlines() if x.startswith('Cross-view MLP &'))
             self.assertEqual(row.count(' & '), count)
 

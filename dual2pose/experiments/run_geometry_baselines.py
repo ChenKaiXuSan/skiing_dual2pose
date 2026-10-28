@@ -1,8 +1,8 @@
 """Train and evaluate calibrated DLT baselines for the IVC main tables.
 
-The runner consumes immutable raw-pose and geometry exports.  Geometry is
-independently body-canonicalized together with the raw target at the complete
-protocol batch size.  The learned method sees only canonical DLT,
+The runner consumes immutable raw-pose and calibrated-world geometry exports.
+Geometry and target are independently body-canonicalized per frame on their
+native skeleton. The learned method sees only canonical DLT,
 reprojection error, and DLT validity.
 """
 
@@ -29,6 +29,8 @@ from dual2pose.eval.main_baseline_data import (
     write_json,
 )
 from dual2pose.experiments.run_main_baselines import MetricAccumulator
+from dual2pose.eval.main_baseline_data import require_current_protocol
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL, common13_pose
 from dual2pose.models.dlt_residual_baseline import (
     DLTResidualMLP,
     dlt_residual_loss,
@@ -53,11 +55,11 @@ GEOMETRY_DTYPES = {
 COORDINATE_NOTE = {
     "unity": (
         "Calibrated metric-world DLT and the raw target are independently "
-        "body-canonicalized by the archived batch-first-frame procedure."
+        "body-canonicalized once per frame on the native skeleton."
     ),
     "ski": (
         "Ski pseudo-GT is a GT-3D-fitted camera-local constructed reference; "
-        "its source labels are root-relative. Before archived canonicalization, "
+        "its source labels are root-relative. Before per-frame canonicalization, "
         "each calibrated-world DLT frame is translated by its own predicted "
         "pelvis midpoint (common13 joints 4 and 5). No scale, ground-truth "
         "feature, test similarity, or fitted transform is used."
@@ -283,8 +285,8 @@ def _update_metrics(
     dataset: str,
 ) -> None:
     for subset, accumulator in metrics.items():
-        indices = slice(2, None) if dataset == "unity" and subset == "common13" else slice(None)
-        accumulator.update(prediction[:, :, indices], target[:, :, indices])
+        pred, truth = (common13_pose(prediction), common13_pose(target)) if subset == "common13" else (prediction, target)
+        accumulator.update(pred, truth)
 
 
 @torch.no_grad()
@@ -369,14 +371,16 @@ def _provenance(
             if args.dataset == "ski"
             else None
         ),
-        "canonicalization": (
-            "geometry and target independently; after forming the complete "
-            "protocol batch; archived first-sample first-frame batch anchor"
-        ),
+        "canonicalization": "geometry and target independently per frame on native skeleton; direct output scoring",
+        "canonical_mode": "per_frame",
+        "evaluation_protocol": dict(EVALUATION_PROTOCOL),
+        "primary_metric": "common13/mpjpe",
         "gt_feature_inputs": False,
         "oracle_conversion": False,
         "test_fitted_transform": False,
         "runner_sha256": runner_hash,
+        "canonicalization_sha256": sha256(ROOT/"dual2pose/trainer/canonicalize.py"),
+        "data_transform_sha256": sha256(ROOT/"dual2pose/eval/main_baseline_data.py"),
         "model_code_sha256": model_hash,
         "torch_version": torch.__version__,
         "command": list(sys.argv),
@@ -430,6 +434,8 @@ def _checkpoint_payload(
     signature: dict[str, Any],
 ) -> dict[str, Any]:
     return {
+        "canonical_mode": "per_frame",
+        "evaluation_protocol": dict(EVALUATION_PROTOCOL),
         "state_dict": model.state_dict(),
         "optimizer": optimizer.state_dict(),
         "epoch": epoch,
@@ -488,12 +494,17 @@ def _signature(
         "loss": "L1 position + 0.01 predicted acceleration norm",
         "validation_batch_size": 4096 if args.dataset == "unity" else None,
         "test_batch_size": 256 if args.dataset == "unity" else 4,
-        "selection": "minimum validation all15 MPJPE" if args.dataset == "unity" else "fixed final epoch 99",
-        "canonicalization": "complete shuffled batch before any microbatch",
+        "selection": "minimum validation common13 direct MPJPE" if args.dataset == "unity" else f"fixed final epoch {args.epochs - 1}",
+        "canonicalization": "per frame on native skeleton",
+        "canonical_mode": "per_frame",
+        "evaluation_protocol": dict(EVALUATION_PROTOCOL),
+        "training_joint_subset": "native", "scheduler": None,
         "shuffle": "torch.randperm on CPU with seed + epoch",
         "train_inputs": _input_provenance(train_inputs),
         "validation_inputs": _input_provenance(val_inputs) if val_inputs else None,
         "runner_sha256": runner_hash,
+        "canonicalization_sha256": sha256(ROOT/"dual2pose/trainer/canonicalize.py"),
+        "data_transform_sha256": sha256(ROOT/"dual2pose/eval/main_baseline_data.py"),
         "model_code_sha256": model_hash,
         "parameters": sum(parameter.numel() for parameter in model.parameters()),
         "precision": "float32; TF32 matmul disabled",
@@ -506,7 +517,7 @@ def _signature(
         },
         "geometry_preprocessing": (
             "per-frame predicted pelvis midpoint (common13 joints 4 and 5) "
-            "subtracted before archived canonicalization"
+            "subtracted before per-frame canonicalization"
             if args.dataset == "ski"
             else "none"
         ),
@@ -604,6 +615,7 @@ def train(args: argparse.Namespace) -> None:
         if saved_config.get("signature") != signature:
             raise RuntimeError("Resume configuration/cache/code mismatch")
         saved = torch.load(last_path, map_location=args.device, weights_only=False)
+        require_current_protocol(saved)
         if saved.get("signature") != signature:
             raise RuntimeError("Checkpoint resume signature mismatch")
         model.load_state_dict(saved["state_dict"], strict=True)
@@ -682,7 +694,7 @@ def train(args: argparse.Namespace) -> None:
                 if val_inputs is not None
                 else None
             )
-            value = validation["all15"]["mpjpe"] if validation else None
+            value = validation["common13"]["mpjpe"] if validation else None
             improved = value is not None and value < best
             if improved:
                 best = float(value)
@@ -717,6 +729,7 @@ def train(args: argparse.Namespace) -> None:
     if not selected.exists():
         raise RuntimeError(f"Selected checkpoint is missing: {selected}")
     checkpoint = torch.load(selected, map_location=args.device, weights_only=False)
+    require_current_protocol(checkpoint)
     if checkpoint.get("signature") != signature:
         raise RuntimeError("Selected checkpoint signature mismatch")
     model.load_state_dict(checkpoint["state_dict"], strict=True)

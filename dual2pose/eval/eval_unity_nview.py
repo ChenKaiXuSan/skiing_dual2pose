@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from dual2pose.training_protocol import evaluation_checkpoint_from_env
+
 import csv
 import hashlib
 import itertools
@@ -27,6 +29,7 @@ from dual2pose.eval.nview_protocol import (
 )
 from dual2pose.path_rewrite import rewrite_data_paths
 from dual2pose.trainer.canonicalize import canonicalize_pose_torch
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL, common13_point_errors, common13_pose
 from dual2pose.training_protocol import resolve_fold_index_path, validate_fold_metadata
 
 
@@ -35,7 +38,7 @@ DEFAULT_CHECKPOINT = REPO_ROOT / "logs/train_unity/crossview_fusion/2026-05-14/0
 # Not a path on this machine: this is the data root recorded inside the
 # archived index files, which path_rewrite maps onto the real root.
 DEFAULT_STALE_ROOT = "/home/kaixu_chen/data/skiing/skiing_unity_dataset"
-OUTPUT_ROOT = REPO_ROOT / "logs/ivc_p1/nview"
+OUTPUT_ROOT = REPO_ROOT / "logs/per_frame_common13_v1/nview"
 
 
 def resolve_nview_inputs(
@@ -54,7 +57,7 @@ def _canonicalize(model: Any, pose: torch.Tensor) -> torch.Tensor:
     if hasattr(model, "predict_pair") and not hasattr(model, "models"):
         return pose
     if hasattr(model, "canonicalize"):
-        # Body frame the model was trained with (per-frame or first-frame).
+        # Active checkpoints are verified as per-frame by the shared loader.
         return model.canonicalize(pose.unsqueeze(0))[0].squeeze(0)
     canonical, _ = canonicalize_pose_torch(
         pose.unsqueeze(0),
@@ -131,7 +134,7 @@ def evaluate_nview_group(
     output["pair_forward_count"] = len(pair_predictions)
     output["pairwise_canonfuse_mean"] = pairwise_mean
     pair_errors = torch.stack(
-        [torch.norm(prediction - gt, dim=-1).mean() for prediction in pair_predictions]
+        [common13_point_errors(prediction, gt).mean() for prediction in pair_predictions]
     )
     oracle_index = int(torch.argmin(pair_errors).item())
     output["pairwise_oracle_select"] = pair_predictions[oracle_index]
@@ -154,6 +157,7 @@ def warmup_pairwise_composition(
 
 
 def _acceleration_error(prediction: torch.Tensor, target: torch.Tensor) -> float:
+    prediction, target = common13_pose(prediction), common13_pose(target)
     if prediction.shape[0] < 3:
         return float("nan")
     pred_acc = prediction[2:] - 2.0 * prediction[1:-1] + prediction[:-2]
@@ -317,14 +321,9 @@ def _camera_lookup(rows: Sequence[Mapping[str, Any]]) -> dict[tuple[str, str, st
 
 
 def _load_model(config: DictConfig, checkpoint: Path, device: torch.device) -> Any:
-    from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
+    from dual2pose.training_protocol import load_fusion_checkpoint
 
-    model = CrossViewFusionTrainer(config)
-    payload = torch.load(checkpoint, map_location="cpu", weights_only=False)
-    state_dict = payload.get("state_dict", payload)
-    model.load_state_dict(state_dict, strict=True)
-    model.to(device).eval()
-    return model
+    return load_fusion_checkpoint(checkpoint, config=config, device=device)
 
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="dual2pose.yaml")
@@ -343,7 +342,7 @@ def main(config: DictConfig) -> None:
     if len(groups) != 180:
         raise RuntimeError(f"N-view protocol requires 180 proposed groups, got {len(groups)}")
     limit = int(os.environ.get("NVIEW_LIMIT_GROUPS", "0"))
-    checkpoint = Path(os.environ.get("EVAL_CKPT_PATH", str(DEFAULT_CHECKPOINT))).resolve()
+    checkpoint = Path(str(evaluation_checkpoint_from_env())).resolve()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = _load_model(config, checkpoint, device)
     lookup = _camera_lookup(rows)
@@ -393,7 +392,7 @@ def main(config: DictConfig) -> None:
             ]
             for method in methods:
                 prediction = result[method]
-                mpjpe = float(torch.norm(prediction - result["gt"], dim=-1).mean().item())
+                mpjpe = float(common13_point_errors(prediction, result["gt"]).mean().item())
                 result_rows.append(
                     {
                         "group_id": group.group_id,
@@ -413,6 +412,7 @@ def main(config: DictConfig) -> None:
                     }
                 )
     manifest_payload = {
+        "evaluation_protocol": dict(EVALUATION_PROTOCOL),
         "proposed_group_count": len(groups),
         "evaluated_group_count": evaluated_count,
         "accepted_group_count": len(accepted),
@@ -449,6 +449,7 @@ def main(config: DictConfig) -> None:
     (output_root / "nview_group_manifest.json").write_text(
         json.dumps(
             {
+                "evaluation_protocol": dict(EVALUATION_PROTOCOL),
                 "proposed_group_count": len(groups),
                 "evaluated_group_count": evaluated_count,
                 "accepted_group_count": len(accepted),
@@ -464,12 +465,13 @@ def main(config: DictConfig) -> None:
         json.dumps(
             {
                 "experiment": "ivc_p1_nview",
+                "evaluation_protocol": dict(EVALUATION_PROTOCOL),
                 "checkpoint": str(checkpoint),
                 "checkpoint_sha256": _sha256(checkpoint),
                 "fold_json": str(fold_path),
                 "fold": 0,
                 "seed": 42,
-                "joint_subset": "all15",
+                "joint_subset": "common13",
                 "units": "dataset_coordinate_units",
                 "pairwise_composition": "all_unique_pairs_arithmetic_mean",
                 "timing_execution_mode": "serial_all_unique_pairs",

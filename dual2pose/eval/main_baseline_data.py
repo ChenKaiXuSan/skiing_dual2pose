@@ -1,8 +1,4 @@
-"""Immutable raw-pose caches for the archived IVC main-table protocol.
-
-Canonicalization deliberately happens AFTER each training batch is shuffled.
-Caching canonical poses would silently replace the archived batch anchor.
-"""
+"""Immutable raw-pose caches and per-frame native-skeleton input transforms."""
 from __future__ import annotations
 
 import argparse
@@ -18,6 +14,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from dual2pose.trainer.canonicalize import canonicalize_pose_torch
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 
 ROOT = Path(__file__).resolve().parents[2]
 _NP_LOAD = np.load
@@ -53,8 +50,16 @@ def batch_slices(count, batch_size, drop_last=False):
 def canonical_batch(left, right, target, *, dataset):
     if dataset not in EXPECTED:
         raise ValueError(dataset)
-    kwargs = {} if dataset == "unity" else {"left_hip": 4, "right_hip": 5, "neck": 12}
-    return tuple(canonicalize_pose_torch(x, **kwargs)[0] for x in (left, right, target))
+    kwargs = {} if dataset == "unity" else {"left_hip": 4, "right_hip": 5, "neck": 12,
+                                          "enforce_face_z_positive": False}
+    return tuple(canonicalize_pose_torch(x, **kwargs, mode="per_frame")[0] for x in (left, right, target))
+
+
+def require_current_protocol(record):
+    """Reject historical learned weights/results before inference or resume."""
+    if (record.get("canonical_mode") != "per_frame" or
+            record.get("evaluation_protocol") != EVALUATION_PROTOCOL):
+        raise ValueError("Incompatible protocol: per_frame/common13 weights or results must be regenerated")
 
 
 @lru_cache(maxsize=32768)
@@ -181,6 +186,8 @@ def export_cache(dataset, splits, output, workers=8):
 def load_cache(path, device="cpu"):
     path = Path(path)
     manifest = json.loads((path / "manifest.json").read_text())
+    if manifest.get("representation") != "raw_pre_batch_canonicalization":
+        raise RuntimeError("Only verified raw pose caches may enter per-frame canonicalization")
     for filename, expected in manifest["files"].items():
         if sha256(path / filename) != expected:
             raise RuntimeError(f"Cache checksum mismatch: {path / filename}")

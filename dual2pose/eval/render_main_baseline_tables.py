@@ -5,7 +5,7 @@ import csv
 import json
 import math
 from pathlib import Path
-from dual2pose.eval.main_baseline_data import sha256, write_json
+from dual2pose.eval.main_baseline_data import sha256, write_json, require_current_protocol
 
 DIRECT = ['left_canonical','right_canonical','canonical_avg','aligned_average',
           'quality_weighted','mlp','tcn','smoothnet','canonfuse3d']
@@ -26,10 +26,11 @@ def load_records(results):
         for method in DIRECT+GEOMETRY:
             path=Path(results)/dataset/f'{method}.json'
             record=json.loads(path.read_text())
+            require_current_protocol(record.get("provenance", {}))
             if record['method']!=method: raise ValueError(f'Method mismatch: {path}')
             if dataset == 'ski' and method in GEOMETRY and not record['provenance'].get('ski_prediction_root_centered', False):
                 raise ValueError(f'Ski geometric prediction must use the documented pelvis-relative convention: {path}')
-            subsets=['all15','common13'] if dataset=='unity' else ['common13']
+            subsets=['common13']
             for subset in subsets:
                 metrics=record['metrics'][subset]
                 if metrics['sample_count']!=(64440 if dataset=='unity' else 30):
@@ -49,7 +50,7 @@ def load_records(results):
 
 def render_table(dataset,records):
     lookup={r['method']:r['result'] for r in records if r['dataset']==dataset}
-    subsets=['all15','common13'] if dataset=='unity' else ['common13']
+    subsets=['common13']
     ncols=1+3*len(subsets)
     caption=(r'Expanded Unity comparison on all 64,440 held-out camera-pair sequences. '
              if dataset=='unity' else r'Expanded Ski-PTZ-Pose comparison on all 30 fixed test camera-pair sequences. ')
@@ -59,11 +60,6 @@ def render_table(dataset,records):
     label='native_reference' if dataset=='unity' else 'ski_poseptz_reference'
     lines=[r'\begin{table}[t]',r'\centering',r'\caption{'+caption+'}',r'\label{tab:'+label+'}',
            (r'\footnotesize' if dataset=='unity' else r'\small'),r'\setlength{\tabcolsep}{3pt}',r'\begin{tabular}{@{}l'+'rrr'*len(subsets)+'@{}}',r'\toprule']
-    if dataset=='unity':
-        tabular_index = next(i for i, line in enumerate(lines) if line.startswith(r'\begin{tabular}'))
-        lines.insert(tabular_index, r'\resizebox{\linewidth}{!}{%')
-        lines.extend([r'& \multicolumn{3}{c}{All 15 joints} & \multicolumn{3}{c}{Common 13 joints}'+END,
-                      r'\cmidrule(lr){2-4}\cmidrule(lr){5-7}'])
     lines.append('Method' + r' & MPJPE $\downarrow$ & PA-MPJPE $\downarrow$ & Accel. $\downarrow$'*len(subsets)+END)
     for title,methods in [(r'3D pose inputs only',DIRECT),(r'Additional estimated 2D and camera calibration',GEOMETRY)]:
         lines.extend([r'\midrule',r'\multicolumn{'+str(ncols)+r'}{l}{\textit{'+title+'}}'+END,r'\midrule'])
@@ -77,8 +73,8 @@ def render_table(dataset,records):
                     if value==minima[subset,metric]: text=r'\textbf{'+text+'}'
                     values.append(text)
             lines.append(LABELS[method]+' & '+' & '.join(values)+END)
-    note=(r'Errors use dataset coordinate units after independent batch-referenced body transforms; '
-          r'30 frames per sequence, batch size '+('256' if dataset=='unity' else '4')+r', with the final batch retained. '
+    note=(r'Errors use dataset coordinate units in independent per-frame orthonormal body frames on the common 13 joints; '
+          r'30 frames per sequence, with the final batch retained. Primary MPJPE compares output directly with GT without output alignment. '
           r'The two input groups have different information requirements. '
           r'PA uses a separate per-frame similarity fit for each joint subset, with no reflection; MPJPE and acceleration use predictions before this evaluation-only fit. ')
     if dataset=='ski':
@@ -87,8 +83,6 @@ def render_table(dataset,records):
     note+=r'Raw-space single-view metrics remain in the archived evidence.'
     lines.extend([r'\bottomrule',r'\end{tabular}',r'\vspace{0.4em}',r'\begin{minipage}{0.98\linewidth}',
                   r'\footnotesize\textit{Note.} '+note,r'\end{minipage}',r'\end{table}'])
-    if dataset=='unity':
-        lines.insert(lines.index(r'\end{tabular}') + 1, '}')
     return '\n'.join(lines)+'\n'
 
 def render_package(records,paper):
@@ -100,7 +94,7 @@ def render_package(records,paper):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--results',type=Path,required=True)
-    parser.add_argument('--paper',type=Path,default=Path('paper/ivc_draft_20260821'))
+    parser.add_argument('--paper',type=Path,required=True)
     args=parser.parse_args(); records=load_records(args.results)
     evidence=args.paper/'evidence'; (evidence/'results').mkdir(parents=True,exist_ok=True)
     json_path=evidence/'results/main_baselines__results.json'

@@ -314,8 +314,11 @@ def run(args):
         progress('complete_predictions_not_yet_scored',windows=count//30,frames=count)
         print(json.dumps(report,indent=2),flush=True)
         if args.evaluation_python:
-            subprocess.run([str(args.evaluation_python),'-m','dual2pose.eval.evaluate_metapose',
-                            '--run-dir',str(output),'--control-metrics',str(args.control_metrics)],check=True)
+            command = [str(args.evaluation_python),'-m','dual2pose.eval.evaluate_metapose',
+                       '--run-dir',str(output)]
+            if args.control_metrics:
+                command += ['--control-metrics',str(args.control_metrics)]
+            subprocess.run(command,check=True)
             progress('complete_evaluated',windows=count//30,frames=count)
     except BaseException as error:
         write_json(output/'failure.json',dict(error=repr(error),traceback=traceback.format_exc(),
@@ -338,6 +341,6 @@ if __name__ == '__main__':
     args = p.parse_args()
     if min(args.stages,args.epochs,args.batch_size,args.timeout_hours) <= 0:
         p.error('Training and timeout budgets must be positive')
-    if bool(args.evaluation_python) != bool(args.control_metrics):
-        p.error('Automatic evaluation needs both --evaluation-python and --control-metrics')
+    if args.control_metrics and not args.evaluation_python:
+        p.error('--control-metrics needs --evaluation-python')
     run(args)

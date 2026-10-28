@@ -25,6 +25,7 @@ from dual2pose.eval.extension_experiment_utils import (
     patch_index_mapping_path_rewrite,
 )
 from dual2pose.eval.frontend_manifest import FrontEndManifest
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -408,6 +409,9 @@ def _comparison_rows(image_rows: Sequence[Mapping[str, Any]], pose_csv: Path) ->
         if key not in pose_by_key:
             raise KeyError(f"Pose-stream occlusion summary lacks E5 match {key}")
         pose = pose_by_key[key]
+        for field in ("evaluation_protocol", "joint_subset", "canonical_mode", "output_alignment"):
+            if image.get(field) is None or pose.get(field) != image[field]:
+                raise ValueError(f"Cannot compare different or untagged evaluation protocols ({field}); rescore {pose_csv}")
         pose_mpjpe = float(pose["fused_mpjpe"])
         image_mpjpe = float(image["fused_mpjpe"])
         compared.append(
@@ -415,6 +419,7 @@ def _comparison_rows(image_rows: Sequence[Mapping[str, Any]], pose_csv: Path) ->
                 "view_mode": key[0],
                 "pattern": key[1],
                 "ratio": key[2],
+                "evaluation_protocol": image["evaluation_protocol"],
                 "image_fused_mpjpe": image_mpjpe,
                 "pose_fused_mpjpe": pose_mpjpe,
                 "image_minus_pose_mpjpe": image_mpjpe - pose_mpjpe,
@@ -430,7 +435,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
+    parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--pose-occlusion-csv", type=Path, default=DEFAULT_POSE_OCCLUSION)
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--batch-size", type=int, default=256)
@@ -450,11 +455,6 @@ def build_argument_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = build_argument_parser().parse_args(argv)
-    if args.batch_size != 256:
-        raise ValueError(
-            "The batch-referenced canonical transform requires --batch-size 256 "
-            "to match the archived protocol"
-        )
     seed_everything(args.seed, workers=True)
     with initialize_config_dir(
         version_base=None,
@@ -541,7 +541,11 @@ def main(argv: Sequence[str] | None = None) -> None:
             "frontend_manifest_sha256": _sha256(manifest_path),
             "fold": 0,
             "seed": args.seed,
-            "joint_subset": "all15",
+            "joint_subset": "common13",
+            "evaluation_protocol": EVALUATION_PROTOCOL["name"],
+            "canonical_mode": EVALUATION_PROTOCOL["canonical_mode"],
+            "output_alignment": EVALUATION_PROTOCOL["output_alignment"],
+            "reduction": EVALUATION_PROTOCOL["reduction"],
             "units": "dataset_coordinate_units",
         }
         rows.append(row)
@@ -556,6 +560,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         output_root / "image_occlusion_summary_last.json",
         {
             "experiment": "unity_image_occlusion_through_sam3d",
+            "evaluation_protocol": dict(EVALUATION_PROTOCOL),
             "cell_count": len(rows),
             "failure_policy": "no SAM3D person -> all-zero 15x3 pose plus boolean flag",
             "rows": rows,

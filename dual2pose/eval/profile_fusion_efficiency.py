@@ -9,8 +9,8 @@ import numpy as np
 import torch
 from torch.utils.flop_counter import FlopCounterMode
 
-from dual2pose.eval.main_baseline_data import ROOT, sha256, write_json
-from dual2pose.experiments.run_main_baselines import ReferenceModel, CHECKPOINTS
+from dual2pose.eval.main_baseline_data import ROOT, sha256, write_json, require_current_protocol
+from dual2pose.experiments.run_main_baselines import ReferenceModel
 from dual2pose.models.main_baselines import build_baseline
 
 
@@ -67,6 +67,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--checkpoint", type=Path, required=True)
+    parser.add_argument("--baseline-results", type=Path, required=True, help="Current Unity baseline result directory")
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -79,14 +81,16 @@ def main():
     results = {}
     for name in ("canonfuse3d", "tcn", "smoothnet"):
         if name == "canonfuse3d":
-            checkpoint = CHECKPOINTS["unity"]
+            checkpoint = args.checkpoint
             model = ReferenceModel(checkpoint).to(args.device)
         else:
-            record = json.loads((ROOT/"logs/ivc_mmsports_extension/main_baselines/20260906/results/unity"/f"{name}.json").read_text())
+            record = json.loads((args.baseline_results / f"{name}.json").read_text())
+            require_current_protocol(record.get("provenance", {}))
             checkpoint = Path(record["checkpoint"])
             if sha256(checkpoint) != record["checkpoint_sha256"]:
                 raise RuntimeError(f"Checkpoint mismatch: {checkpoint}")
             saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
+            require_current_protocol(saved)
             model = build_baseline(name, num_joints=15, time_window=30).to(args.device)
             model.load_state_dict(saved["state_dict"], strict=True)
         results[name] = measure(model, *inputs)

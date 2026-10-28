@@ -59,10 +59,11 @@ def _statistics(action_rows, clusters):
 
 
 class ViewAngleSignificanceArtifactTest(unittest.TestCase):
-    def test_batch_referenced_protocol_requires_archived_batch_size(self):
+    def test_per_frame_protocol_accepts_positive_batch_sizes(self):
         validate_protocol_batch_size(256)
-        with self.assertRaisesRegex(ValueError, "batch_size=256"):
-            validate_protocol_batch_size(4096)
+        validate_protocol_batch_size(4096)
+        with self.assertRaisesRegex(ValueError, "positive"):
+            validate_protocol_batch_size(0)
 
     def test_writer_rejects_incomplete_action_pair_rows(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from dual2pose.training_protocol import evaluation_checkpoint_from_env
+
 from dataclasses import dataclass
 import importlib
 import csv
@@ -24,6 +26,7 @@ from dual2pose.eval.eval_unity_temporal_offset import (
     _patch_index_mapping_path_rewrite,
     _summarize_gate_error_relationship,
 )
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 from dual2pose.eval.extension_experiment_utils import (
     build_experiment_provenance,
     complete_test_dataloader,
@@ -156,10 +159,10 @@ def init_params(config: DictConfig | None = None) -> None:
     if anchor not in {"center", "start"}:
         raise ValueError("SAMPLING_RATE_ANCHOR must be center or start")
 
-    ckpt_path = Path(os.environ.get("EVAL_CKPT_PATH", str(DEFAULT_CKPT_PATH)))
+    ckpt_path = Path(str(evaluation_checkpoint_from_env()))
     output_root = Path(
         os.environ.get(
-            "EVAL_OUTPUT_ROOT", str(REPO_ROOT / "logs/eval_unity_sampling_rate")
+            "EVAL_OUTPUT_ROOT", str(REPO_ROOT / "logs/per_frame_common13_v1/eval_unity_sampling_rate")
         )
     )
     output_root.mkdir(parents=True, exist_ok=True)
@@ -206,8 +209,9 @@ def init_params(config: DictConfig | None = None) -> None:
             sample_count=int(flat["fused"].shape[0]),
             fold=int(config.train.fold),
             seed=seed,
-            joint_subset="all15",
+            joint_subset="common13",
             units="dataset_coordinate_units",
+            evaluation_protocol=EVALUATION_PROTOCOL,
         )
         metrics = eval_helpers._summarize_outputs(
             flat, failure_threshold=failure_threshold

@@ -33,11 +33,9 @@ from dual2pose.eval.view_angle_significance import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CKPT_PATH = (
-    REPO_ROOT
-    / "logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt"
-)
-DEFAULT_OUTPUT_ROOT = REPO_ROOT / "logs/ivc_mmsports_extension/view_angle"
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
+
+DEFAULT_OUTPUT_ROOT = REPO_ROOT / "logs/per_frame_common13_v1/view_angle"
 PAIRWISE_FIELDS = (
     "angle_bin_a",
     "angle_bin_b",
@@ -156,13 +154,9 @@ def _software_provenance() -> dict[str, Any]:
 
 
 def validate_protocol_batch_size(batch_size: int) -> None:
-    """Lock the batch-referenced canonical transform to the archived protocol."""
-
-    if int(batch_size) != 256:
-        raise ValueError(
-            "The archived code uses a batch-referenced first-frame transform; "
-            "E4 therefore requires data.batch_size=256 for numerical comparability"
-        )
+    """Per-frame transforms are independent of batch size."""
+    if int(batch_size) <= 0:
+        raise ValueError("batch_size must be positive")
 
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="dual2pose.yaml")
@@ -173,7 +167,9 @@ def init_params(config: DictConfig | None = None) -> None:
     seed_everything(seed, workers=True)
     config.train.gpu = int(getattr(config.train, "gpu", 0))
     validate_protocol_batch_size(int(config.data.batch_size))
-    checkpoint = Path(os.environ.get("EVAL_CKPT_PATH", str(DEFAULT_CKPT_PATH)))
+    if not os.environ.get("EVAL_CKPT_PATH"):
+        raise ValueError("Set EVAL_CKPT_PATH to a current per-frame checkpoint")
+    checkpoint = Path(os.environ["EVAL_CKPT_PATH"])
     output_root = Path(os.environ.get("EVAL_OUTPUT_ROOT", str(DEFAULT_OUTPUT_ROOT)))
     bootstrap_resamples = int(os.environ.get("BOOTSTRAP_RESAMPLES", "10000"))
     bin_edges = _parse_bin_edges(os.environ.get("VIEW_ANGLE_BIN_EDGES"))
@@ -210,7 +206,8 @@ def init_params(config: DictConfig | None = None) -> None:
         sample_count=len(pair_rows),
         fold=int(config.train.fold),
         seed=seed,
-        joint_subset="all15",
+        joint_subset="common13",
+        evaluation_protocol=EVALUATION_PROTOCOL,
         units="dataset_coordinate_units",
     )
     provenance.update(

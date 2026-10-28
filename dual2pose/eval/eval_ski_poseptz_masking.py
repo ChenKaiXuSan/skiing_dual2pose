@@ -64,7 +64,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ckpt-path",
         type=Path,
-        default=DEFAULT_CKPT,
+        required=True,
         help="Checkpoint path to evaluate.",
     )
     parser.add_argument(
@@ -171,6 +171,10 @@ def _build_config(args: argparse.Namespace):
     config.data.left_hip_idx = 4
     config.data.right_hip_idx = 5
     config.data.neck_idx = 12
+    # The 13-joint skeleton has no eyes: joints 0/1 are the shoulders, so the
+    # face-direction sign is disabled and the forward axis is x cross y (inputs
+    # and reference share the same handedness).
+    config.data.face_sign = False
     config.data.load_frames = False
     config.data.load_2d_kpt = False
     config.data.load_3d_kpt = True

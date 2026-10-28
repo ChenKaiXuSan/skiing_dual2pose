@@ -32,7 +32,8 @@ from dual2pose.frontend_adaptation import (
     configure_trainable_scope,
     load_model_weights_only,
 )
-from dual2pose.training_protocol import resolve_fold_index_path, validate_fold_metadata
+from dual2pose.training_protocol import resolve_fold_index_path, validate_fold_metadata, load_fusion_checkpoint
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 
 
 class FrontendAdaptationTrainer(CrossViewFusionTrainer):
@@ -92,8 +93,14 @@ def main(config: DictConfig) -> None:
     output_root = Path(str(config.log_path)).resolve()
     output_root.mkdir(parents=True, exist_ok=True)
 
-    model = FrontendAdaptationTrainer(config)
+    if config.adaptation.source_checkpoint is None:
+        raise ValueError("Set adaptation.source_checkpoint to the retrained Unity model")
     source_checkpoint = Path(str(config.adaptation.source_checkpoint))
+    source_model = load_fusion_checkpoint(source_checkpoint)
+    if (source_model.left_hip_idx, source_model.right_hip_idx, source_model.neck_idx, source_model.face_sign) != (6, 7, 14, True):
+        raise ValueError("Frontend adaptation requires a Unity skeleton checkpoint")
+    model = FrontendAdaptationTrainer(config)
+    del source_model
     CrossViewFusionTrainer.check_checkpoint_protocol(
         torch.load(source_checkpoint, map_location="cpu", weights_only=False),
         source=str(source_checkpoint),
@@ -151,6 +158,7 @@ def main(config: DictConfig) -> None:
     (output_root / "adaptation_init.json").write_text(
         json.dumps(
             {
+                "evaluation_protocol": dict(EVALUATION_PROTOCOL),
                 "frontend": frontend,
                 "scope": str(config.adaptation.scope),
                 "seed": int(config.train.seed),
@@ -168,6 +176,7 @@ def main(config: DictConfig) -> None:
     (output_root / "adaptation_complete.json").write_text(
         json.dumps(
             {
+                "evaluation_protocol": dict(EVALUATION_PROTOCOL),
                 "best_model_path": checkpoint.best_model_path,
                 "best_model_score": (
                     float(checkpoint.best_model_score.item())

@@ -21,6 +21,7 @@ import torch
 from dual2pose.eval.main_baseline_data import EXPECTED, batch_slices, sha256, write_json
 from dual2pose.eval.main_baseline_geometry import _load_index, _match_source_samples, _resolve_dataset_path
 from dual2pose.eval.stride_external import COMMON, canonical_average17, load_official_stride
+from dual2pose.eval.external_protocol import protocol_metadata
 from dual2pose.map_config import filter_sam3d_body_kpts
 from dual2pose.trainer.canonicalize import canonicalize_pose_torch
 
@@ -111,8 +112,8 @@ def prepare_inputs(cache_dir, dataset_root, limit=0, workers=4):
             extra.append(np.stack(batch_bones))
         average[start:stop] = canonical_average17(
             native[0][start:stop],native[1][start:stop],*extra,dataset)
-    return average, dict(dataset=dataset,split=split,sample_count=count,
-        full_split_count=total,protocol_batch_size=batch_size,cache_dir=str(cache),
+    return average, dict(**protocol_metadata(),dataset=dataset,split=split,sample_count=count,
+        full_split_count=total,preparation_batch_size=batch_size,cache_dir=str(cache),
         cache_manifest_sha256=sha256(cache/'manifest.json'),source_index_sha256=sha256(index),
         raw_array_sha256=evidence,raw_hash_definition='float32 filtered15 xyz bytes followed by MHR127 xyz bytes',
         frame_ids=frames[:count].tolist(),samples=samples,
@@ -130,14 +131,14 @@ def evaluate_predictions(cache, prediction, average, dataset):
     if target.shape != (len(prediction),30,joints,3):
         raise ValueError('Prediction/target coverage mismatch')
     accumulators = [PAMetricAccumulator(),PAMetricAccumulator()]
-    kwargs={} if dataset=='unity' else dict(left_hip=4,right_hip=5,neck=12)
+    kwargs={} if dataset=='unity' else dict(left_hip=4,right_hip=5,neck=12,enforce_face_z_positive=False)
     for start,stop in batch_slices(len(prediction),256 if dataset=='unity' else 4):
-        truth=canonicalize_pose_torch(torch.tensor(target[start:stop]),**kwargs)[0]
+        truth=canonicalize_pose_torch(torch.tensor(target[start:stop]),**kwargs, mode="per_frame")[0]
         if dataset=='unity':
             truth=truth[:,:,2:15]
         for acc,values in zip(accumulators,(prediction,average[:,:,COMMON])):
             acc.update(torch.tensor(values[start:stop]),truth)
-    return dict(stride_adapted=accumulators[0].result(),average_control=accumulators[1].result(),pa_protocol=PA_PROTOCOL)
+    return dict(**protocol_metadata(),dataset=dataset,cache_manifest_sha256=sha256(cache/'manifest.json'),stride_adapted=accumulators[0].result(),average_control=accumulators[1].result(),pa_protocol=PA_PROTOCOL)
 
 
 def main():
@@ -156,7 +157,7 @@ def main():
     if args.max_seconds <= 0 or args.workers < 1:
         parser.error('Positive wall-clock budget and worker count required')
     args.output_dir.mkdir(parents=True,exist_ok=False)
-    start=time.time();report=dict(status='preparing',publication_eligible=False,command=sys.argv,
+    start=time.time();report=dict(**protocol_metadata(),status='preparing',publication_eligible=False,command=sys.argv,
         method='Avg. + STRIDE (adapted; MHR17; 30-frame TTT)',start_unix=start,
         code_sha256={str(p):sha256(p) for p in (Path(__file__),Path(__file__).parents[1]/'eval/stride_external.py')})
     report_path=args.output_dir/'report.json'
@@ -165,6 +166,7 @@ def main():
         torch.set_num_threads(2)
         average,provenance=prepare_inputs(args.cache_dir,args.dataset_root,args.limit,args.workers)
         np.save(args.output_dir/'inputs17.npy',average)
+        report['input_sha256']=sha256(args.output_dir/'inputs17.npy')
         write_json(args.output_dir/'input_provenance.json',provenance)
         adapter,model_info=load_official_stride(args.stride_repo,args.checkpoint,args.device)
         if torch.device(args.device).type == 'cuda':

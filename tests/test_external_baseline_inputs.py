@@ -83,10 +83,10 @@ class ExternalBaselineInputTests(unittest.TestCase):
             with self.subTest(dataset=dataset):
                 self.make_cache(dataset, 'train')
                 result = load_pose_probe(self.cache, count=2)
-                kwargs = {} if dataset == 'unity' else dict(left_hip=4, right_hip=5, neck=12)
+                kwargs = {} if dataset == 'unity' else dict(left_hip=4, right_hip=5, neck=12, enforce_face_z_positive=False)
                 indices = list(range(2, 15)) if dataset == 'unity' else list(range(13))
                 for view, original in enumerate([self.left, self.right]):
-                    expected = canonicalize_pose_torch(torch.tensor(original), **kwargs)[0]
+                    expected = canonicalize_pose_torch(torch.tensor(original), **kwargs, mode="per_frame")[0]
                     np.testing.assert_array_equal(result.canonical_views[:, :, view],
                                                   expected.numpy()[:2, :, indices])
                 np.testing.assert_allclose(result.average, result.canonical_views.mean(axis=2))

@@ -1,5 +1,8 @@
 import math
 import unittest
+from dataclasses import replace
+
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 
 from dual2pose.eval.summarize_multiseed_crossfold import (
     RunMetrics,
@@ -43,6 +46,21 @@ class MultiSeedSummaryTest(unittest.TestCase):
         rows = self._rows()
         with self.assertRaisesRegex(ValueError, "matrix"):
             summarize_training_runs(rows[:-1] + [rows[0]])
+
+    def test_current_protocol_is_preserved(self) -> None:
+        rows = [replace(row, evaluation_protocol=dict(EVALUATION_PROTOCOL)) for row in self._rows()]
+        self.assertEqual(summarize_training_runs(rows)["evaluation_protocol"], EVALUATION_PROTOCOL)
+
+    def test_mixed_protocols_are_rejected(self) -> None:
+        for incompatible in (None, {**EVALUATION_PROTOCOL, "output_alignment": "recanonicalized"}):
+            with self.subTest(incompatible=incompatible):
+                rows = [replace(row, evaluation_protocol=dict(EVALUATION_PROTOCOL)) for row in self._rows()]
+                rows[0] = replace(rows[0], evaluation_protocol=incompatible)
+                with self.assertRaisesRegex(ValueError, "protocol"):
+                    summarize_training_runs(rows)
+
+    def test_legacy_results_are_not_relabelled_as_current(self) -> None:
+        self.assertIsNone(summarize_training_runs(self._rows())["evaluation_protocol"])
 
 
 if __name__ == "__main__":

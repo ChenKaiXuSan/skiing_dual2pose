@@ -146,48 +146,11 @@ class RWDataset(torch.utils.data.Dataset):
 
 
 def load_model(ckpt_path, backbone="crossview_fusion"):
-    CrossViewFusionTrainer, _, _ = _symbols()
-    # Use a minimal dict-based config to avoid Hydra OmegaConf interpolation issues
-    class AttrDict(dict):
-        def __getattr__(self, k): return self.get(k)
-        def __setattr__(self, k, v): self[k] = v
-        def get(self, k, default=None):
-            # Handle nested access like config.data.time_window
-            if "." in str(k):
-                parts = k.split(".")
-                d = self
-                for p in parts:
-                    if isinstance(d, dict) and p in d:
-                        d = d[p]
-                    else: return default
-                return d
-            return super().get(k, default)
-    
-    raw = load_config(REPO_ROOT / "configs" / "dual2pose.yaml")
-    c = AttrDict(OmegaConf.to_container(raw))
-    c["model"] = {"backbone": backbone}
-    c["data"] = {"load_frames": False, "load_2d_kpt": False, "load_3d_kpt": True,
-                 "time_window": 30, "batch_size": 1, "num_workers": 0}
-    c["log_path"] = str(ckpt_path.parent) + "/test"
-    config = AttrDict(c)
-    
-    model = CrossViewFusionTrainer(config)
-    # Load weights directly
-    if ckpt_path.exists():
-        state_dict = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-        # Handle Lightning checkpoints: might have 'state_dict' key or be direct
-        if "state_dict" in state_dict:
-            model.load_state_dict(state_dict["state_dict"])
-        elif "model_state_dict" in state_dict:
-            model.load_state_dict(state_dict["model_state_dict"])
-        else:
-            # Assume it's the state dict itself (or try)
-            try:
-                model.load_state_dict(state_dict)
-            except Exception:
-                print(f"[WARN] Could not load weights from {ckpt_path}")
-    model.eval()
-    return model
+    from dual2pose.training_protocol import load_fusion_checkpoint
+
+    if backbone != "crossview_fusion":
+        raise ValueError(f"Unsupported backbone: {backbone}")
+    return load_fusion_checkpoint(ckpt_path)
 
 
 def direct_inference(model, dataset, device=0):

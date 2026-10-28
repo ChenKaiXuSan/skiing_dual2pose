@@ -9,6 +9,8 @@ observations, then evaluates the fusion model robustness.
 
 from __future__ import annotations
 
+from dual2pose.training_protocol import evaluation_checkpoint_from_env
+
 from dataclasses import dataclass
 import csv
 import json
@@ -31,6 +33,7 @@ from torch.utils.data import DataLoader, default_collate
 import matplotlib.pyplot as plt
 import numpy as np
 
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 from dual2pose.eval.extension_experiment_utils import (
     build_experiment_provenance,
     complete_test_dataloader,
@@ -338,7 +341,12 @@ def _flatten_test_outputs(
 def _summarize_outputs(
     flat: Dict[str, torch.Tensor],
     failure_threshold: float,
+    *, joint_subset: str = "common13",
 ) -> Dict[str, Any]:
+    from dual2pose.eval.pose_metrics import common13_pose
+
+    if joint_subset not in ("common13", "all15"):
+        raise ValueError(f"Unsupported evaluation joint subset: {joint_subset}")
     if not flat:
         return {"error": "No valid test outputs with ground truth."}
 
@@ -360,6 +368,10 @@ def _summarize_outputs(
 
     summary: Dict[str, Any] = {}
     for name, (pred, gt) in pred_gt_pairs.items():
+        if joint_subset == "common13":
+            pred, gt = common13_pose(pred), common13_pose(gt)
+        elif pred.shape[-2] != 15 or gt.shape[-2] != 15:
+            raise ValueError("The all15 auxiliary metric requires 15-joint tensors")
         summary[name] = {
             "mpjpe": _metric_mpjpe(pred, gt),
             "per_joint_mpjpe": _metric_per_joint_mpjpe(pred, gt),
@@ -583,13 +595,13 @@ def init_params(config: DictConfig | None = None) -> None:
     seed_everything(seed, workers=True)
     config.train.gpu = int(getattr(config.train, "gpu", 0))
 
-    ckpt_path = Path(os.environ.get("EVAL_CKPT_PATH", DEFAULT_CKPT_PATH))
+    ckpt_path = Path(str(evaluation_checkpoint_from_env()))
     failure_threshold = float(os.environ.get("FAILURE_THRESHOLD", "0.15"))
 
     results_root = Path(
         os.environ.get(
             "EVAL_OUTPUT_ROOT",
-            str(Path(__file__).resolve().parents[2] / "logs" / "eval_unity_masking"),
+            str(Path(__file__).resolve().parents[2] / "logs" / "per_frame_common13_v1" / "eval_unity_masking"),
         )
     )
     results_root.mkdir(parents=True, exist_ok=True)
@@ -627,8 +639,9 @@ def init_params(config: DictConfig | None = None) -> None:
             sample_count=int(flat["fused"].shape[0]),
             fold=int(config.train.fold),
             seed=seed,
-            joint_subset="all15",
+            joint_subset="common13",
             units="dataset_coordinate_units",
+            evaluation_protocol=EVALUATION_PROTOCOL,
         )
         metrics = _summarize_outputs(flat=flat, failure_threshold=failure_threshold)
         alpha_tensor = _collect_alpha_tensor(test_outputs)

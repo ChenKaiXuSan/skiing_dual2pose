@@ -50,7 +50,8 @@ class GateEvaluationTests(unittest.TestCase):
         for metrics in result["metrics"].values():
             self.assertEqual(metrics["common13"]["sample_count"], 5)
             self.assertEqual(metrics["common13"]["point_count"], 390)
-        self.assertEqual(result["gate_diagnostics"]["joint_frame_count"], 450)
+        self.assertEqual(result["gate_diagnostics"]["joint_frame_count"], 390)
+        self.assertEqual(result["gate_diagnostics"]["joint_subset"], "common13")
 
 
 if __name__ == "__main__":

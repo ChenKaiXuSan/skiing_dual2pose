@@ -41,7 +41,7 @@ def assemble_h36m17(common, bones):
 def canonical_average17(left, right, bones_left, bones_right, dataset):
     if dataset not in ('unity', 'ski'):
         raise ValueError(dataset)
-    kwargs = {} if dataset == 'unity' else dict(left_hip=4, right_hip=5, neck=12)
+    kwargs = {} if dataset == 'unity' else dict(left_hip=4, right_hip=5, neck=12, enforce_face_z_positive=False)
     joint_slice = slice(2, 15) if dataset == 'unity' else slice(None)
     expected_joints = 15 if dataset == 'unity' else 13
     outputs = []
@@ -49,9 +49,9 @@ def canonical_average17(left, right, bones_left, bones_right, dataset):
         native = np.asarray(native, np.float32)
         if native.ndim != 4 or native.shape[-2:] != (expected_joints,3):
             raise ValueError('Expected native protocol batch, not preselected points')
-        _, transform = canonicalize_pose_torch(torch.from_numpy(native.copy()), **kwargs)
+        _, transform = canonicalize_pose_torch(torch.from_numpy(native.copy()), **kwargs, mode="per_frame")
         full = torch.from_numpy(assemble_h36m17(native[..., joint_slice, :], bones))
-        output = (full-transform['pelvis']) @ transform['R']
+        output = (full-transform['pelvis'][..., None, :]) @ transform['R']
         outputs.append(output.numpy())
     result = (outputs[0]+outputs[1])*.5
     if not np.isfinite(result).all():

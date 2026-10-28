@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from dual2pose.training_protocol import evaluation_checkpoint_from_env
+
 import csv
 import hashlib
 import importlib
@@ -32,6 +34,7 @@ from dual2pose.eval.eval_unity_temporal_offset import (
 )
 from dual2pose.eval.frontend_manifest import FrontEndManifest, FrontEndPoseDataset
 from dual2pose.map_config import FILTERED_15_TO_COMMON_13_INDICES
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 
 
 logger = logging.getLogger(__name__)
@@ -106,8 +109,8 @@ def _summary_row(
     seed: int,
     manifest_metadata: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    fused = metrics_all15.get("fused", {})
-    canonical_avg = metrics_all15.get("canonical_avg", {})
+    fused = metrics_common13.get("fused", {})
+    canonical_avg = metrics_common13.get("canonical_avg", {})
     raw_avg = metrics_all15.get("raw_avg", {})
     common_fused = metrics_common13.get("fused", {})
     common_canonical_avg = metrics_common13.get("canonical_avg", {})
@@ -127,6 +130,8 @@ def _summary_row(
         "seed": int(seed),
         "sample_count": sample_count,
         "joint_subset": "common13",
+        "evaluation_protocol": EVALUATION_PROTOCOL["name"],
+        "output_alignment": "none",
         "units": "dataset_coordinate_units",
         "input_2d_source": provenance.get("input_2d_source", "sam3d_native"),
         "estimator_checkpoint": provenance.get("estimator_checkpoint", ""),
@@ -135,6 +140,8 @@ def _summary_row(
         ),
         "official_repo_commit": provenance.get("official_repo_commit", ""),
         "all15_raw_avg_mpjpe": raw_avg.get("mpjpe", math.nan),
+        "all15_fused_mpjpe": metrics_all15.get("fused", {}).get("mpjpe", math.nan),
+        "all15_canonical_avg_mpjpe": metrics_all15.get("canonical_avg", {}).get("mpjpe", math.nan),
         "fused_mpjpe": fused_mpjpe,
         "canonical_avg_mpjpe": canonical_avg_mpjpe,
         "fusion_gain_mpjpe": canonical_avg_mpjpe - fused_mpjpe,
@@ -213,7 +220,7 @@ def init_params(config: DictConfig | None = None) -> None:
     seed = int(os.environ.get("EVAL_SEED", "42"))
     seed_everything(seed, workers=True)
     config.train.gpu = int(getattr(config.train, "gpu", 0))
-    ckpt_path = Path(os.environ.get("EVAL_CKPT_PATH", str(DEFAULT_CKPT_PATH)))
+    ckpt_path = Path(str(evaluation_checkpoint_from_env()))
     failure_threshold = float(os.environ.get("FAILURE_THRESHOLD", "0.15"))
 
     raw_manifest = os.environ.get("FRONTEND_MANIFEST", "").strip()
@@ -223,7 +230,7 @@ def init_params(config: DictConfig | None = None) -> None:
     output_root = Path(
         os.environ.get(
             "EVAL_OUTPUT_ROOT",
-            str(REPO_ROOT / "logs/eval_unity_frontend_generalization"),
+            str(REPO_ROOT / "logs/per_frame_common13_v1/eval_unity_frontend_generalization"),
         )
     )
     run_dir = output_root / frontend_name
@@ -248,7 +255,7 @@ def init_params(config: DictConfig | None = None) -> None:
     test_outputs = list(getattr(model, "test_outputs", []))
     flat = eval_helpers._flatten_test_outputs(test_outputs)
     metrics_all15 = eval_helpers._summarize_outputs(
-        flat, failure_threshold=failure_threshold
+        flat, failure_threshold=failure_threshold, joint_subset="all15"
     )
     common13_flat = _joint_subset(
         flat, indices=list(FILTERED_15_TO_COMMON_13_INDICES)
@@ -275,6 +282,7 @@ def init_params(config: DictConfig | None = None) -> None:
         json.dumps(
             {
                 "experiment": "unity_frontend_generalization",
+                "evaluation_protocol": dict(EVALUATION_PROTOCOL),
                 "frontend_name": frontend_name,
                 "manifest": str(manifest_path.resolve()) if manifest_path else None,
                 "checkpoint": str(ckpt_path.resolve()),
@@ -283,7 +291,7 @@ def init_params(config: DictConfig | None = None) -> None:
                 "seed": seed,
                 "sample_count": sample_count,
                 "manifest_metadata": manifest.metadata if manifest else {},
-                "metrics": metrics_all15,
+                "metrics": metrics_common13,
                 "metrics_all15": metrics_all15,
                 "metrics_common13": metrics_common13,
                 "gate": gate_stats,

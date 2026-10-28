@@ -104,6 +104,7 @@ def main(config: DictConfig) -> None:
     result.update(
         {
             "experiment": "ivc_p1_temporal_alignment_calibration",
+            "descriptor_protocol": "per_frame_body_velocity_v1",
             "split": "val",
             "fold": 0,
             "fold_json": str(fold_path),

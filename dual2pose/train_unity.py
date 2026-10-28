@@ -120,9 +120,9 @@ def init_params(config: DictConfig):
             model_check_point,
             lr_monitor,
         ],
-        # limit_train_batches=1,
-        # limit_val_batches=1,
-        # limit_test_batches=10,
+        limit_train_batches=getattr(config.train, "limit_train_batches", 1.0),
+        limit_val_batches=getattr(config.train, "limit_val_batches", 1.0),
+        limit_test_batches=getattr(config.train, "limit_test_batches", 1.0),
     )
 
     trainer.fit(classification_module, unity_data_module)
@@ -132,6 +132,7 @@ def init_params(config: DictConfig):
         classification_module,
         unity_data_module,
         ckpt_path=str(config.train.test_ckpt_path),
+        weights_only=False,
     )
     action_metrics = summarize_test_outputs_by_action(
         list(getattr(classification_module, "test_outputs", []))

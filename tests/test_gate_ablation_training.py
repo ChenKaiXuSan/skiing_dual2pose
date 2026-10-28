@@ -6,6 +6,21 @@ from omegaconf import OmegaConf
 
 
 class GateAblationTrainingTests(unittest.TestCase):
+    def test_validation_exposes_common13_direct_output_error(self):
+        module = self.module()
+        from dual2pose.eval.main_baseline_data import canonical_batch
+        raw = tuple(torch.randn(2, 6, 15, 3) for _ in range(3))
+        truth = canonical_batch(*raw, dataset="unity")[2]
+        class OffsetModel(torch.nn.Module):
+            def forward(self, left, right):
+                prediction = truth.clone()
+                prediction[..., 2:, 0] += 2
+                prediction[..., :2, 0] += 10
+                return prediction, {}
+        result = module.evaluate(OffsetModel(), raw)
+        self.assertIn("common13", result)
+        self.assertAlmostEqual(result["common13"]["mpjpe"], 2., places=6)
+
     def module(self):
         self.assertIsNotNone(importlib.util.find_spec("dual2pose.experiments.run_gate_ablation"),
                              "controlled gate training is not implemented")

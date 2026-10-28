@@ -14,7 +14,7 @@ BIN_EDGES = [0, 30, 60, 90, 120, 150, 180]
 
 
 def _output_fixture():
-    ground_truth = torch.zeros((2, 2, 1, 3), dtype=torch.float32)
+    ground_truth = torch.zeros((2, 2, 15, 3), dtype=torch.float32)
     fused = ground_truth.clone()
     fused[0, ..., 0] = 1.0
     fused[1, ..., 0] = 2.0
@@ -64,6 +64,12 @@ class ViewAngleSignificanceTest(unittest.TestCase):
         self.assertEqual(rows[0]["angle_bin"], "0-30")
         self.assertAlmostEqual(rows[0]["fused_mpjpe"], 1.0)
         self.assertAlmostEqual(rows[0]["canonical_avg_mpjpe"], 2.0)
+
+    def test_eye_error_is_excluded_from_primary_score(self):
+        output = _output_fixture()
+        output["fused"][..., :2, :] = 10000.0
+        rows = extract_angle_pair_rows([output], BIN_EDGES)
+        self.assertAlmostEqual(rows[0]["fused_mpjpe"], 1.0)
 
     def test_extract_rejects_nonfinite_tensors(self):
         output = _output_fixture()

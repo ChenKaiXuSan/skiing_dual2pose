@@ -29,6 +29,7 @@ class RunMetrics:
     checkpoint_sha256: str
     best_epoch: int
     per_action: Mapping[str, Mapping[str, Any]]
+    evaluation_protocol: Mapping[str, Any] | None = None
 
 
 def _sha256(path: Path) -> str:
@@ -61,6 +62,9 @@ def summarize_training_runs(rows: Sequence[RunMetrics]) -> dict[str, Any]:
             f"Repeated-training matrix mismatch; missing={sorted(EXPECTED_CELLS - set(indexed))}, "
             f"extra={sorted(set(indexed) - EXPECTED_CELLS)}"
         )
+    protocol = rows[0].evaluation_protocol
+    if any(row.evaluation_protocol != protocol for row in rows):
+        raise ValueError("Cannot aggregate mixed evaluation protocols (including untagged historical results)")
     values = [float(indexed[key].mpjpe) for key in sorted(indexed)]
     mean, std = _mean_std(values)
     margin = T_CRITICAL_DF5_95 * std / math.sqrt(len(values))
@@ -89,6 +93,7 @@ def summarize_training_runs(rows: Sequence[RunMetrics]) -> dict[str, Any]:
             "mpjpe_std": action_std,
         }
     return {
+        "evaluation_protocol": dict(protocol) if protocol is not None else None,
         "aggregate": {
             "run_count": len(values),
             "mpjpe_mean": mean,
@@ -130,6 +135,7 @@ def collect_run_metrics(root: Path) -> list[RunMetrics]:
                 checkpoint_sha256=_sha256(checkpoint),
                 best_epoch=epoch,
                 per_action=dict(payload["per_action"]),
+                evaluation_protocol=payload.get("evaluation_protocol"),
             )
         )
     return rows
@@ -145,6 +151,7 @@ def _write_outputs(root: Path, rows: Sequence[RunMetrics], summary: Mapping[str,
             "best_epoch": row.best_epoch,
             "best_checkpoint": row.best_checkpoint,
             "checkpoint_sha256": row.checkpoint_sha256,
+            "evaluation_protocol": json.dumps(row.evaluation_protocol, sort_keys=True),
         }
         for row in rows
     ]

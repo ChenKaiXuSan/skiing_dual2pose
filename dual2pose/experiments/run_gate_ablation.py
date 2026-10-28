@@ -15,6 +15,8 @@ from dual2pose.models.crossview_fusion import CrossViewCanonicalFusion
 from dual2pose.eval.main_baseline_data import ROOT, batch_slices, canonical_batch, load_cache, sha256, write_json
 from dual2pose.experiments.run_main_baselines import MetricAccumulator, _save_checkpoint
 from dual2pose.eval.pa_mpjpe import PAMetricAccumulator
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL, common13_pose
+from dual2pose.eval.main_baseline_data import require_current_protocol
 
 TRAIN_VARIANTS = {
     "full": dict(gate_mode="dynamic", disable_output_residual=False),
@@ -44,14 +46,14 @@ def fusion_objective(prediction, alpha, left, right, target):
 @torch.no_grad()
 def evaluate(model, arrays, batch_size=4096, with_pa=False):
     model.eval()
-    names = ("all15", "common13") if with_pa else ("all15",)
+    names = ("common13", "all15")
     metrics = {name: PAMetricAccumulator() if with_pa else MetricAccumulator() for name in names}
     for start, stop in batch_slices(len(arrays[0]), batch_size):
         left, right, target = canonical_batch(*(a[start:stop] for a in arrays), dataset="unity")
         prediction, _ = model(left, right)
         for name, accumulator in metrics.items():
-            idx = slice(2, None) if name == "common13" else slice(None)
-            accumulator.update(prediction[:, :, idx], target[:, :, idx])
+            pred, truth = (common13_pose(prediction), common13_pose(target)) if name == "common13" else (prediction, target)
+            accumulator.update(pred, truth)
     return {key: value.result() for key, value in metrics.items()}
 
 
@@ -69,14 +71,17 @@ def run_variant(args, variant, train_arrays, val_arrays, train_manifest, val_man
         validation_batch_size=args.batch_size, evaluation_batch_size=256,
         train_drop_last=True, validation_drop_last=False,
         initialization="from scratch; same seed and complete initial parameter layout",
-        loss="archived full fusion objective; fixed-gate regularizers remain constants",
-        selection="minimum full-validation all15 MPJPE",
+        loss="native-skeleton full fusion objective; fixed-gate regularizers remain constants",
+        canonical_mode="per_frame", evaluation_protocol=dict(EVALUATION_PROTOCOL),
+        training_joint_subset="native15", primary_metric="common13/mpjpe",
+        selection="minimum full-validation common13 direct MPJPE",
         optimizer="AdamW lr=0.001 weight_decay=0.01; no scheduler",
+        budget_contract="independent 100-epoch default gate runs; full not reused from main trainer with different scheduler",
         dtype="float32; TF32 disabled", smoke_steps=args.smoke_steps,
         train_manifest=train_manifest, val_manifest=val_manifest,
         source_sha256={str(p): sha256(p) for p in (
             Path(__file__), ROOT/"dual2pose/models/crossview_fusion.py",
-            ROOT/"dual2pose/eval/main_baseline_data.py")},
+            ROOT/"dual2pose/eval/main_baseline_data.py", ROOT/"dual2pose/trainer/canonicalize.py")},
     )
     write_json(output/"config.json", config)
     started, best = time.monotonic(), float("inf")
@@ -110,7 +115,7 @@ def run_variant(args, variant, train_arrays, val_arrays, train_manifest, val_man
             raise ValueError("No complete training batch")
         validation_arrays = tuple(a[:args.batch_size] for a in val_arrays) if args.smoke_steps else val_arrays
         validation = evaluate(model, validation_arrays, args.batch_size)
-        score = validation["all15"]["mpjpe"]
+        score = validation["common13"]["mpjpe"]
         if score < best:
             best = score
             _save_checkpoint(output/"best.pt", model, optimizer, epoch, best, config)
@@ -128,6 +133,7 @@ def run_variant(args, variant, train_arrays, val_arrays, train_manifest, val_man
         return
     # Test data are opened only after training and validation selection are over.
     saved = torch.load(output/"best.pt", map_location=args.device, weights_only=False)
+    require_current_protocol(saved)
     model.load_state_dict(saved["state_dict"], strict=True)
     test_arrays, test_manifest = load_cache(args.cache_root/"unity/test", args.device)
     metrics = evaluate(model, test_arrays, batch_size=256, with_pa=True)

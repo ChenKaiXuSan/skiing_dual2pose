@@ -56,34 +56,15 @@ def correction_accuracy_masks(
     )
 
 
-def _normalize(vector: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
-    return vector / (vector.norm(dim=-1, keepdim=True) + eps)
+DESCRIPTOR_PROTOCOL = "per_frame_body_velocity_v1"
 
 
 def _canonical_pose(pose: torch.Tensor) -> torch.Tensor:
-    if pose.ndim != 4 or pose.shape[-1] != 3:
-        raise ValueError(f"Expected pose shape BxTxJx3, got {tuple(pose.shape)}")
-    if pose.shape[1] == 0:
-        raise ValueError("Temporal alignment requires at least one frame")
-
-    reference = pose[:, 0]
-    left_hip = reference[:, 6]
-    right_hip = reference[:, 7]
-    neck = reference[:, 14]
-    pelvis = 0.5 * (left_hip + right_hip)
-
-    x_axis = _normalize(right_hip - left_hip)
-    y_axis = _normalize(neck - pelvis)
-    z_axis = _normalize(torch.linalg.cross(x_axis, y_axis))
-    eye_mid = 0.5 * (reference[:, 0] + reference[:, 1])
-    face_direction = _normalize(eye_mid - neck)
-    sign = torch.sign((z_axis * face_direction).sum(dim=-1, keepdim=True))
-    sign = torch.where(sign == 0, torch.ones_like(sign), sign)
-    z_axis = z_axis * sign
-
-    rotation = torch.stack((x_axis, y_axis, z_axis), dim=-1)
-    centered = pose - pelvis[:, None, None, :]
-    return torch.einsum("btjc,bck->btjk", centered, rotation)
+    from dual2pose.trainer.canonicalize import canonicalize_pose_torch
+    if pose.ndim != 4 or pose.shape[-1] != 3 or pose.shape[1] == 0:
+        raise ValueError("Temporal alignment expects nonempty BxTxJx3 poses")
+    canonical, _ = canonicalize_pose_torch(pose, mode="per_frame")
+    return canonical
 
 
 def _score_canonical(

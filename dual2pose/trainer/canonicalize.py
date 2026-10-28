@@ -37,7 +37,7 @@ reuse the rotation of the previous valid frame of the same sequence (the next
 valid one for leading frames, the identity if the whole sequence is
 degenerate) and are flagged in ``transform["degenerate"]``.
 
-``mode="first_frame"`` (the default of this library function) is the archived
+``mode="first_frame"`` (explicit opt-in only) is the archived
 manuscript construction: one reference frame per batch, axes normalised but
 not orthogonalised.  It is kept unchanged for the archived baseline and
 native-output analyses and is not a training option.
@@ -109,7 +109,7 @@ def canonicalize_pose_torch(
     left_hip: int = 6,
     right_hip: int = 7,
     neck: int = 14,
-    mode: str = "first_frame",
+    mode: str = "per_frame",
     eps: float = 1e-8,
     enforce_face_z_positive: bool = True,
     left_eye: int = 0,

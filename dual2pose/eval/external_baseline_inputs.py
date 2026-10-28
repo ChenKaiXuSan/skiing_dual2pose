@@ -1,7 +1,7 @@
 """Target-free, bounded input preparation for external-baseline diagnostics.
 
 This module is not a full evaluation loader. It refuses test splits and exports
-at most four windows from the first archived protocol batch. In particular it
+at most four windows, canonicalized independently per frame. In particular it
 never opens target.npy, GT 2D, labels HDF5 or camera calibration.
 """
 from __future__ import annotations
@@ -14,6 +14,7 @@ import numpy as np
 import torch
 
 from dual2pose.eval.main_baseline_data import sha256
+from dual2pose.eval.external_protocol import protocol_metadata
 from dual2pose.eval.main_baseline_geometry import (
     _load_index, _match_source_samples, _resolve_dataset_path,
 )
@@ -37,7 +38,7 @@ def _verify(path: Path, expected: str) -> None:
 
 
 def load_pose_probe(cache_dir: Path, count: int = 2) -> PoseProbe:
-    """Read only inputs from a verified train/val cache; preserve its anchor."""
+    """Read only raw inputs from a verified train/val cache."""
     root = Path(cache_dir).resolve()
     manifest = json.loads((root / 'manifest.json').read_text())
     dataset, split = manifest['dataset'], manifest['split']
@@ -53,10 +54,9 @@ def load_pose_probe(cache_dir: Path, count: int = 2) -> PoseProbe:
     names = ('left.npy', 'right.npy', 'frames.npy', 'samples.jsonl')
     for name in names:
         _verify(root / name, manifest['files'][name])
-    batch_size = 256 if dataset == 'unity' else 4
-    stop = min(total, batch_size)
+    stop = count
     indices = list(range(2, 15)) if dataset == 'unity' else list(range(13))
-    kwargs = {} if dataset == 'unity' else dict(left_hip=4, right_hip=5, neck=12)
+    kwargs = {} if dataset == 'unity' else dict(left_hip=4, right_hip=5, neck=12, enforce_face_z_positive=False)
     raw, canonical = [], []
     for name in ('left', 'right'):
         mapped = np.load(root / f'{name}.npy', mmap_mode='r', allow_pickle=False)
@@ -65,7 +65,7 @@ def load_pose_probe(cache_dir: Path, count: int = 2) -> PoseProbe:
         batch = np.array(mapped[:stop], copy=True)
         if not np.isfinite(batch).all():
             raise ValueError(f'Nonfinite {name} input')
-        transformed = canonicalize_pose_torch(torch.from_numpy(batch), **kwargs)[0].numpy()
+        transformed = canonicalize_pose_torch(torch.from_numpy(batch), **kwargs, mode="per_frame")[0].numpy()
         # Select after the native 15/13-joint transform, not before it.
         raw.append(batch[:count, :, indices].copy())
         canonical.append(transformed[:count, :, indices].copy())
@@ -88,8 +88,8 @@ def load_pose_probe(cache_dir: Path, count: int = 2) -> PoseProbe:
         'verified_input_files': {name: manifest['files'][name] for name in names},
         'source_index': manifest['index'], 'source_index_sha256': manifest['index_sha256'],
         'cache_sample_count': total, 'selected_count': count, 'samples': samples,
-        'protocol_batch_size': batch_size, 'canonicalized_batch_count': stop,
-        'anchor_sample_index': 0, 'joint_subset': 'common13',
+        **protocol_metadata(), 'canonicalized_batch_count': stop,
+        'joint_subset': 'common13',
         'native_joint_count': joints, 'native_to_common_indices': indices,
         'ground_truth_loaded': False, 'supplied_calibration': False,
         'input_code_sha256': sha256(__file__),

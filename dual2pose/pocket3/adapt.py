@@ -9,7 +9,7 @@ is a deployment-calibration demonstration, not a generalization test.
 
 Example::
 
-    python -m dual2pose.pocket3.adapt --gpu 1 --output-dir logs/eval_pocket3_chen4/adaptation
+    python -m dual2pose.pocket3.adapt --gpu 1
 """
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ from dual2pose.pocket3 import evaluate as ep
 from dual2pose.frontend_adaptation import configure_trainable_scope
 from dual2pose.models.main_baselines import aligned_average
 from dual2pose.trainer.canonicalize import canonicalize_pose_torch
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 
 
 def load_windows(args):
@@ -37,42 +38,39 @@ def load_windows(args):
     j, _ = ep.pair_by_utc(gl["utc"], gr["utc"])
     usable = (j >= 0) & ep.subject_in_view(lb, lv, args.frame_height) & np.where(j >= 0, ep.subject_in_view(rb, rv, args.frame_height)[np.clip(j, 0, None)], False)
     starts = ep.build_windows(usable, args.window, args.window, gl["reliable"][:, ep.ANCHOR_JOINTS].all(1))
+    if not starts:
+        raise ValueError("No valid complete Pocket3 windows")
     li = np.stack([np.arange(s, s + args.window) for s in starts])
     return L[li], R[j[li]], gl["joints"][li], gl["reliable"][li], starts
 
 
-def canon(x, device):
-    c, _ = canonicalize_pose_torch(torch.from_numpy(x).to(device), left_hip=ep.LEFT_HIP, right_hip=ep.RIGHT_HIP, neck=ep.NECK)
+def canon(x, device, *, model=None):
+    if model is not None:
+        return model.canonicalize(ep.native_pose(model, torch.from_numpy(x).to(device)))[0]
+    c, _ = canonicalize_pose_torch(torch.from_numpy(x).to(device), left_hip=ep.LEFT_HIP, right_hip=ep.RIGHT_HIP, neck=ep.NECK, mode="per_frame")
     return c
 
 
 def evaluate(model, L, R, G, REL, device):
-    """Per-frame body-frame MPJPE / PA-MPJPE (common 13, mm) for averaging, frozen/adapted model and gate-only.
+    """Direct common-13 MPJPE (mm), with separately reported aligned diagnostics.
 
-    The averaging baselines use the first-frame window protocol; the model receives the body
-    frame it was trained with (``model.canonical_mode``) and is compared with the reference in
-    that same frame (``gt_model``).
+    The averaging baselines, model and reference all use the per-frame body frame.
     """
-    outs = {"canonical_average": [], "aligned_average": [], "model": [], "gate_only": [], "gt": [], "gt_model": []}
-    ref = {"canonical_average": "gt", "aligned_average": "gt", "model": "gt_model", "gate_only": "gt_model"}
+    ep.validate_targets(G, REL)
     model.eval()
-    with torch.no_grad():
-        for w in range(L.shape[0]):
-            lc, rc, gc = canon(L[w:w + 1], device), canon(R[w:w + 1], device), canon(G[w:w + 1], device)
-            ml, mr = ep.model_inputs(model, torch.from_numpy(L[w:w + 1]).to(device), torch.from_numpy(R[w:w + 1]).to(device))
-            fused, aux = model.models(ml, mr, return_components=True)
-            outs["canonical_average"].append((0.5 * (lc + rc)).cpu().numpy())
-            outs["aligned_average"].append(aligned_average(lc, rc).cpu().numpy())
-            outs["model"].append(fused.cpu().numpy())
-            outs["gate_only"].append((fused - aux["output_residual"]).cpu().numpy())
-            outs["gt"].append(gc.cpu().numpy())
-            outs["gt_model"].append(model.canonicalize(torch.from_numpy(G[w:w + 1]).to(device))[0].cpu().numpy())
-    outs = {k: np.concatenate(v) for k, v in outs.items()}
+    raw = ep.run_methods(L, R, G, {"model": model}, device)
+    outs = {"canonical_average": raw["canonical_average"], "aligned_average": raw["aligned_average"],
+            "model": raw["canonfuse3d[model]"], "gate_only": raw["canonfuse3d_gate_only[model]"], "gt": raw["gt"]}
+    ref = {k: "gt" for k in ("canonical_average", "aligned_average", "model", "gate_only")}
     pf = {k: ep.per_frame_canonical(v) for k, v in outs.items()}
     res = {}
     for k in ("canonical_average", "aligned_average", "model", "gate_only"):
         g = ref[k]
         res[k] = {
+            "mpjpe_mm": 1000 * ep.masked_mpjpe(outs[k], outs[g], REL, ep.COMMON13)[0],
+            "accel_mm": 1000 * ep.masked_accel_error(outs[k], outs[g], REL, ep.COMMON13)[0],
+            "recanonicalized_mpjpe_mm": 1000 * ep.masked_mpjpe(pf[k], pf[g], REL, ep.COMMON13)[0],
+            # Historical keys are auxiliary aliases, never selection criteria.
             "per_frame_canonical_mpjpe_mm": 1000 * ep.masked_mpjpe(pf[k], pf[g], REL, ep.COMMON13)[0],
             "pa_mpjpe_mm": 1000 * ep.masked_pa_mpjpe(outs[k], outs[g], REL, ep.COMMON13)[0],
             "per_frame_canonical_accel_mm": 1000 * ep.masked_accel_error(pf[k], pf[g], REL, ep.COMMON13)[0],
@@ -80,7 +78,11 @@ def evaluate(model, L, R, G, REL, device):
     return res
 
 
-def adapt(model, L, R, G, device, scope: str, epochs: int, lr: float, seed: int):
+def adapt(model, L, R, G, REL, device, scope: str, epochs: int, lr: float, seed: int):
+    ep.validate_pocket_models({"model": model})
+    ep.validate_targets(G, REL)
+    if epochs <= 0 or lr <= 0:
+        raise ValueError("epochs and learning rate must be positive")
     torch.manual_seed(seed)
     model = copy.deepcopy(model)
     configure_trainable_scope(model, scope)
@@ -91,10 +93,10 @@ def adapt(model, L, R, G, device, scope: str, epochs: int, lr: float, seed: int)
     for _ in range(epochs):
         order = torch.randperm(n)
         for w in order.tolist():
-            batch = {"kpt3d_sam": {"cam1": torch.from_numpy(L[w:w + 1]).to(device),
-                                   "cam2": torch.from_numpy(R[w:w + 1]).to(device)},
-                     "kpt3d_gt": torch.from_numpy(G[w:w + 1]).to(device)}
+            batch = ep.training_batch(model, L[w:w + 1], R[w:w + 1], G[w:w + 1], REL[w:w + 1], device)
             loss = model._shared_step(batch, stage="train")
+            if not torch.isfinite(loss):
+                raise ValueError("Nonfinite Pocket3 adaptation loss")
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -113,24 +115,38 @@ def main(argv=None):
     ap.add_argument("--adapt-fraction", type=float, default=0.6)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--gpu", type=int, default=0)
-    ap.add_argument("--output-dir", type=Path, default=ep.REPO_ROOT / "logs/eval_pocket3_chen4/adaptation")
+    ap.add_argument("--output-dir", type=Path, default=ep.default_output_dir("adaptation"))
     args = ap.parse_args(argv)
     device = torch.device(f"cuda:{args.gpu}" if torch.cuda.is_available() else "cpu")
-    L, R, G, REL, starts = load_windows(args)
-    W = L.shape[0]
-    k = int(round(args.adapt_fraction * W))
+    from dual2pose.pocket3.train import load_frames, windows_in, gather
+    if not 0 < args.adapt_fraction < 1:
+        raise ValueError("adapt-fraction must lie strictly between zero and one")
+    L, R, j, gl, usable, anchor = load_frames(args)
+    # Freeze frame blocks BEFORE deriving valid windows; availability cannot move the boundary.
+    F = len(usable)
+    cut = int(round(args.adapt_fraction * F))
+    if not 0 < cut < F:
+        raise ValueError("Adaptation and test require nonempty temporal blocks")
+    blocks = {"adapt_first_test_last": ((0, cut), (cut, F)),
+              "adapt_last_test_first": ((F - cut, F), (0, F - cut))}
     base = ep.load_model(args.ckpt, device)
     # disable Lightning logging side effects during manual training
     base.log = lambda *a, **kw: None
-    results = {"windows": W, "splits": {}, "epochs": args.epochs, "lr": args.lr,
+    results = {"source_frames": F, "splits": {}, "epochs": args.epochs, "lr": args.lr,
+               "evaluation_protocol": dict(EVALUATION_PROTOCOL), "comparison_frame": dict(ep.COMPARISON_FRAME), "primary_metric": "mpjpe_mm",
                "checkpoint": str(args.ckpt), "canonical_mode": base.canonical_mode, "scopes": ["heads_only", "full"]}
-    for name, (ai, ti) in {"adapt_first_test_last": (slice(0, k), slice(k, W)),
-                           "adapt_last_test_first": (slice(W - k, W), slice(0, W - k))}.items():
-        entry = {"adapt_windows": [int(s) for s in np.array(starts)[ai]], "test_windows": [int(s) for s in np.array(starts)[ti]],
-                 "frozen": evaluate(base, L[ti], R[ti], G[ti], REL[ti], device)}
+    for name, (adapt_block, test_block) in blocks.items():
+        ai = windows_in(usable, anchor, *adapt_block, args.window, args.window)
+        ti = windows_in(usable, anchor, *test_block, args.window, args.window)
+        tr = gather(L, R, j, gl, ai, args.window)
+        te = gather(L, R, j, gl, ti, args.window)
+        entry = {"adapt_windows": ai, "test_windows": ti,
+                 "blocks": {"adapt": list(adapt_block), "test": list(test_block)},
+                 "selection": "fixed_final_epoch", "selected_epoch": args.epochs,
+                 "frozen": evaluate(base, *te, device)}
         for scope in ("heads_only", "full"):
-            m = adapt(base, L[ai], R[ai], G[ai], device, scope, args.epochs, args.lr, args.seed)
-            entry[f"adapted_{scope}"] = evaluate(m, L[ti], R[ti], G[ti], REL[ti], device)
+            m = adapt(base, *tr, device, scope, args.epochs, args.lr, args.seed)
+            entry[f"adapted_{scope}"] = evaluate(m, *te, device)
         results["splits"][name] = entry
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "summary.json").write_text(json.dumps(results, indent=1))
@@ -138,9 +154,9 @@ def main(argv=None):
         print(f"--- {name}: adapt {len(e['adapt_windows'])} windows, test {len(e['test_windows'])} windows")
         for cond in ("frozen", "adapted_heads_only", "adapted_full"):
             r = e[cond]
-            print(f"  {cond:14s} avg {r['canonical_average']['per_frame_canonical_mpjpe_mm']:5.1f}/{r['canonical_average']['pa_mpjpe_mm']:4.1f}  "
-                  f"model {r['model']['per_frame_canonical_mpjpe_mm']:5.1f}/{r['model']['pa_mpjpe_mm']:4.1f}  "
-                  f"gate-only {r['gate_only']['per_frame_canonical_mpjpe_mm']:5.1f}/{r['gate_only']['pa_mpjpe_mm']:4.1f}  (MPJPE/PA mm)")
+            print(f"  {cond:14s} avg {r['canonical_average']['mpjpe_mm']:5.1f}/{r['canonical_average']['pa_mpjpe_mm']:4.1f}  "
+                  f"model {r['model']['mpjpe_mm']:5.1f}/{r['model']['pa_mpjpe_mm']:4.1f}  "
+                  f"gate-only {r['gate_only']['mpjpe_mm']:5.1f}/{r['gate_only']['pa_mpjpe_mm']:4.1f}  (common-13 direct MPJPE / auxiliary PA, mm)")
 
 
 if __name__ == "__main__":

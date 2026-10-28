@@ -1,3 +1,4 @@
+import csv
 import tempfile
 import unittest
 from pathlib import Path
@@ -91,12 +92,35 @@ class ImageOcclusionReplacementTest(unittest.TestCase):
 
 
 class ImageOcclusionStudyTest(unittest.TestCase):
-    def test_cli_defaults_to_archived_batch_referenced_protocol(self):
+    def test_cli_retains_default_batch_size(self):
         parser = build_argument_parser()
         args = parser.parse_args(
-            ["--manifest-root", "/tmp/in", "--output-root", "/tmp/out"]
+            ["--manifest-root", "/tmp/in", "--output-root", "/tmp/out", "--checkpoint", "/tmp/current.ckpt"]
         )
         self.assertEqual(args.batch_size, 256)
+
+    def test_comparison_rejects_historical_pose_scores(self):
+        from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
+
+        row = dict(view_mode="both", pattern="random", ratio=1.0, fused_mpjpe=0.2,
+                   fusion_gain_percent=10.0, delta_mpjpe_full_minus_avg=-0.1,
+                   sam3d_detection_failure_rate=0.0,
+                   evaluation_protocol=EVALUATION_PROTOCOL["name"],
+                   joint_subset="common13", canonical_mode="per_frame", output_alignment="none")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "pose.csv"
+            for protocol in ("historical", EVALUATION_PROTOCOL["name"]):
+                with path.open("w", newline="") as handle:
+                    writer = csv.DictWriter(handle, fieldnames=list(row))
+                    writer.writeheader()
+                    writer.writerow({**row, "evaluation_protocol": protocol})
+                if protocol == "historical":
+                    with self.assertRaisesRegex(ValueError, "protocol"):
+                        image_occlusion_eval._comparison_rows([row], path)
+                else:
+                    result = image_occlusion_eval._comparison_rows([row], path)
+                    self.assertEqual(result[0]["image_minus_pose_mpjpe"], 0.0)
+                    self.assertEqual(result[0]["evaluation_protocol"], protocol)
 
     def test_study_has_exactly_eighteen_cells(self):
         cells = build_image_occlusion_study()
@@ -109,6 +133,8 @@ class ImageOcclusionStudyTest(unittest.TestCase):
         try:
             args = parser.parse_args(
                 [
+                    "--checkpoint",
+                    "/tmp/current.ckpt",
                     "--manifest-root",
                     "/tmp/in",
                     "--output-root",

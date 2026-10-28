@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from dual2pose.training_protocol import evaluation_checkpoint_from_env
+
 import csv
 import importlib
 import json
@@ -15,6 +17,7 @@ import hydra
 from omegaconf import DictConfig
 from pytorch_lightning import seed_everything
 
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 from dual2pose.eval.extension_experiment_utils import (
     build_experiment_provenance,
     complete_test_dataloader,
@@ -79,10 +82,10 @@ def init_params(config: DictConfig | None = None) -> None:
     seed_everything(seed, workers=True)
     config.train.gpu = int(getattr(config.train, "gpu", 0))
 
-    ckpt_path = Path(os.environ.get("EVAL_CKPT_PATH", str(DEFAULT_CKPT_PATH)))
+    ckpt_path = Path(str(evaluation_checkpoint_from_env()))
     output_root = Path(
         os.environ.get(
-            "EVAL_OUTPUT_ROOT", str(REPO_ROOT / "logs/eval_unity_view_angle")
+            "EVAL_OUTPUT_ROOT", str(REPO_ROOT / "logs/per_frame_common13_v1/eval_unity_view_angle")
         )
     )
     output_root.mkdir(parents=True, exist_ok=True)
@@ -118,8 +121,9 @@ def init_params(config: DictConfig | None = None) -> None:
         sample_count=sample_count,
         fold=int(config.train.fold),
         seed=seed,
-        joint_subset="all15",
+        joint_subset="common13",
         units="dataset_coordinate_units",
+        evaluation_protocol=EVALUATION_PROTOCOL,
     )
     _attach_provenance(rows, provenance)
     run_tag = ckpt_path.stem

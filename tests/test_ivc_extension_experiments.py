@@ -70,7 +70,7 @@ class ViewAngleTest(unittest.TestCase):
         self.assertEqual(assign_angle_bin(180.0, edges), "150-180")
 
     def test_summarize_outputs_by_angle_keeps_sample_groups_separate(self) -> None:
-        gt = torch.zeros((2, 2, 1, 3), dtype=torch.float32)
+        gt = torch.zeros((2, 2, 13, 3), dtype=torch.float32)
         fused = gt.clone()
         fused[0, :, :, 0] = 1.0
         fused[1, :, :, 0] = 2.0
@@ -190,6 +190,21 @@ class CompleteTestDataLoaderTest(unittest.TestCase):
         self.assertEqual(actual["sample_count"], 10)
         self.assertEqual(actual["joint_subset"], "all15")
         self.assertEqual(actual["units"], "meters")
+
+    def test_current_provenance_records_alignment_without_relabelling_legacy(self) -> None:
+        from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
+
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint = Path(directory) / "model.ckpt"
+            checkpoint.write_bytes(b"weights")
+            kwargs = dict(checkpoint=checkpoint, sample_count=10, fold=0, seed=42,
+                          joint_subset="common13", units="meters")
+            current = build_experiment_provenance(**kwargs, evaluation_protocol=EVALUATION_PROTOCOL)
+            legacy = build_experiment_provenance(**kwargs)
+        self.assertEqual(current["evaluation_protocol"], EVALUATION_PROTOCOL["name"])
+        self.assertEqual(current["canonical_mode"], "per_frame")
+        self.assertEqual(current["output_alignment"], "none")
+        self.assertNotIn("evaluation_protocol", legacy)
 
     def test_perturbation_wrappers_retain_partial_batch(self) -> None:
         class BaseDataModule:

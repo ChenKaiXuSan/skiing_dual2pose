@@ -9,7 +9,7 @@ import math
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Sequence, Tuple, cast
+from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple, cast
 
 import torch
 from torch.utils.data import DataLoader, Dataset
@@ -73,6 +73,8 @@ def build_experiment_provenance(
     seed: int,
     joint_subset: str,
     units: str,
+    *,
+    evaluation_protocol: Mapping[str, str] | None = None,
 ) -> Dict[str, Any]:
     """Return deterministic provenance shared by extension experiments."""
 
@@ -81,7 +83,7 @@ def build_experiment_provenance(
     with checkpoint_path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
-    return {
+    provenance = {
         "checkpoint": str(checkpoint_path),
         "checkpoint_sha256": digest.hexdigest(),
         "sample_count": int(sample_count),
@@ -90,6 +92,16 @@ def build_experiment_provenance(
         "joint_subset": str(joint_subset),
         "units": str(units),
     }
+    if evaluation_protocol is not None:
+        if evaluation_protocol["joint_subset"] != joint_subset:
+            raise ValueError("Evaluation protocol and joint subset disagree")
+        provenance.update({
+            "evaluation_protocol": evaluation_protocol["name"],
+            "canonical_mode": evaluation_protocol["canonical_mode"],
+            "output_alignment": evaluation_protocol["output_alignment"],
+            "reduction": evaluation_protocol["reduction"],
+        })
+    return provenance
 
 
 def complete_test_dataloader(
@@ -236,6 +248,7 @@ def summarize_outputs_by_angle(
     bin_edges: Sequence[float],
 ) -> List[Dict[str, Any]]:
     """Aggregate canonical-space evaluation metrics by camera azimuth separation."""
+    from dual2pose.eval.pose_metrics import common13_pose
 
     edges = _validated_bin_edges(bin_edges)
     grouped: Dict[str, Dict[str, List[torch.Tensor]]] = defaultdict(
@@ -257,6 +270,7 @@ def summarize_outputs_by_angle(
         left = cast(torch.Tensor, output["left_canonical"]).detach().cpu()
         right = cast(torch.Tensor, output["right_canonical"]).detach().cpu()
         gt = cast(torch.Tensor, output["ground_truth_canonical"]).detach().cpu()
+        fused, left, right, gt = (common13_pose(pose) for pose in (fused, left, right, gt))
         if not (fused.shape == left.shape == right.shape == gt.shape):
             raise ValueError("Angle evaluation tensors must share the same shape")
         meta = output.get("meta")

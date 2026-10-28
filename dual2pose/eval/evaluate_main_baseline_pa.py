@@ -16,9 +16,12 @@ from dual2pose.experiments.run_main_baselines import FunctionModel, ReferenceMod
 from dual2pose.experiments.run_geometry_baselines import _load_verified_split, _prediction_reference, _tensor
 from dual2pose.models.main_baselines import aligned_average, quality_weighted_fusion, build_baseline
 from dual2pose.models.dlt_residual_baseline import DLTResidualMLP
+from dual2pose.eval.main_baseline_data import require_current_protocol
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL, common13_pose
 
 
 def selected_model(method, record, joints, device):
+    require_current_protocol(record.get('provenance', {}))
     checkpoint = record.get('checkpoint')
     if checkpoint and sha256(checkpoint) != record['checkpoint_sha256']:
         raise RuntimeError(f'Checkpoint checksum mismatch: {checkpoint}')
@@ -33,6 +36,7 @@ def selected_model(method, record, joints, device):
         return None
     else:
         saved = torch.load(checkpoint, map_location='cpu', weights_only=False)
+        require_current_protocol(saved)
         if saved['epoch'] != record['selected_epoch']:
             raise RuntimeError(f'Selected epoch mismatch: {method}')
         model = DLTResidualMLP(joints) if method == 'dlt_mlp' else build_baseline(method, num_joints=joints, time_window=30)
@@ -99,8 +103,8 @@ def run(args):
                     prediction = model(prediction, _tensor(inputs.reprojection_error_px[start:stop], args.device),
                                        _tensor(inputs.dlt_valid[start:stop], args.device))
             for subset, metric in accumulators.items():
-                idx = slice(2, None) if subset == 'common13' and args.dataset == 'unity' else slice(None)
-                metric.update(prediction[:, :, idx], target[:, :, idx])
+                pred, truth = (common13_pose(prediction), common13_pose(target)) if subset == 'common13' else (prediction, target)
+                metric.update(pred, truth)
             if batch % 32 == 0 or stop == count:
                 progress = {'pid': os.getpid(), 'dataset': args.dataset, 'method': method,
                             'processed_samples': stop, 'total_samples': count,
@@ -111,7 +115,7 @@ def run(args):
         differences = check_previous_metrics(original['metrics'], metrics)
         result = copy.deepcopy(original)
         result['metrics'] = metrics
-        result['pa_evaluation'] = {'protocol': PA_PROTOCOL, 'original_result': str(original_path),
+        result['pa_evaluation'] = {'protocol': PA_PROTOCOL, 'evaluation_protocol': dict(EVALUATION_PROTOCOL), 'original_result': str(original_path),
             'original_result_sha256': sha256(original_path), 'original_metric_absolute_differences': differences,
             'cache_manifest_sha256': sha256(args.root/'cache'/args.dataset/'test/manifest.json'),
             'geometry_manifest_sha256': sha256(args.root/'geometry'/args.dataset/'test/manifest.json'),

@@ -10,14 +10,10 @@ import time
 import numpy as np
 import torch
 from torch import nn
-from dual2pose.eval.main_baseline_data import ROOT, batch_slices, canonical_batch, load_cache, sha256, write_json
+from dual2pose.eval.main_baseline_data import ROOT, batch_slices, canonical_batch, load_cache, sha256, write_json, require_current_protocol
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL, common13_pose
 
 RUNNER_SHA256 = sha256(__file__)
-
-CHECKPOINTS = {
- 'unity': ROOT/'logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt',
- 'ski': ROOT/'logs/train_ski_poseptz/crossview_fusion/2026-05-25/14-13-23/checkpoints/last.ckpt',
-}
 
 class MetricAccumulator:
     def __init__(self):
@@ -39,12 +35,22 @@ class MetricAccumulator:
 class ReferenceModel(nn.Module):
     def __init__(self,checkpoint):
         super().__init__()
-        from dual2pose.models.crossview_fusion import CrossViewCanonicalFusion
-        self.model=CrossViewCanonicalFusion(num_heads=4)
-        checkpoint=torch.load(checkpoint,map_location='cpu',weights_only=False)
-        state={k[len('models.'):]:v for k,v in checkpoint['state_dict'].items() if k.startswith('models.')}
-        self.model.load_state_dict(state,strict=True)
-    def forward(self,left,right): return self.model(left,right)[0]
+        from dual2pose.training_protocol import load_fusion_checkpoint
+        trainer = load_fusion_checkpoint(checkpoint)
+        self.model = trainer.models
+        self.skeleton_contract = (trainer.left_hip_idx, trainer.right_hip_idx,
+                                  trainer.neck_idx, trainer.face_sign,
+                                  trainer.left_eye_idx, trainer.right_eye_idx)
+    def validate_dataset(self, dataset):
+        expected = (6, 7, 14, True, 0, 1) if dataset == 'unity' else (4, 5, 12, False, 0, 1)
+        if dataset not in ('unity', 'ski') or self.skeleton_contract != expected:
+            raise ValueError(f'Checkpoint skeleton contract {self.skeleton_contract} does not match {dataset}')
+    def forward(self,left,right):
+        joints = left.shape[-2]
+        if joints not in (13, 15):
+            raise ValueError(f'Unsupported skeleton: {joints}')
+        self.validate_dataset('unity' if joints == 15 else 'ski')
+        return self.model(left,right)[0]
 
 class FunctionModel(nn.Module):
     def __init__(self,function): super().__init__(); self.function=function
@@ -58,8 +64,8 @@ def evaluate(model,arrays,dataset,batch_size):
         left,right,target=canonical_batch(*(x[start:stop] for x in arrays),dataset=dataset)
         prediction=model(left,right)
         for subset,metric in stats.items():
-            idx=slice(2,None) if subset=='common13' and dataset=='unity' else slice(None)
-            metric.update(prediction[:,:,idx],target[:,:,idx])
+            pred, truth = (common13_pose(prediction), common13_pose(target)) if subset=='common13' else (prediction, target)
+            metric.update(pred,truth)
     return {name:metric.result() for name,metric in stats.items()}
 
 def provenance(args,manifest):
@@ -67,7 +73,11 @@ def provenance(args,manifest):
             'time_window':30,'drop_last':False,'input_group':'3D poses only',
             'units':'dataset_coordinate_units','test_cache':manifest,'command':sys.argv,
             'runner_sha256':RUNNER_SHA256,'torch_version':torch.__version__,
-            'canonicalization':'independent left/right/target, first sample first frame of each batch'}
+            'canonicalization_sha256':sha256(ROOT/'dual2pose/trainer/canonicalize.py'),
+            'data_transform_sha256':sha256(ROOT/'dual2pose/eval/main_baseline_data.py'),
+            'canonical_mode':'per_frame', 'evaluation_protocol':dict(EVALUATION_PROTOCOL),
+            'primary_metric':'common13/mpjpe', 'auxiliary_metrics':['all15', 'PA'],
+            'canonicalization':'independent left/right/target per frame on native skeleton; direct output scoring'}
 
 def run_evaluation(args):
     arrays,manifest=load_cache(args.root/'cache'/args.dataset/'test',args.device)
@@ -76,7 +86,7 @@ def run_evaluation(args):
     if args.mode=='reference':
         methods={'left_canonical':FunctionModel(lambda l,r:l),'right_canonical':FunctionModel(lambda l,r:r),
                  'canonical_avg':FunctionModel(lambda l,r:(l+r)/2),
-                 'canonfuse3d':ReferenceModel(CHECKPOINTS[args.dataset]).to(args.device)}
+                 'canonfuse3d':ReferenceModel(args.checkpoint).to(args.device)}
     else:
         from dual2pose.models.main_baselines import aligned_average, quality_weighted_fusion
         methods={'aligned_average':FunctionModel(aligned_average),
@@ -88,13 +98,14 @@ def run_evaluation(args):
         record={'method':name,'metrics':metrics,'provenance':provenance(args,manifest),
                 'elapsed_seconds':time.monotonic()-start}
         if name=='canonfuse3d':
-            record['checkpoint']=str(CHECKPOINTS[args.dataset]); record['checkpoint_sha256']=sha256(CHECKPOINTS[args.dataset])
+            record['checkpoint']=str(args.checkpoint); record['checkpoint_sha256']=sha256(args.checkpoint)
         if args.mode=='heuristics': record['model_code_sha256']=sha256(ROOT/'dual2pose/models/main_baselines.py')
         write_json(path,record); print(json.dumps(record),flush=True)
 
 def _save_checkpoint(path,model,optimizer,epoch,best,config):
     temporary=path.with_suffix('.tmp')
-    torch.save({'state_dict':model.state_dict(),'optimizer':optimizer.state_dict(),'epoch':epoch,
+    torch.save({'canonical_mode':'per_frame', 'evaluation_protocol':dict(EVALUATION_PROTOCOL),
+                'state_dict':model.state_dict(),'optimizer':optimizer.state_dict(),'epoch':epoch,
                 'best_validation_mpjpe':best,'config':config,'rng_state':torch.get_rng_state(),
                 'cuda_rng_state':torch.cuda.get_rng_state_all() if torch.cuda.is_available() else []},temporary)
     temporary.replace(path)
@@ -122,16 +133,21 @@ def train(args):
             'training_batch_size':batch_size,'microbatch_size':args.microbatch or batch_size,
             'train_drop_last':True,'learning_rate':.001,'weight_decay':.01,
             'validation_batch_size':4096 if args.dataset=='unity' else None,
-            'selection':'minimum validation MPJPE' if args.dataset=='unity' else 'fixed final epoch',
+            'selection':'minimum validation common13 direct MPJPE' if args.dataset=='unity' else 'fixed final epoch',
+            'canonical_mode':'per_frame', 'evaluation_protocol':dict(EVALUATION_PROTOCOL),
+            'training_joint_subset':'native', 'scheduler':None,
             'loss':'L1 position + 0.01 predicted acceleration norm',
             'train_cache':train_manifest,'validation_cache':val_manifest,
             'model_code_sha256':sha256(model_source),'runner_sha256':RUNNER_SHA256,
+            'canonicalization_sha256':sha256(ROOT/'dual2pose/trainer/canonicalize.py'),
+            'data_transform_sha256':sha256(ROOT/'dual2pose/eval/main_baseline_data.py'),
             'parameters':sum(p.numel() for p in model.parameters()),'device':args.device,
             'precision':'float32; TF32 matmul disabled','command':sys.argv}
     if args.method=='smoothnet': config['loss']='L1 position + 0.1 L1 acceleration error (official SmoothNet objective)'
     first_epoch=0; best=float('inf'); config_path=output/'config.json'
     if (output/'last.pt').exists():
         saved=torch.load(output/'last.pt',map_location=args.device,weights_only=False)
+        require_current_protocol(saved)
         validate_resume_config(saved['config'],config)
         model.load_state_dict(saved['state_dict']); optimizer.load_state_dict(saved['optimizer'])
         first_epoch=saved['epoch']+1; best=saved['best_validation_mpjpe']
@@ -165,7 +181,7 @@ def train(args):
                     loss_sum+=loss.item()*(b-a)
                 optimizer.step(); trained+=len(left)
             metrics=evaluate(model,val_arrays,args.dataset,4096) if val_arrays is not None else None
-            value=metrics['all15']['mpjpe'] if metrics else None
+            value=metrics['common13']['mpjpe'] if metrics else None
             if value is not None and value<best:
                 best=value; _save_checkpoint(output/'best.pt',model,optimizer,epoch,best,config)
             _save_checkpoint(output/'last.pt',model,optimizer,epoch,best,config)
@@ -177,6 +193,7 @@ def train(args):
             print(json.dumps(entry,allow_nan=False),flush=True)
     selected=output/('best.pt' if args.dataset=='unity' else 'last.pt')
     checkpoint=torch.load(selected,map_location=args.device,weights_only=False)
+    require_current_protocol(checkpoint)
     model.load_state_dict(checkpoint['state_dict']); model.eval()
     del train_arrays,val_arrays,optimizer
     arrays,manifest=load_cache(args.root/'cache'/args.dataset/'test',args.device)
@@ -195,10 +212,13 @@ def main():
     p.add_argument('--dataset',choices=['unity','ski'],required=True)
     p.add_argument('--mode',choices=['reference','heuristics','train'],required=True)
     p.add_argument('--method',choices=['mlp','tcn','smoothnet'])
+    p.add_argument('--checkpoint',type=Path,help='Explicit retrained per-frame fusion checkpoint for reference mode')
     p.add_argument('--device',default='cuda:1'); p.add_argument('--epochs',type=int,default=100)
     p.add_argument('--seed',type=int,default=42); p.add_argument('--microbatch',type=int)
     args=p.parse_args(); args.root=args.root.resolve()
     if args.mode=='train' and args.method is None: p.error('--method is required for training')
+    if args.mode=='reference' and args.checkpoint is None: p.error('--checkpoint is required for reference evaluation')
+    if args.epochs <= 0: p.error('--epochs must be positive')
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
     torch.set_num_threads(4); torch.backends.cuda.matmul.allow_tf32=False
     torch.backends.cudnn.allow_tf32=False

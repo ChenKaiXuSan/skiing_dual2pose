@@ -26,8 +26,9 @@ from dual2pose.experiments.run_multiseed_crossfold import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-ROOT = REPO_ROOT / "logs/ivc_p1/frontend_adaptation"
-SOURCE_CHECKPOINT = REPO_ROOT / "logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt"
+ROOT = REPO_ROOT / "logs/per_frame_common13_v1/frontend_adaptation"
+SOURCE_CHECKPOINT = None
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
 FRONTENDS = ("videopose3d", "poseformer", "motionbert")
 TEST_FRONTENDS = ("sam3d",) + FRONTENDS
 
@@ -78,6 +79,8 @@ def training_directory(run: AdaptationRun) -> Path:
 
 
 def build_training_command(run: AdaptationRun, python: Path) -> list[str]:
+    if SOURCE_CHECKPOINT is None:
+        raise ValueError("An explicit current per-frame source checkpoint is required")
     command = [
         str(python),
         str(REPO_ROOT / "dual2pose/train_frontend_adaptation.py"),
@@ -107,6 +110,8 @@ def build_training_command(run: AdaptationRun, python: Path) -> list[str]:
 
 def _checkpoint_for_model(model_name: str) -> Path:
     if model_name == "mmsports":
+        if SOURCE_CHECKPOINT is None:
+            raise ValueError("An explicit current source checkpoint is required")
         return SOURCE_CHECKPOINT
     completion = ROOT / "training" / model_name / "adaptation_complete.json"
     if not completion.is_file():
@@ -151,13 +156,17 @@ def _load_manifest() -> dict[str, Any]:
     path = ROOT / "run_manifest.json"
     if not path.is_file():
         return {
-            "schema_version": 1,
+            "schema_version": 2,
+            "evaluation_protocol": dict(EVALUATION_PROTOCOL),
+            "source_checkpoint": str(SOURCE_CHECKPOINT),
             "experiment": "ivc_p1_frontend_adaptation",
             "created_at": utc_now(),
             "training": {},
             "evaluation": {},
         }
     payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("evaluation_protocol") != EVALUATION_PROTOCOL or payload.get("source_checkpoint") != str(SOURCE_CHECKPOINT):
+        raise ValueError("Manifest protocol/source changed; use a fresh output root")
     if not isinstance(payload.get("training"), dict) or not isinstance(payload.get("evaluation"), dict):
         raise ValueError(f"Invalid front-end adaptation manifest: {path}")
     return payload
@@ -251,6 +260,14 @@ def _schedule(
 
 
 def run_phase(args: argparse.Namespace) -> int:
+    global ROOT, SOURCE_CHECKPOINT
+    from dual2pose.training_protocol import load_fusion_checkpoint
+    SOURCE_CHECKPOINT = Path(args.source_checkpoint).resolve()
+    ROOT = Path(args.output_root).resolve()
+    model = load_fusion_checkpoint(SOURCE_CHECKPOINT)
+    if (model.left_hip_idx, model.right_hip_idx, model.neck_idx, model.face_sign) != (6, 7, 14, True):
+        raise ValueError("Frontend adaptation requires a Unity skeleton checkpoint")
+    del model
     ROOT.mkdir(parents=True, exist_ok=True)
     manifest = _load_manifest()
     if args.phase == "train":
@@ -288,6 +305,8 @@ def run_phase(args: argparse.Namespace) -> int:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", choices=("train", "evaluate"), required=True)
+    parser.add_argument("--source-checkpoint", type=Path, required=True)
+    parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--gpus", nargs="+", type=int, default=[0, 1])
     parser.add_argument("--python", type=Path, default=DEFAULT_PYTHON)
     parser.add_argument("--poll-seconds", type=float, default=30.0)

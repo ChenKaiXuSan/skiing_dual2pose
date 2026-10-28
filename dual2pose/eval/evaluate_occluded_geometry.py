@@ -1,7 +1,7 @@
 """Matched C07 RGB occlusion/calibration evaluation; no test-time tuning.
 
 All five methods retain the original ordered cohort. Missing DLT points use
-an explicit zero-vector fallback before the unchanged canonicalization; the
+an explicit zero-vector fallback before per-frame canonicalization; the
 residual MLP receives the missingness mask. This is a disclosed deployment
 fallback, not a claim that failed triangulations were recovered.
 """
@@ -20,8 +20,8 @@ from dual2pose.eval.run_matched_occlusion_frontend import (
     CONDITIONS, DEFAULT_DATA_ROOT, REPO_ROOT, validate_matched_stream, stream_output_path,
 )
 from dual2pose.eval.main_baseline_data import sha256, write_json
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL, common13_pose
 
-DEFAULT_BASELINE = REPO_ROOT/'logs/ivc_mmsports_extension/main_baselines/20260906'
 ANGLES = (0., 1., 3.)
 METHODS = ('canonfuse3d', 'canonical_avg', 'dlt', 'robust_dlt', 'dlt_mlp')
 EVALUATION_CONDITIONS = [('clean', 'clean', 'clean')] + [
@@ -84,6 +84,8 @@ def load_inputs(frontend, baseline):
         raise RuntimeError('Required frame manifest checksum changed')
     cache = baseline/'cache/unity'/contract['split']
     cached = json.loads((cache/'manifest.json').read_text())
+    if cached.get('representation') != 'raw_pre_batch_canonicalization':
+        raise RuntimeError('C07 requires raw cache inputs, not historical canonical poses')
     if cached['index_sha256'] != contract['index_sha256']:
         raise RuntimeError('Cache and frontend index hashes differ')
     for name, expected in cached['files'].items():
@@ -181,14 +183,15 @@ def run(args):
     projections, intrinsics, camera_hashes = camera_matrices(args.data_root, pairs)
     records = {name: json.loads((args.baseline/f'results/unity/{name}.json').read_text())
                for name in ('canonfuse3d', 'dlt_mlp')}
-    provenance = {'frontend_contract': contract, 'original_cache': cached,
+    provenance = {'canonical_mode': 'per_frame', 'evaluation_protocol': dict(EVALUATION_PROTOCOL),
+        'frontend_contract': contract, 'original_cache': cached,
         'frontend_manifest_sha256': {name: sha256(args.frontend/name/'frontend_manifest.json') for name in CONDITIONS},
         'frozen_models': {name: {key: record[key] for key in ('checkpoint', 'checkpoint_sha256')}
                           for name, record in records.items()},
         'camera_file_sha256': camera_hashes, 'batch_size': 256, 'joint_subset': 'common13 after all15 canonicalization',
         'angles_degrees': ANGLES, 'rotation': 'right camera local positive y; center fixed; left unchanged',
         'input_2d': 'SAM3D projected original-image pixels from same selected person and masked RGB as 3D',
-        'missing_policy': 'zero invalid DLT vectors before unchanged batch-anchor canonicalization; failed anchors can affect the whole batch; no dropped samples; MLP receives validity mask',
+        'missing_policy': 'zero invalid DLT vectors before per-frame native canonicalization; temporal fallback remains within each sequence; no dropped samples; MLP receives validity mask',
         'robust_policy': 'archived 25px gate; interpolate finite rejected points, ungated fallback for all-rejected finite tracks; missing observations not interpolated',
         'pa_protocol': PA_PROTOCOL, 'source_sha256': {str(p.relative_to(REPO_ROOT)): sha256(p) for p in (
             Path(__file__), REPO_ROOT/'dual2pose/eval/main_baseline_geometry.py',
@@ -229,14 +232,11 @@ def run(args):
                 lf, rf = stack(left, 'detection_failed'), stack(right, 'detection_failed')
                 detections.update(left_failed_frame_positions=int(lf.sum()), right_failed_frame_positions=int(rf.sum()),
                     either_failed_frame_positions=int((lf | rf).sum()), both_failed_frame_positions=int((lf & rf).sum()),
-                    frame_positions=int(lf.size), sample_count=len(rows),
-                    left_failed_batch_anchor=int(lf[0, 0]), right_failed_batch_anchor=int(rf[0, 0]),
-                    samples_in_left_failed_anchor_batches=len(rows)*int(lf[0, 0]),
-                    samples_in_right_failed_anchor_batches=len(rows)*int(rf[0, 0]))
+                    frame_positions=int(lf.size), sample_count=len(rows))
                 l, r, truth = canonical_batch(tensor(stack(left, 'pose')), tensor(stack(right, 'pose')),
                     tensor(target[start:stop]), dataset='unity')
                 for method, prediction in [('canonical_avg', (l+r)/2), ('canonfuse3d', models['canonfuse3d'](l, r))]:
-                    metrics[(0., method)].update(prediction[:, :, 2:], truth[:, :, 2:])
+                    metrics[(0., method)].update(common13_pose(prediction), common13_pose(truth))
                 pl = np.stack([projections[(row['person_id'], row['cam1_id'])] for row in rows])[:, None]
                 uv_l, uv_r = stack(left, 'keypoints_2d'), stack(right, 'keypoints_2d')
                 for angle in ANGLES:
@@ -245,14 +245,14 @@ def run(args):
                     geometry = geometry_predictions(pl, pr, uv_l, uv_r)
                     counts[angle].update(geometry['counts'])
                     for geometry_method, valid_key in [('dlt', 'dlt_valid'), ('robust_dlt', 'robust_valid')]:
-                        missing_anchor = not geometry[valid_key][0, 0, [0, 1, 6, 7, 14]].all()
-                        counts[angle].update({f'{geometry_method}_missing_batch_anchor': int(missing_anchor),
-                            f'{geometry_method}_samples_in_missing_anchor_batches': len(rows)*int(missing_anchor)})
+                        missing_anchor = ~geometry[valid_key][..., [0, 1, 6, 7, 14]].all(axis=-1)
+                        counts[angle].update({f'{geometry_method}_missing_anchor_frames': int(missing_anchor.sum()),
+                            f'{geometry_method}_samples_with_missing_anchor': int(missing_anchor.any(axis=-1).sum())})
                     dlt, robust, _ = canonical_batch(tensor(geometry['dlt']), tensor(geometry['robust_dlt']),
                         tensor(target[start:stop]), dataset='unity')
                     residual = models['dlt_mlp'](dlt, tensor(geometry['reprojection_error_px']), tensor(geometry['dlt_valid']))
                     for method, prediction in [('dlt', dlt), ('robust_dlt', robust), ('dlt_mlp', residual)]:
-                        metrics[(angle, method)].update(prediction[:, :, 2:], truth[:, :, 2:])
+                        metrics[(angle, method)].update(common13_pose(prediction), common13_pose(truth))
                 if batch_index % 16 == 0 or stop == len(pairs):
                     progress = {'status': 'running', 'condition': condition, 'samples': stop,
                         'total_samples': len(pairs), 'elapsed_seconds': time.monotonic()-started, 'pid': os.getpid()}
@@ -286,7 +286,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--frontend', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--baseline', type=Path, default=DEFAULT_BASELINE)
+    parser.add_argument('--baseline', type=Path, required=True,
+                        help='New per-frame results/cache root with retrained fusion and DLT-residual weights')
     parser.add_argument('--data-root', type=Path, default=DEFAULT_DATA_ROOT)
     parser.add_argument('--device', default='cuda:0')
     run(parser.parse_args())

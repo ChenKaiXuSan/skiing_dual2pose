@@ -11,6 +11,7 @@ This entry point is intentionally Ski-only:
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -41,15 +42,14 @@ from dual2pose.dataloader.ski_poseptz_dataset_dual_view import (
 from dual2pose.map_config import filter_filtered_kpts_to_common, filter_h36m_kpts
 from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_CONFIG = "/workspace/Skiing_Canonical_DualView_3D_Pose_PyTorch/configs/dual2pose.yaml"
+DEFAULT_CONFIG = REPO_ROOT / "configs/dual2pose.yaml"
 
 
-def _parse_args() -> argparse.Namespace:
+def _parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Train crossview_fusion on Ski-PosePTZ pseudo GT."
     )
@@ -99,7 +99,11 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip the final test pass after training.",
     )
-    return parser.parse_args()
+    parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--limit-train-batches", type=int, default=None)
+    parser.add_argument("--limit-test-batches", type=int, default=None)
+    return parser.parse_args(argv)
 
 
 def _build_config(args: argparse.Namespace):
@@ -111,6 +115,10 @@ def _build_config(args: argparse.Namespace):
     config.data.left_hip_idx = 4
     config.data.right_hip_idx = 5
     config.data.neck_idx = 12
+    # The 13-joint skeleton has no eyes: joints 0/1 are the shoulders, so the
+    # face-direction sign is disabled and the forward axis is x cross y (inputs
+    # and reference share the same handedness).
+    config.data.face_sign = False
     config.data.load_frames = False
     config.data.load_2d_kpt = False
     config.data.load_3d_kpt = True
@@ -121,6 +129,9 @@ def _build_config(args: argparse.Namespace):
     config.experiment = "train_ski_poseptz"
 
     run_dir = Path("logs") / "train_ski_poseptz" / "crossview_fusion" / datetime.now().strftime("%Y-%m-%d") / datetime.now().strftime("%H-%M-%S")
+    run_dir = getattr(args, "output_dir", None) or run_dir
+    config.train.seed = int(getattr(args, "seed", 42))
+    config.train.test_ckpt_path = "last"
     config.log_path = str(run_dir)
     setattr(
         config,
@@ -227,20 +238,10 @@ class SkiPosePTZDataModule(LightningDataModule):
             path_rewrite_to=self._path_rewrite_to,
         )
 
-    def val_dataloader(self) -> DataLoader:
-        # Ski-PosePTZ does not provide a non-empty validation split in the current index map.
-        return _build_ski_poseptz_loader(
-            index_mapping=self._index_mapping,
-            split="train",
-            batch_size=self._batch_size,
-            num_workers=self._num_workers,
-            time_window=self._time_window,
-            shuffle=False,
-            drop_last=False,
-            pin_memory=self._pin_memory,
-            path_rewrite_from=self._path_rewrite_from,
-            path_rewrite_to=self._path_rewrite_to,
-        )
+    def val_dataloader(self):
+        # Paper split has no validation partition. Select the predeclared final
+        # epoch, never train-set performance or test-set performance.
+        return []
 
     def test_dataloader(self) -> DataLoader:
         return _build_ski_poseptz_loader(
@@ -257,11 +258,19 @@ class SkiPosePTZDataModule(LightningDataModule):
         )
 
 
+def build_fixed_budget_checkpoint(directory: Path) -> ModelCheckpoint:
+    return ModelCheckpoint(dirpath=directory, monitor=None, save_top_k=0,
+                           save_last=True, save_on_train_epoch_end=True)
+
+
 def main() -> None:
     args = _parse_args()
-    seed_everything(42, workers=True)
+    seed_everything(args.seed, workers=True)
     config = _build_config(args)
 
+    output_root = Path(config.log_path)
+    if output_root.exists() and any(output_root.iterdir()):
+        raise FileExistsError(f"Use a fresh training output directory: {output_root}")
     model = CrossViewFusionTrainer(config)
     datamodule = SkiPosePTZDataModule(config)
 
@@ -277,21 +286,17 @@ def main() -> None:
         flush_logs_every_n_steps=100,
     )
 
-    checkpoint = ModelCheckpoint(
-        dirpath=os.path.join(config.log_path, "checkpoints"),
-        filename="{epoch}-{val/loss:.4f}-{val/mpjpe:.4f}",
-        auto_insert_metric_name=False,
-        monitor="val/mpjpe",
-        mode="min",
-        save_last=True,
-        save_top_k=2,
-    )
+    checkpoint = build_fixed_budget_checkpoint(Path(config.log_path) / "checkpoints")
 
     use_gpu = torch.cuda.is_available() and not args.cpu
     trainer = Trainer(
         devices=[int(args.gpu)] if use_gpu else 1,
         accelerator="gpu" if use_gpu else "cpu",
         max_epochs=int(config.train.max_epochs),
+        limit_val_batches=0,
+        num_sanity_val_steps=0,
+        limit_train_batches=args.limit_train_batches or 1.0,
+        limit_test_batches=args.limit_test_batches or 1.0,
         logger=[tb_logger, csv_logger],
         callbacks=[
             RichProgressBar(refresh_rate=10, leave=True),
@@ -301,9 +306,15 @@ def main() -> None:
         ],
     )
 
+    from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL
+    (output_root / "training_protocol.json").write_text(json.dumps({
+        "evaluation_protocol": EVALUATION_PROTOCOL, "seed": args.seed,
+        "selection": "fixed_final_epoch", "max_epochs": args.max_epochs,
+        "test_checkpoint": "last", "index_mapping": str(config.data.ski_pose_ptz.index_mapping_path),
+    }, indent=2))
     trainer.fit(model, datamodule)
     if not args.skip_test:
-        trainer.test(model, datamodule, ckpt_path="last")
+        trainer.test(model, datamodule, ckpt_path="last", weights_only=False)
 
 
 if __name__ == "__main__":

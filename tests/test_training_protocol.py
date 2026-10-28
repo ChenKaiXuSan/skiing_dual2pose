@@ -50,7 +50,7 @@ def _rigid_per_frame(poses, seed=1):
     return out
 
 
-def _config(**arch):
+def _config(data=None, **arch):
     return OmegaConf.create(
         {
             "model": {
@@ -59,13 +59,14 @@ def _config(**arch):
                 "optim": {"lr": 1e-3, "weight_decay": 0.0},
                 "loss": {},
             },
+            "data": dict(data or {}),
             "log_path": "/tmp/unused",
         }
     )
 
 
-def _trainer(**arch):
-    model = CrossViewFusionTrainer(_config(**arch))
+def _trainer(data=None, **arch):
+    model = CrossViewFusionTrainer(_config(data=data, **arch))
     model.log = lambda *args, **kwargs: None  # no Trainer attached
     return model.eval()
 
@@ -248,6 +249,33 @@ class TrainingProtocolTest(unittest.TestCase):
         poses = _pose_batch()
         expected, _ = canonicalize_pose_torch(poses, left_hip=6, right_hip=7, neck=14, mode="per_frame")
         torch.testing.assert_close(_trainer().canonicalize(poses)[0], expected, atol=0, rtol=0)
+
+    def test_eye_pair_and_face_sign_come_from_the_data_config(self):
+        poses = _pose_batch()
+        poses[..., :2, 2] = -0.1  # eyes behind the neck: the face sign flips the forward axis
+        default = _trainer()
+        self.assertEqual((default.left_eye_idx, default.right_eye_idx, default.face_sign), (0, 1, True))
+        expected, _ = canonicalize_pose_torch(poses, mode="per_frame", left_eye=0, right_eye=1)
+        torch.testing.assert_close(default.canonicalize(poses)[0], expected, atol=0, rtol=0)
+        no_face = _trainer(data={"face_sign": False})
+        expected, _ = canonicalize_pose_torch(poses, mode="per_frame", enforce_face_z_positive=False)
+        torch.testing.assert_close(no_face.canonicalize(poses)[0], expected, atol=0, rtol=0)
+        self.assertGreater((no_face.canonicalize(poses)[0] - default.canonicalize(poses)[0]).abs().max().item(), 0.1)
+        swapped = _trainer(data={"left_eye_idx": 1, "right_eye_idx": 0})
+        self.assertEqual((swapped.left_eye_idx, swapped.right_eye_idx), (1, 0))
+
+    def test_ski_skeleton_without_eyes_canonicalizes_with_the_cross_product_sign(self):
+        """Ski-PosePTZ: 13 joints, hips 4/5, neck 12, no eyes (joints 0/1 are the shoulders)."""
+        poses13 = _pose_batch()[..., 2:, :]
+        ski = _trainer(data={"left_hip_idx": 4, "right_hip_idx": 5, "neck_idx": 12, "face_sign": False})
+        canon, transform = ski.canonicalize(poses13)
+        expected, _ = canonicalize_pose_torch(poses13, left_hip=4, right_hip=5, neck=12, mode="per_frame",
+                                              enforce_face_z_positive=False)
+        torch.testing.assert_close(canon, expected, atol=0, rtol=0)
+        R = transform["R"]
+        torch.testing.assert_close(torch.linalg.det(R), torch.ones(R.shape[:2]), atol=1e-5, rtol=0)  # proper rotation
+        pelvis = 0.5 * (canon[..., 4, :] + canon[..., 5, :])
+        torch.testing.assert_close(pelvis, torch.zeros_like(pelvis), atol=1e-6, rtol=0)
 
 
 class CheckpointProtocolTest(unittest.TestCase):

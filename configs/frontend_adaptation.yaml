@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 adaptation:
-  source_checkpoint: ${oc.env:P1_SOURCE_CHECKPOINT,logs/train_unity/crossview_fusion/2026-05-14/04-55-35/checkpoints/last.ckpt}
+  source_checkpoint: ${oc.env:P1_SOURCE_CHECKPOINT,null}
   frontend: videopose3d
   scope: heads_only
   epochs: 20
@@ -27,4 +27,4 @@ train:
   fold: 0
   gpu: 0
 
-log_path: logs/ivc_p1/frontend_adaptation/manual
+log_path: logs/per_frame_common13_v1/frontend_adaptation/${now:%Y%m%d_%H%M%S}

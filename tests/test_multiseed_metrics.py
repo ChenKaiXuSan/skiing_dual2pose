@@ -9,7 +9,7 @@ class MultiSeedMetricsTest(unittest.TestCase):
     """Break caught: per-action uncertainty is computed from frames instead of samples."""
 
     def test_outputs_are_reduced_to_one_mpjpe_per_pair_sample(self) -> None:
-        gt = torch.zeros((3, 2, 1, 3))
+        gt = torch.zeros((3, 2, 13, 3))
         fused = gt.clone()
         fused[0, :, :, 0] = 1.0
         fused[1, :, :, 0] = 3.0

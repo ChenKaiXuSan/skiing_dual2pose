@@ -62,6 +62,8 @@ def test_build_windows_skips_unusable_frames():
     anchor = np.ones(100, bool)
     anchor[36] = False          # first frame of the second window lacks a reliable anchor
     assert ep.build_windows(usable, 30, 30, anchor) == [0, 37, 67]
+    anchor[50] = False          # inside a window: every frame defines its own body frame, so the window is skipped
+    assert ep.build_windows(usable, 30, 30, anchor) == [0, 51]
 
 
 def test_masked_metrics():
@@ -160,13 +162,14 @@ def test_run_methods_feeds_the_model_the_per_frame_body_frame():
     for t in range(T):  # translate every frame somewhere else
         L[:, t] += np.array([t, -t, 2 * t], np.float32); R[:, t] += np.array([-t, 0, t], np.float32)
     out = ep.run_methods(L, R, G, {"pf": _FakeFusion()}, torch.device("cpu"))
-    # the non-learned baselines keep the first-frame window protocol
-    assert not np.allclose(out["canonical_average"][..., [ep.LEFT_HIP, ep.RIGHT_HIP], :].mean(-2), 0, atol=1e-2)
+    # Every baseline uses the same per-frame inputs as the learned fusion.
+    assert np.allclose(out["canonical_average"][..., [4, 5], :].mean(-2), 0, atol=1e-5)
     # the model receives per-frame inputs, so its output is a per-frame body-frame pose
-    expected = 0.5 * (ep.per_frame_canonical(L) + ep.per_frame_canonical(R))
+    expected = 0.5 * (ep.per_frame_canonical(L)[..., ep.COMMON13, :] + ep.per_frame_canonical(R)[..., ep.COMMON13, :])
+    assert np.allclose(out["canonical_average"], expected, atol=1e-5)
     assert np.allclose(out["canonfuse3d[pf]"], expected, atol=1e-5)
-    assert np.allclose(out["canonfuse3d[pf]"][..., [ep.LEFT_HIP, ep.RIGHT_HIP], :].mean(-2), 0, atol=1e-5)
+    assert np.allclose(out["canonfuse3d[pf]"][..., [4, 5], :].mean(-2), 0, atol=1e-5)
     # and the matching reference is exposed, centred in every frame
-    assert np.allclose(out["gt_per_frame"], ep.per_frame_canonical(G), atol=1e-5)
-    assert np.allclose(out["gt_per_frame"][..., [ep.LEFT_HIP, ep.RIGHT_HIP], :].mean(-2), 0, atol=1e-6)
-    assert out["gt"].shape == out["gt_per_frame"].shape == (W, T, 15, 3)
+    assert np.allclose(out["gt_per_frame"], ep.per_frame_canonical(G)[..., ep.COMMON13, :], atol=1e-5)
+    assert np.allclose(out["gt_per_frame"][..., [4, 5], :].mean(-2), 0, atol=1e-6)
+    assert out["gt"].shape == out["gt_per_frame"].shape == (W, T, 13, 3)

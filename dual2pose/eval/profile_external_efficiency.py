@@ -1,7 +1,7 @@
 """External-adaptation timing audit; no accuracy selection or artifact overwrite.
 
 Run MetaPose in its isolated TensorFlow environment, the others in dual2pose.
-The first archived Unity window is fixed before timing. These heterogeneous
+The first window of an explicitly supplied run is fixed before timing. These heterogeneous
 method contracts are intentionally not presented as a common-input ranking.
 """
 from __future__ import annotations
@@ -14,7 +14,6 @@ import statistics
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
-EXTERNAL = ROOT / 'logs/ivc_mmsports_extension/external_baselines'
 
 
 def time_calls(call, synchronize, warmup=20, repeats=100):
@@ -43,10 +42,21 @@ def sha(path):
         return hashlib.file_digest(handle, 'sha256').hexdigest()
 
 
-def torch_profile(method):
+def torch_profile(method, run_dir, source_repo=None):
     import numpy as np
     import torch
     from dual2pose.eval.profile_fusion_efficiency import parameter_summary
+    from dual2pose.eval.main_baseline_data import require_current_protocol
+    from dual2pose.eval.external_protocol import protocol_metadata
+    if method not in ('stride', 'deciwatch'):
+        raise ValueError(method)
+    root = Path(run_dir).resolve()
+    report = read(root/'report.json')
+    require_current_protocol(report)
+    if method == 'deciwatch' and (report.get('status') != 'complete' or report.get('trained') is False):
+        raise ValueError('DeciWatch profiling needs a complete current trained run')
+    if method == 'stride' and report.get('status') not in ('complete','preflight_complete'):
+        raise ValueError('STRIDE profiling needs a complete current run or bounded preflight')
     torch.set_num_threads(4)
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
@@ -54,17 +64,22 @@ def torch_profile(method):
     sync = lambda: torch.cuda.synchronize(0)
     if method == 'stride':
         from dual2pose.eval.stride_external import load_official_stride, COMMON
-        root = EXTERNAL/'20260910/stride_unity_test_full_seed42'
-        old = read(root/'report.json')
-        checkpoint = ROOT/'ckpt/external/stride_latest_epoch.bin'
-        assert sha(checkpoint) == old['model']['checkpoint_sha256']
-        adapter, info = load_official_stride(ROOT/'.cache/external_baselines/STRIDE', checkpoint, 'cuda:0')
-        assert info['config_sha256'] == old['model']['config_sha256']
+        provenance = read(root/'input_provenance.json')
+        require_current_protocol(provenance)
+        checkpoint = Path(report['model']['checkpoint'])
+        if sha(checkpoint) != report['model']['checkpoint_sha256']:
+            raise ValueError('STRIDE checkpoint checksum mismatch')
+        if sha(root/'inputs17.npy') != report.get('input_sha256'):
+            raise ValueError('STRIDE prepared input checksum missing or mismatched; regenerate inputs')
+        repo = Path(source_repo) if source_repo else Path(report['model']['source_repo'])
+        adapter, info = load_official_stride(repo, checkpoint, 'cuda:0')
+        if info['config_sha256'] != report['model']['config_sha256']:
+            raise ValueError('STRIDE method configuration differs from supplied run')
         arr = np.load(root/'inputs17.npy', mmap_mode='r')[:1].copy()
         x = torch.as_tensor(arr, device='cuda:0')
         pred, _ = adapter.refine(x)
-        expected = np.load(root/'predictions_common13.npy', mmap_mode='r')[:1]
-        delta = float(np.max(np.abs(pred.numpy()[:,:,COMMON,:]-expected)))
+        if not torch.isfinite(pred).all():
+            raise ValueError('Nonfinite current STRIDE output')
         # A reset and all 30 gradient updates are repeated for every timed call.
         details = []
         def run():
@@ -83,51 +98,63 @@ def torch_profile(method):
                      scope='prepared canonical average17 on GPU; reset, AdamW creation, 30 updates, flip inference and CPU output; forward-only excludes reset/updates/CPU output',
                      checkpoint_sha256=sha(checkpoint), config_sha256=info['config_sha256'])
     else:
-        from dual2pose.experiments.run_deciwatch import DeciWatchWindow
-        root = EXTERNAL/'20260911/deciwatch_unity_official_protocol_full_seed4321'
+        from dual2pose.experiments.run_deciwatch import DeciWatchWindow, WindowDataset
         config = read(root/'config.json')
+        require_current_protocol(config)
         checkpoint = root/'best.pth'
-        assert sha(checkpoint) == read(root/'report.json')['checkpoint_sha256']
-        model = DeciWatchWindow(ROOT/'.cache/external_baselines/DeciWatch',39,
+        if sha(checkpoint) != report['checkpoint_sha256']:
+            raise ValueError('DeciWatch checkpoint checksum mismatch')
+        state = torch.load(checkpoint,map_location='cpu',weights_only=False)
+        require_current_protocol(state['config'])
+        repo = Path(source_repo) if source_repo else Path(config['deciwatch_repo'])
+        model = DeciWatchWindow(repo,39,
                                config['interval'],config['hidden'],config['layers']).cuda().eval()
-        model.load_state_dict(torch.load(checkpoint,map_location='cpu',weights_only=False)['state_dict'],strict=True)
-        arr = np.load(root/'prepared/test/input.npy',mmap_mode='r')[:1].copy().reshape(1,30,39)
+        model.load_state_dict(state['state_dict'],strict=True)
+        # Checks current metadata, producer hash and actual array hash before use.
+        prepared = WindowDataset(root/'prepared/test/input.npy')
+        arr = prepared[0].numpy()[None]
         x = torch.as_tensor(arr,device='cuda:0')
         def inference():
             with torch.no_grad():
                 return model(x)[0]
         prediction = inference().cpu().numpy().reshape(1,30,13,3)
-        expected = np.load(root/'recovered.npy',mmap_mode='r')[:1].reshape(1,30,13,3)
-        delta = float(np.max(np.abs(prediction-expected)))
+        if not np.isfinite(prediction).all():
+            raise ValueError('Nonfinite current DeciWatch output')
         extra = dict(forward_only=time_calls(inference,sync), checkpoint_sha256=sha(checkpoint),
                      scope='prepared canonical average13 on GPU; repeat-last to 31 tokens, official forward, both output heads, crop to 30; excludes input canonicalization/averaging')
-    if not np.isfinite(delta) or delta > 2e-3:
-        raise ValueError(f'Archived prediction parity failed: {delta}')
-    return dict(method=method, **parameter_summary(model), **extra,
-                archived_first_window_max_abs_difference=delta, input_shape=list(arr.shape),
+    return dict(**protocol_metadata(), method=method, **parameter_summary(model), **extra,
+                method_run_dir=str(root), run_report_sha256=sha(root/'report.json'),
+                input_shape=list(arr.shape),
                 input_slice_sha256=hashlib.sha256(arr.tobytes()).hexdigest(),
                 dtype='float32', framework=torch.__version__, gpu=torch.cuda.get_device_name(0),
                 cpu_threads=4, tf32=False)
 
 
-def metapose_profile():
+def metapose_profile(run_dir, prepared_data_dir, source_repo=None):
     import numpy as np
-    from dual2pose.experiments.run_metapose import OfficialMetaPose
+    from dual2pose.experiments.run_metapose import OfficialMetaPose, load_split
     from dual2pose.eval.metapose_inputs import normalize_observations, point_mixtures, restore_left_gauge
-    root = EXTERNAL/'20260911/metapose_unity_full_seed42'
-    data = EXTERNAL/'20260911/metapose_data/unity/test'
+    root = Path(run_dir).resolve()
+    data = Path(prepared_data_dir).resolve()
+    report = read(root/'report.json')
+    split = load_split(data,'test')  # Native caches remain reusable; verify their bytes.
+    if split['manifest_hash'] != report['split_manifests']['test']:
+        raise ValueError('MetaPose native prepared-input provenance mismatch')
+    if sha(root/'metapose_raw_left.npy') != report['predictions']['metapose_raw_left.npy']:
+        raise ValueError('MetaPose native prediction checksum mismatch')
     arrays = {name: np.load(data/f'{name}.npy',mmap_mode='r')[:30].copy()
               for name in ('xyz','uv','q','t','native_left')}
     native = (arrays['xyz']-arrays['t'][...,None,:])/arrays['q'][...,None,None]
     uncertainty = read(root/'uncertainty.json')
-    model = OfficialMetaPose(ROOT/'.cache/external_baselines/google-research',42)
+    model = OfficialMetaPose(Path(source_repo) if source_repo else ROOT/'.cache/external_baselines/google-research',42)
     tf = model.tf
     if not tf.config.list_physical_devices('GPU'):
         raise RuntimeError('Refusing CPU fallback')
     hashes = []
     for i, selection in enumerate(read(root/'selected_stages.json'),1):
         path = root/f'stage_{i}.weights.h5'
-        assert sha(path) == selection['checkpoint_sha256']
+        if sha(path) != selection['checkpoint_sha256']:
+            raise ValueError('MetaPose selected checkpoint checksum mismatch')
         model.add_stage(); model.load_stage(path); hashes.append(sha(path))
     x = model.initialize(arrays['xyz'])
     task = point_mixtures(arrays['uv'],uncertainty).reshape(30,-1)
@@ -142,7 +169,7 @@ def metapose_profile():
     expected = np.load(root/'metapose_raw_left.npy',mmap_mode='r')[0]
     delta = float(np.max(np.abs(prediction-expected)))
     if not np.isfinite(delta) or delta > 2e-3:
-        raise ValueError(f'MetaPose archived prediction parity failed: {delta}')
+        raise ValueError(f'MetaPose native prediction reproduction failed: {delta}')
     # Public wrappers materialize numpy outputs, synchronizing TF device work.
     forward = time_calls(lambda: model.predict(x,task),lambda: None)
     total = time_calls(full,lambda: None)
@@ -154,21 +181,29 @@ def metapose_profile():
                 gpu=tf.config.experimental.get_device_details(tf.config.list_physical_devices('GPU')[0]).get('device_name'),
                 cpu_threads=dict(intra=8,inter=2), input_shape=[30,2,13,3],
                 checkpoint_sha256=hashes, input_slice_sha256=hashlib.sha256(native.tobytes()+arrays['uv'].tobytes()).hexdigest(),
-                archived_first_window_max_abs_difference=delta,
+                method_run_dir=str(root), prepared_data_dir=str(data),
+                coordinate_system='native_left_camera; excludes per-frame evaluation mapping',
+                native_prediction_reproduction_max_abs_difference=delta,
                 scope='30 independent frames batched; predicted weak projection fit, S1, point mixtures, three-stage solver, left-gauge restoration; CPU/GPU transfers included; normalized 2D box units; excludes RGB front end, disk I/O and final evaluation canonicalization')
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--method',choices=['stride','deciwatch','metapose'],required=True)
+    p.add_argument('--method-run-dir',type=Path,required=True)
+    p.add_argument('--prepared-data-dir',type=Path,help='Required MetaPose native prepared test input directory')
+    p.add_argument('--source-repo',type=Path)
     p.add_argument('--output',type=Path,required=True)
     args = p.parse_args()
+    if args.method == 'metapose' and args.prepared_data_dir is None:
+        p.error('MetaPose requires --prepared-data-dir for its unchanged native inputs')
     if args.output.exists():
         raise FileExistsError(args.output)
     args.output.parent.mkdir(parents=True,exist_ok=True)
-    result = metapose_profile() if args.method=='metapose' else torch_profile(args.method)
+    result = (metapose_profile(args.method_run_dir,args.prepared_data_dir,args.source_repo)
+              if args.method=='metapose' else torch_profile(args.method,args.method_run_dir,args.source_repo))
     result.update(status='complete_timing_audit',source_sha256=sha(__file__),
-                  selected_input='first archived Unity test window, fixed before timing; no GT input',
+                  selected_input='first window of explicitly supplied prepared input, fixed before timing; no GT input',
                   cuda_visible_devices=os.environ.get('CUDA_VISIBLE_DEVICES'),
                   limitation='method-specific adaptation contracts; not common-input speed ranking or full video pipeline')
     with args.output.open('x') as handle:

@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Any, Mapping, Sequence
 
 import torch
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL, common13_point_errors
 
 
 def summarize_test_outputs_by_action(
@@ -32,7 +33,7 @@ def summarize_test_outputs_by_action(
             raise ValueError("Test output action_id must be a string sequence")
         if len(actions) != fused.shape[0]:
             raise ValueError("Action metadata count does not match test batch")
-        sample_values = torch.norm(fused - target, dim=-1).mean(dim=(1, 2)).detach().cpu()
+        sample_values = common13_point_errors(fused, target).mean(dim=(1, 2)).detach().cpu()
         for action, value in zip(actions, sample_values.tolist()):
             numeric = float(value)
             all_values.append(numeric)
@@ -40,6 +41,7 @@ def summarize_test_outputs_by_action(
     if not all_values:
         raise ValueError("No test outputs were provided")
     return {
+        "evaluation_protocol": dict(EVALUATION_PROTOCOL),
         "sample_count": len(all_values),
         "mpjpe": sum(all_values) / len(all_values),
         "per_action": {

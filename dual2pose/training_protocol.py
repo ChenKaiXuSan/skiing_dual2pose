@@ -1,4 +1,4 @@
-"""Shared provenance rules for the two-fold Unity training protocol."""
+"""Shared provenance rules for the per-frame training protocol."""
 
 from __future__ import annotations
 
@@ -11,6 +11,40 @@ _FOLD_DIRECTORY = Path(
     "index_mapping/use_layer_camera_filter_disabled/"
     "camera_pairs_by_action_folds"
 )
+
+
+def load_fusion_checkpoint(checkpoint_path: Path, *, config=None, device="cpu"):
+    """Load a tagged fusion checkpoint, preserving its saved model configuration.
+
+    Older per-frame Lightning files and manual Pocket3 exports both carry
+    ``hyper_parameters.hparams``. A caller configuration (or the repository
+    default) is only a fallback for tagged files without saved configuration.
+    Bare weights and first-frame checkpoints are rejected before construction.
+    """
+    from copy import deepcopy
+    from omegaconf import OmegaConf
+    import torch
+    from dual2pose.config import load_config
+    from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
+
+    path = Path(checkpoint_path)
+    payload = torch.load(path, map_location="cpu", weights_only=False)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Checkpoint must be a dictionary: {path}")
+    CrossViewFusionTrainer.check_checkpoint_protocol(payload, source=str(path))
+    saved_config = payload.get("hyper_parameters", {}).get("hparams")
+    selected = saved_config if saved_config is not None else config
+    config = deepcopy(selected) if selected is not None else load_config()
+    if isinstance(config, dict):
+        config = OmegaConf.create(config)
+    # Inference must not resolve a training-time ${now:...} expression (Hydra
+    # is not initialized in a fresh CLI process) or reuse an old output path.
+    config.log_path = str(path.parent)
+    model = CrossViewFusionTrainer(config)
+    if "state_dict" not in payload:
+        raise ValueError(f"Tagged checkpoint has no state_dict: {path}")
+    model.load_state_dict(payload["state_dict"], strict=True)
+    return model.to(device).eval()
 
 
 def resolve_fold_index_path(data_root: Path, fold: int) -> Path:
@@ -44,3 +78,10 @@ def validate_fold_metadata(index_path: Path, fold: int) -> None:
         raise ValueError(
             f"Requested fold {fold}, but index metadata fold {metadata_fold}: {index_path}"
         )
+
+
+def evaluation_checkpoint_from_env() -> Path:
+    raw = os.environ.get("EVAL_CKPT_PATH")
+    if not raw:
+        raise ValueError("Set EVAL_CKPT_PATH to an explicit current per-frame checkpoint")
+    return Path(raw)

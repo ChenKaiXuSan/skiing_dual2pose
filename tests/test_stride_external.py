@@ -27,7 +27,7 @@ class StrideMappingTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 assemble_h36m17(common, bones)
 
-    def test_extra_points_use_original_batch_anchor_not_their_own_pelvis(self):
+    def test_extra_points_use_native_input_per_frame_pelvis(self):
         # Native unity-15: hips +-x, neck +y, eyes towards +z => identity R.
         native = np.zeros((2,30,15,3), np.float32)
         native[:,:,6] = [-1,0,0]; native[:,:,7] = [1,0,0]
@@ -37,8 +37,8 @@ class StrideMappingTests(unittest.TestCase):
         bones[:,:,[1,35,37,126]] = [3,4,5]
         bones[1] += [10,20,30]
         result = canonical_average17(native, native, bones, bones, 'unity')
-        np.testing.assert_allclose(result[1,0,0], [13,24,35], atol=1e-6)
-        np.testing.assert_allclose(result[1,0,4], [9,20,30], atol=1e-6)
+        np.testing.assert_allclose(result[1,0,0], [3,4,5], atol=1e-6)
+        np.testing.assert_allclose(result[1,0,4], [-1,0,0], atol=1e-6)
 
 
 class StrideResetTests(unittest.TestCase):

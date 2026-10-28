@@ -1,5 +1,8 @@
 import importlib
 import unittest
+import json
+import tempfile
+from pathlib import Path
 
 
 class TimingTests(unittest.TestCase):
@@ -22,6 +25,22 @@ class TimingTests(unittest.TestCase):
         for warm, repeats in [(0, 2), (1, 1)]:
             with self.assertRaises(ValueError):
                 m.time_calls(lambda: None, lambda: None, warm, repeats)
+
+    def test_torch_profile_refuses_legacy_run_before_loading_weights(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/'report.json').write_text(json.dumps({'status': 'complete'}))
+            with self.assertRaisesRegex(ValueError, 'protocol'):
+                self.module().torch_profile('deciwatch', root)
+
+    def test_torch_profile_refuses_untrained_current_smoke_as_trained_run(self):
+        from dual2pose.eval.external_protocol import protocol_metadata
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/'report.json').write_text(json.dumps(dict(**protocol_metadata(),
+                status='preflight_complete',trained=False)))
+            with self.assertRaisesRegex(ValueError, 'complete|trained'):
+                self.module().torch_profile('deciwatch', root)
 
 
 if __name__ == '__main__':

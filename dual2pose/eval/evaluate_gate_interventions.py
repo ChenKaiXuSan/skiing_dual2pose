@@ -13,7 +13,8 @@ from dual2pose.eval.main_baseline_data import (
     ROOT, batch_slices, canonical_batch, load_cache, sha256, write_json,
 )
 from dual2pose.eval.pa_mpjpe import PAMetricAccumulator
-from dual2pose.experiments.run_main_baselines import CHECKPOINTS, ReferenceModel
+from dual2pose.experiments.run_main_baselines import ReferenceModel
+from dual2pose.eval.pose_metrics import EVALUATION_PROTOCOL, common13_pose
 
 CONDITIONS = ("clean", "left_zero", "right_zero",
               "switch_left_to_right", "switch_right_to_left")
@@ -70,11 +71,12 @@ def evaluate_condition(model, arrays, dataset, condition, batch_size, progress=N
                 subsets = ("all15", "common13") if dataset == "unity" else ("common13",)
                 metrics[name] = {key: PAMetricAccumulator() for key in subsets}
             for subset, accumulator in metrics[name].items():
-                idx = slice(2, None) if dataset == "unity" and subset == "common13" else slice(None)
-                accumulator.update(prediction[:, :, idx], target[:, :, idx])
-        a = aux["alpha"].squeeze(-1).double()
-        el = torch.linalg.vector_norm(aux["base_l"] - target, dim=-1).double()
-        er = torch.linalg.vector_norm(aux["base_r"] - target, dim=-1).double()
+                pred, truth = (common13_pose(prediction), common13_pose(target)) if subset == "common13" else (prediction, target)
+                accumulator.update(pred, truth)
+        joint_indices = slice(2, None) if dataset == "unity" else slice(None)
+        a = aux["alpha"][..., joint_indices, :].squeeze(-1).double()
+        el = torch.linalg.vector_norm(common13_pose(aux["base_l"]) - common13_pose(target), dim=-1).double()
+        er = torch.linalg.vector_norm(common13_pose(aux["base_r"]) - common13_pose(target), dim=-1).double()
         d = er - el  # Positive means the left candidate has lower reference error.
         sums += np.array([a.sum().item(), d.sum().item(), (a*a).sum().item(),
                           (d*d).sum().item(), (a*d).sum().item(), (el+er).sum().item()])
@@ -100,9 +102,11 @@ def evaluate_condition(model, arrays, dataset, condition, batch_size, progress=N
     denom = np.sqrt(variance_a * variance_d)
     return {
         "condition": condition,
+        "canonical_mode": "per_frame", "evaluation_protocol": dict(EVALUATION_PROTOCOL),
         "metrics": {name: {key: acc.result() for key, acc in subsets.items()}
                     for name, subsets in metrics.items()},
         "gate_diagnostics": {
+            "joint_subset": "common13",
             "joint_frame_count": n, "alpha_mean": sums[0] / n,
             "alpha_std_joint_frames": np.sqrt(variance_a / n),
             "candidate_error_correlation": covariance / denom if denom > 0 else None,
@@ -126,6 +130,7 @@ def main():
     parser.add_argument("--split", choices=("val", "test"), default="test")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
     args = parser.parse_args()
     if args.limit < 0:
@@ -138,16 +143,19 @@ def main():
     arrays, manifest = load_cache(args.cache_root / args.dataset / args.split, args.device)
     if args.limit:
         arrays = tuple(a[:args.limit] for a in arrays)
-    model = ReferenceModel(CHECKPOINTS[args.dataset]).model.to(args.device).eval()
+    reference = ReferenceModel(args.checkpoint)
+    reference.validate_dataset(args.dataset)
+    model = reference.model.to(args.device).eval()
     full_test = args.split == "test" and args.limit == 0
     config = {
         "status": "running", "experiment": "frozen checkpoint intervention, not retraining",
         "dataset": args.dataset, "split": args.split, "limit": args.limit,
         "full_test": full_test, "samples": len(arrays[0]), "cache_manifest": manifest,
-        "checkpoint_sha256": sha256(CHECKPOINTS[args.dataset]),
+        "checkpoint": str(args.checkpoint), "checkpoint_sha256": sha256(args.checkpoint),
+        "canonical_mode": "per_frame", "evaluation_protocol": dict(EVALUATION_PROTOCOL),
         "source_sha256": {str(p): sha256(p) for p in (Path(__file__), ROOT/"dual2pose/models/crossview_fusion.py")},
         "corruption": "complete raw-pose zeroing; switch at floor(T/2); reference untouched",
-        "anchor_warning": "corruption may also change batch-anchor landmarks",
+        "anchor_warning": "corruption affects only its own sequence's per-frame landmarks and temporal fallback",
     }
     write_json(args.output / "config.json", config)
     started = time.monotonic()
@@ -158,14 +166,6 @@ def main():
                             total=total, elapsed_seconds=time.monotonic()-started))
         result = evaluate_condition(model, arrays, args.dataset, condition,
                                     256 if args.dataset == "unity" else 4, progress)
-        if condition == "clean" and full_test:
-            reference = ROOT/"logs/ivc_mmsports_extension/main_baselines/20260906/results"/args.dataset/"canonfuse3d.json"
-            old = json.loads(reference.read_text())["metrics"]
-            for subset, values in old.items():
-                for key in ("mpjpe", "acceleration_error"):
-                    delta = abs(result["metrics"]["dynamic_residual"][subset][key] - values[key])
-                    if delta > 5e-7:
-                        raise RuntimeError(f"Archived clean control mismatch: {subset}/{key}: {delta}")
         write_json(args.output / f"{condition}.json", result)
         print(json.dumps({"condition": condition, "metrics": result["metrics"]["dynamic_residual"]}), flush=True)
     write_json(args.output / "progress.json",
