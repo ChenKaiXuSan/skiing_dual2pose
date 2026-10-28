@@ -70,6 +70,7 @@ class DeciWatchOfficialProtocolTest(unittest.TestCase):
 
 
 @unittest.skipUnless(os.environ.get('DECIWATCH_REPO'), 'official DeciWatch checkout required')
+@unittest.skipUnless(torch.cuda.is_available(), 'CUDA device required by official DeciWatch')
 class DeciWatchAdapterTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -8,11 +8,11 @@ from pathlib import Path
 from dual2pose.eval.main_baseline_data import sha256, write_json, require_current_protocol
 
 DIRECT = ['left_canonical','right_canonical','canonical_avg','aligned_average',
-          'quality_weighted','mlp','tcn','smoothnet','canonfuse3d']
+          'quality_weighted','tcn','smoothnet','canonfuse3d']
 GEOMETRY = ['dlt','robust_dlt','dlt_mlp']
 LABELS = {'left_canonical':'Left canonical','right_canonical':'Right canonical',
           'canonical_avg':'Canonical average','aligned_average':r'Aligned average~\cite{umeyama1991least}',
-          'quality_weighted':'3D quality-weighted fusion','mlp':'Cross-view MLP',
+          'quality_weighted':'3D quality-weighted fusion',
           'tcn':r'Temporal fusion (local TCN)~\cite{bai2018empirical}','smoothnet':r'Avg. + SmoothNet~\cite{zeng2022smoothnet}',
           'canonfuse3d':'CanonFuse3D','dlt':r'Calibrated DLT~\cite{hartley2004multiple}',
           'robust_dlt':r'Reprojection-gated DLT~\cite{hartley2004multiple}',
@@ -111,11 +111,11 @@ def main():
         writer=csv.DictWriter(fp,fieldnames=columns);writer.writeheader();writer.writerows(rows)
     render_package(records,args.paper)
     write_json(evidence/'main_baselines_manifest.json',{
-        'run_root':str(args.results.parent.resolve()),'method_count_per_dataset':12,'direct_group_rows':9,
-        'additional_input_rows':3,'record_count':len(records),'metric_rows':len(rows),
+        'run_root':str(args.results.parent.resolve()),'method_count_per_dataset':len(DIRECT)+len(GEOMETRY),'direct_group_rows':len(DIRECT),
+        'additional_input_rows':len(GEOMETRY),'record_count':len(records),'metric_rows':len(rows),
         'source_results':[{k:v for k,v in item.items() if k!='result'} for item in records],
         'packaged_result_sha256':sha256(json_path),'renderer_sha256':sha256(__file__),
         'tables':{f:sha256(args.paper/'tables'/f) for f in ['native_reference.tex','ski_poseptz_reference.tex']}})
-    print(f'Generated 24 measured method rows / {len(rows)} joint-subset metric rows.')
+    print(f'Generated {len(records)} measured method rows / {len(rows)} joint-subset metric rows.')
 
 if __name__=='__main__': main()

@@ -1,8 +1,8 @@
 """External comparisons, immutable input reuse, and report-only DAG tasks.
 
-The legacy PA entrypoint includes a withdrawn ordinary MLP. The wrapper below
-selects the eleven approved local methods; three external adaptations complete
-fourteen rows per dataset. No command writes into the manuscript tree.
+The PA entrypoint and wrapper use the eleven approved local methods; three
+external adaptations complete fourteen rows per dataset. No command writes into
+the manuscript tree.
 """
 from __future__ import annotations
 
@@ -444,7 +444,6 @@ def main():
         copy_records(Path(ctx['core_root'])/'results'/args.dataset,base/'results'/args.dataset,['tcn','smoothnet'],args.dataset)
     elif args.action=='pa':
         from dual2pose.eval import evaluate_main_baseline_pa as pa
-        pa.DIRECT=[m for m in pa.DIRECT if m!='mlp']
         import torch
         torch.set_num_threads(4);torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
         pa.run(SimpleNamespace(root=base,output=root/'main_baselines_pa',dataset=args.dataset,device='cuda:0'))
