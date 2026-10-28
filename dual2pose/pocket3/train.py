@@ -9,7 +9,7 @@ evaluated once with the selected weights.  Two initializations: the frozen Unity
 
 Example::
 
-    python -m dual2pose.eval.train_pocket3 --gpu 1 --output-dir logs/eval_pocket3_chen4/training
+    python -m dual2pose.pocket3.train --gpu 1 --output-dir logs/eval_pocket3_chen4/training
 """
 from __future__ import annotations
 
@@ -22,8 +22,8 @@ import numpy as np
 import torch
 
 from dual2pose.config import load_config
-from dual2pose.eval import adapt_pocket3 as ad
-from dual2pose.eval import eval_pocket3 as ep
+from dual2pose.pocket3 import adapt as ad
+from dual2pose.pocket3 import evaluate as ep
 from dual2pose.trainer.train_crossview_fusion import CrossViewFusionTrainer
 
 

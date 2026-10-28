@@ -39,7 +39,7 @@ Outputs (``--output-dir``): ``summary.json``, ``per_frame.csv``, ``per_window.cs
 
 Example::
 
-    python -m dual2pose.eval.eval_pocket3 --session chen_4 --gpu 0
+    python -m dual2pose.pocket3.evaluate --session chen_4 --gpu 0
 """
 from __future__ import annotations
 

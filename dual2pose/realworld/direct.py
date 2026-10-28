@@ -24,14 +24,14 @@ from dual2pose.config import load_config
 from omegaconf import OmegaConf
 
 
-REPO_ROOT = Path(__file__).resolve().parents[0]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 @lru_cache(maxsize=1)
 def _symbols():
     fusion_mod = importlib.import_module("dual2pose.trainer.train_crossview_fusion")
-    map_mod = importlib.import_module("map_config")
+    map_mod = importlib.import_module("dual2pose.map_config")
     return (fusion_mod.CrossViewFusionTrainer, map_mod.FILTERED_KPTS_MAPPING, map_mod.filter_sam3d_body_kpts)
 
 

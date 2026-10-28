@@ -26,7 +26,7 @@ from pytorch_lightning.callbacks import RichProgressBar
 from torch.utils.data import DataLoader, Dataset
 
 
-REPO_ROOT = Path(__file__).resolve().parents[0]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -34,7 +34,7 @@ if str(REPO_ROOT) not in sys.path:
 @lru_cache(maxsize=1)
 def _repo_symbols():
     fusion_module = importlib.import_module("dual2pose.trainer.train_crossview_fusion")
-    map_module = importlib.import_module("map_config")
+    map_module = importlib.import_module("dual2pose.map_config")
     return (
         fusion_module.CrossViewFusionTrainer,
         map_module.FILTERED_KPTS_MAPPING,

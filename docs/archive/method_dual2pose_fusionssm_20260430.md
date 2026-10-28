@@ -1,3 +1,5 @@
+> **Archived (2026-10-28).** This document describes the removed `dual2pose` backbone (FusionSSM / ViewGating / SSMRefiner) and its self-supervised loss. The current method is CanonFuse3D (`dual2pose/trainer/train_crossview_fusion.py`) with the fixed per-frame protocol; see the top-level README.
+
 # 双视角 3D 姿态估计方法说明
 
 > **项目**: Skiing Canonical DualView 3D Pose (PyTorch)  

@@ -220,10 +220,19 @@ python dual2pose/train_ski_poseptz.py \
   --max-epochs 100
 ```
 
-### 4. Real-world direct inference
+### 4. Hand-held dual-Pocket recording
 
 ```bash
-python eval_realworld_direct.py --help
+python -m dual2pose.pocket3.evaluate --ckpt Unity=<per-frame checkpoint>   # frozen evaluation
+python -m dual2pose.pocket3.adapt    --ckpt <per-frame checkpoint>         # front-end style adaptation
+python -m dual2pose.pocket3.train    --ckpt <per-frame checkpoint> --gpu 1 # chronological in-domain training
+```
+
+### 5. Real-world inference
+
+```bash
+python -m dual2pose.realworld.direct --help
+python -m dual2pose.realworld.inference --help
 ```
 
 The script loads real-world SAM3D-body outputs, builds left/right temporal windows, runs the trained `crossview_fusion` model, and exports summary/visualization files.
@@ -235,21 +244,27 @@ The script loads real-world SAM3D-body outputs, builds left/right temporal windo
 ```text
 Skiing_Canonical_DualView_3D_Pose_PyTorch/
 ├── dual2pose/
-│   ├── dataloader/              # Unity and Ski-PosePTZ dataset loaders
-│   ├── eval/                    # Evaluation and visualization scripts
-│   ├── models/                  # Cross-view fusion, Sim3, baseline modules
-│   ├── trainer/                 # PyTorch Lightning trainers and canonicalization
-│   └── utils/                   # Utility functions
+│   ├── config.py, map_config.py, path_rewrite.py   # Hydra config loading, skeleton maps, data-root rewriting
+│   ├── training_protocol.py     # the two action-disjoint Unity folds
+│   ├── train_unity.py           # the training entry point (fixed CanonFuse3D protocol)
+│   ├── train_ski_poseptz.py     # same protocol on the Ski-PosePTZ reference
+│   ├── train_frontend_adaptation.py, frontend_adaptation.py   # fine-tuning on other pose front ends
+│   ├── dataloader/              # Unity, Ski-PosePTZ and front-end pose datasets
+│   ├── models/                  # CanonFuse3D (crossview_fusion), Sim3, pose-only and geometric baselines
+│   ├── trainer/                 # canonicalization and the Lightning trainer
+│   ├── pocket3/                 # hand-held dual-Pocket pipeline: evaluate / adapt / train
+│   ├── realworld/               # inference on real-world SAM 3D Body results
+│   ├── eval/                    # evaluation; see dual2pose/eval/README.md for the index
+│   └── experiments/             # archived manuscript runners (external baselines, multi-seed matrix)
 ├── configs/                     # Hydra configuration files
-│   └── model/                   # Model hyperparameters (arch / optim / loss), one group per backbone
-├── cross_validation/            # Camera-pair split generation
+│   └── model/cross_view_fusion.yaml   # model hyperparameters (arch / optim / loss)
+├── cross_validation/            # camera-pair split generation
 ├── SAM3Dbody/                   # SAM 3D Body helper utilities
-├── analysis/                    # Data checks, notebooks, export scripts
-├── pegasus/                     # Cluster job scripts
+├── analysis/                    # data checks, notebooks, export scripts
+├── pegasus/                     # cluster job scripts
 ├── unity/                       # Unity project/assets and analysis helpers
-├── tests/                       # Lightweight tests
-├── eval_realworld_direct.py     # Direct real-world inference/evaluation
-├── eval_realworld_inference.py  # Real-world inference entry point
+├── tests/                       # unit tests
+├── docs/                        # runbooks, audits and archived design notes
 ├── requirements.txt
 └── environment.yaml
 ```

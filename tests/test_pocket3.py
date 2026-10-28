@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from dual2pose.eval import eval_pocket3 as ep
+from dual2pose.pocket3 import evaluate as ep
 from dual2pose.map_config import FILTERED_KPTS_MAPPING
 
 

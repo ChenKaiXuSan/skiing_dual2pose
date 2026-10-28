@@ -9,7 +9,7 @@ is a deployment-calibration demonstration, not a generalization test.
 
 Example::
 
-    python -m dual2pose.eval.adapt_pocket3 --gpu 1 --output-dir logs/eval_pocket3_chen4/adaptation
+    python -m dual2pose.pocket3.adapt --gpu 1 --output-dir logs/eval_pocket3_chen4/adaptation
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from dual2pose.eval import eval_pocket3 as ep
+from dual2pose.pocket3 import evaluate as ep
 from dual2pose.frontend_adaptation import configure_trainable_scope
 from dual2pose.models.main_baselines import aligned_average
 from dual2pose.trainer.canonicalize import canonicalize_pose_torch

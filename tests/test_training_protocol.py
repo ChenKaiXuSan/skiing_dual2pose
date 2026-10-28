@@ -196,7 +196,7 @@ class CheckpointProtocolTest(unittest.TestCase):
 
     def test_pocket3_loader_enforces_the_protocol(self):
         from dual2pose.config import load_config
-        from dual2pose.eval import eval_pocket3 as ep
+        from dual2pose.pocket3 import evaluate as ep
 
         source = CrossViewFusionTrainer(load_config())  # same architecture as load_model builds
         with tempfile.TemporaryDirectory() as directory:
