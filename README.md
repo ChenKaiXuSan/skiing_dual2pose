@@ -69,6 +69,13 @@ Each pose is transformed into a canonical coordinate system using anatomical lan
 
 This makes left/right predictions more comparable without using camera extrinsics.
 
+The reference frame is selected by `model.arch.canonical_mode` in `configs/model/cross_view_fusion.yaml`:
+
+- `per_frame` (default): every frame is centred at its own pelvis and rotated into its own body frame, so training and evaluation see per-frame person-centred poses that do not depend on batch composition;
+- `first_frame`: the legacy protocol of the manuscript, one reference frame (the first frame of the batch) shared by every sequence in it.
+
+Checkpoints saved before this option existed carry no value and are loaded as `first_frame`; the trainer adopts the mode recorded in a checkpoint, so evaluating an older checkpoint under the new default stays consistent with its training.
+
 ### 3. Cross-view canonical fusion
 
 Implemented in `dual2pose/models/crossview_fusion.py`.

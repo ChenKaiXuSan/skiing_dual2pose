@@ -206,11 +206,15 @@ def direct_inference(model, dataset, device=0):
             cam1 = sample["cam1"].unsqueeze(0).to(device)  # (1, T, J, 3)
             cam2 = sample["cam2"].unsqueeze(0).to(device)
             
-            # Canonicalize
-            left_canon, _ = canonicalize_pose_torch(cam1.squeeze(0), 
-                left_hip=model.left_hip_idx, right_hip=model.right_hip_idx, neck=model.neck_idx)
-            right_canon, _ = canonicalize_pose_torch(cam2.squeeze(0),
-                left_hip=model.left_hip_idx, right_hip=model.right_hip_idx, neck=model.neck_idx)
+            # Canonicalize with the body frame the model was trained with
+            if hasattr(model, "canonicalize"):
+                left_canon, _ = model.canonicalize(cam1)
+                right_canon, _ = model.canonicalize(cam2)
+            else:
+                left_canon, _ = canonicalize_pose_torch(cam1.squeeze(0),
+                    left_hip=model.left_hip_idx, right_hip=model.right_hip_idx, neck=model.neck_idx)
+                right_canon, _ = canonicalize_pose_torch(cam2.squeeze(0),
+                    left_hip=model.left_hip_idx, right_hip=model.right_hip_idx, neck=model.neck_idx)
             
             # Move canonicalized outputs to model device (canonicalize may produce CPU tensors)
             left_canon = left_canon.to(device)

@@ -75,6 +75,16 @@ def motion_speed(pose: torch.Tensor) -> torch.Tensor:
     return descriptor.norm(dim=-1).mean(dim=(1, 2))
 
 
+def _model_canonical(model: Any, pose: torch.Tensor) -> torch.Tensor:
+    """Body frame the model was trained with; legacy objects expose only the joint indices."""
+    if hasattr(model, "canonicalize"):
+        return model.canonicalize(pose)[0]
+    canonical, _ = canonicalize_pose_torch(
+        pose, left_hip=model.left_hip_idx, right_hip=model.right_hip_idx, neck=model.neck_idx
+    )
+    return canonical
+
+
 def _model_outputs(
     model: Any,
     left: torch.Tensor,
@@ -82,15 +92,9 @@ def _model_outputs(
     gt: torch.Tensor,
     metric_time_slice: slice | None = None,
 ) -> dict[str, torch.Tensor]:
-    left_canonical, _ = canonicalize_pose_torch(
-        left, left_hip=model.left_hip_idx, right_hip=model.right_hip_idx, neck=model.neck_idx
-    )
-    right_canonical, _ = canonicalize_pose_torch(
-        right, left_hip=model.left_hip_idx, right_hip=model.right_hip_idx, neck=model.neck_idx
-    )
-    gt_canonical, _ = canonicalize_pose_torch(
-        gt, left_hip=model.left_hip_idx, right_hip=model.right_hip_idx, neck=model.neck_idx
-    )
+    left_canonical = _model_canonical(model, left)
+    right_canonical = _model_canonical(model, right)
+    gt_canonical = _model_canonical(model, gt)
     fused, aux = model.models(left_canonical, right_canonical)
     metric_time_slice = metric_time_slice or slice(None)
     fused_metric = fused[:, metric_time_slice]

@@ -23,6 +23,18 @@ Date      	By	Comments
 import numpy as np
 import torch
 
+CANONICAL_MODES = ("first_frame", "per_frame")
+
+
+def validate_canonical_mode(mode) -> str:
+    """Return ``mode`` as a plain string or raise if it is not a known mode."""
+    mode_str = str(mode)
+    if mode_str not in CANONICAL_MODES:
+        raise ValueError(
+            f"canonical_mode must be one of {CANONICAL_MODES}, got {mode!r}"
+        )
+    return mode_str
+
 
 def normalize(v, eps=1e-8):
     return v / (np.linalg.norm(v, axis=-1, keepdims=True) + eps)
@@ -137,10 +149,18 @@ def canonicalize_pose_torch(
     PyTorch version of canonicalize_pose_numpy.
 
     x: (J, 3) or (T, J, 3) or (B, T, J, 3)
-    mode: "per_frame" | "first_frame"
+    mode:
+        "first_frame": one reference, the pelvis and body axes of the first
+            frame of the flattened input, shared by every frame.  With a
+            (B, T, J, 3) batch that is the first frame of the FIRST sequence,
+            so the result depends on batch composition and order.
+        "per_frame": every frame is centred at its own pelvis and rotated into
+            its own body frame (per-frame person centering); independent of
+            batching.
     Returns:
-        x_canon: same shape as x
-        transform: dict with "pelvis" and "R"
+        x_canon: (B, T, J, 3) for 3-D/4-D input, (J, 3) for 2-D input
+        transform: dict with "pelvis" and "R".  For "per_frame" they carry one
+            entry per frame, shaped like the input's leading dimensions.
     """
     if not isinstance(x, torch.Tensor):
         x = torch.as_tensor(x, dtype=torch.float32)
@@ -193,7 +213,12 @@ def canonicalize_pose_torch(
         transform = {"pelvis": ref_pelvis, "R": ref_R}
     elif mode == "per_frame":
         x_canon = torch.einsum("njc,nck->njk", x_centered, R)  # (N, J, 3)
-        transform = {"pelvis": pelvis, "R": R}
+        if squeeze_time:
+            transform = {"pelvis": pelvis[0], "R": R[0]}
+        elif len(original_shape) == 4:
+            transform = {"pelvis": pelvis.reshape(b, t, 3), "R": R.reshape(b, t, 3, 3)}
+        else:
+            transform = {"pelvis": pelvis, "R": R}
     else:
         raise ValueError("mode must be 'first_frame' or 'per_frame'")
 

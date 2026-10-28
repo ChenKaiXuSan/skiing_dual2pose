@@ -53,6 +53,9 @@ def resolve_nview_inputs(
 def _canonicalize(model: Any, pose: torch.Tensor) -> torch.Tensor:
     if hasattr(model, "predict_pair") and not hasattr(model, "models"):
         return pose
+    if hasattr(model, "canonicalize"):
+        # Body frame the model was trained with (per-frame or first-frame).
+        return model.canonicalize(pose.unsqueeze(0))[0].squeeze(0)
     canonical, _ = canonicalize_pose_torch(
         pose.unsqueeze(0),
         left_hip=int(model.left_hip_idx),

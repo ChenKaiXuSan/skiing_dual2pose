@@ -47,26 +47,35 @@ def canon(x, device):
 
 
 def evaluate(model, L, R, G, REL, device):
-    """Per-frame body-frame MPJPE / PA-MPJPE (common 13, mm) for averaging, frozen/adapted model and gate-only."""
-    outs = {"canonical_average": [], "aligned_average": [], "model": [], "gate_only": [], "gt": []}
+    """Per-frame body-frame MPJPE / PA-MPJPE (common 13, mm) for averaging, frozen/adapted model and gate-only.
+
+    The averaging baselines use the first-frame window protocol; the model receives the body
+    frame it was trained with (``model.canonical_mode``) and is compared with the reference in
+    that same frame (``gt_model``).
+    """
+    outs = {"canonical_average": [], "aligned_average": [], "model": [], "gate_only": [], "gt": [], "gt_model": []}
+    ref = {"canonical_average": "gt", "aligned_average": "gt", "model": "gt_model", "gate_only": "gt_model"}
     model.eval()
     with torch.no_grad():
         for w in range(L.shape[0]):
             lc, rc, gc = canon(L[w:w + 1], device), canon(R[w:w + 1], device), canon(G[w:w + 1], device)
-            fused, aux = model.models(lc, rc, return_components=True)
+            ml, mr = ep.model_inputs(model, torch.from_numpy(L[w:w + 1]).to(device), torch.from_numpy(R[w:w + 1]).to(device))
+            fused, aux = model.models(ml, mr, return_components=True)
             outs["canonical_average"].append((0.5 * (lc + rc)).cpu().numpy())
             outs["aligned_average"].append(aligned_average(lc, rc).cpu().numpy())
             outs["model"].append(fused.cpu().numpy())
             outs["gate_only"].append((fused - aux["output_residual"]).cpu().numpy())
             outs["gt"].append(gc.cpu().numpy())
+            outs["gt_model"].append(model.canonicalize(torch.from_numpy(G[w:w + 1]).to(device))[0].cpu().numpy())
     outs = {k: np.concatenate(v) for k, v in outs.items()}
     pf = {k: ep.per_frame_canonical(v) for k, v in outs.items()}
     res = {}
     for k in ("canonical_average", "aligned_average", "model", "gate_only"):
+        g = ref[k]
         res[k] = {
-            "per_frame_canonical_mpjpe_mm": 1000 * ep.masked_mpjpe(pf[k], pf["gt"], REL, ep.COMMON13)[0],
-            "pa_mpjpe_mm": 1000 * ep.masked_pa_mpjpe(outs[k], outs["gt"], REL, ep.COMMON13)[0],
-            "per_frame_canonical_accel_mm": 1000 * ep.masked_accel_error(pf[k], pf["gt"], REL, ep.COMMON13)[0],
+            "per_frame_canonical_mpjpe_mm": 1000 * ep.masked_mpjpe(pf[k], pf[g], REL, ep.COMMON13)[0],
+            "pa_mpjpe_mm": 1000 * ep.masked_pa_mpjpe(outs[k], outs[g], REL, ep.COMMON13)[0],
+            "per_frame_canonical_accel_mm": 1000 * ep.masked_accel_error(pf[k], pf[g], REL, ep.COMMON13)[0],
         }
     return res
 
@@ -114,7 +123,7 @@ def main(argv=None):
     # disable Lightning logging side effects during manual training
     base.log = lambda *a, **kw: None
     results = {"windows": W, "splits": {}, "epochs": args.epochs, "lr": args.lr,
-               "checkpoint": str(args.ckpt), "scopes": ["heads_only", "full"]}
+               "checkpoint": str(args.ckpt), "canonical_mode": base.canonical_mode, "scopes": ["heads_only", "full"]}
     for name, (ai, ti) in {"adapt_first_test_last": (slice(0, k), slice(k, W)),
                            "adapt_last_test_first": (slice(W - k, W), slice(0, W - k))}.items():
         entry = {"adapt_windows": [int(s) for s in np.array(starts)[ai]], "test_windows": [int(s) for s in np.array(starts)[ti]],

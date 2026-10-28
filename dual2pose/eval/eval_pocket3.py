@@ -341,14 +341,31 @@ def load_model(ckpt: Path, device):
     cfg.log_path = str(ckpt.parent)
     model = CrossViewFusionTrainer(cfg)
     state = torch.load(ckpt, map_location="cpu", weights_only=False)
+    # The weights fix the body-frame representation; legacy checkpoints carry
+    # no value and were trained with the first-frame protocol.
+    model.canonical_mode = CrossViewFusionTrainer.canonical_mode_from_checkpoint(state)
     missing, unexpected = model.load_state_dict(state["state_dict"], strict=True)
     assert not missing and not unexpected
     return model.eval().to(device)
 
 
+def model_inputs(model, left, right):
+    """Canonicalize raw (W,T,15,3) tensors the way ``model`` was trained (per-frame or first-frame)."""
+    return model.canonicalize(left)[0], model.canonicalize(right)[0]
+
+
+def reference_key(model) -> str:
+    """Name of the ``run_methods`` output holding the reference in ``model``'s own frame."""
+    return "gt_per_frame" if getattr(model, "canonical_mode", "first_frame") == "per_frame" else "gt"
+
+
 def run_methods(left: np.ndarray, right: np.ndarray, gt: np.ndarray, models: Dict[str, object], device,
                 reference: str = "window") -> Dict[str, np.ndarray]:
     """left/right/gt: (W,T,15,3) raw.  Returns canonical (W,T,15,3) per method plus gt and gate values.
+
+    ``gt`` is the first-frame canonical reference of the baselines; ``gt_per_frame`` is the
+    reference in the per-frame body frame, which is what a model trained with
+    ``canonical_mode=per_frame`` outputs (see ``reference_key``).
 
     ``reference="window"``: every window is canonicalized with its own first frame (deployment
     protocol).  ``reference="batch"``: all windows are canonicalized together, sharing the first
@@ -359,7 +376,7 @@ def run_methods(left: np.ndarray, right: np.ndarray, gt: np.ndarray, models: Dic
     from dual2pose.models.main_baselines import aligned_average
     from dual2pose.trainer.canonicalize import canonicalize_pose_torch
 
-    keys = BASE_METHODS + fusion_methods(list(models)) + ["gt"] + [f"alpha[{lab}]" for lab in models]
+    keys = BASE_METHODS + fusion_methods(list(models)) + ["gt", "gt_per_frame"] + [f"alpha[{lab}]" for lab in models]
     outs: Dict[str, List[np.ndarray]] = {k: [] for k in keys}
     W = left.shape[0]
     chunks = [slice(w, w + 1) for w in range(W)] if reference == "window" else [slice(0, W)]
@@ -376,8 +393,13 @@ def run_methods(left: np.ndarray, right: np.ndarray, gt: np.ndarray, models: Dic
             outs["canonical_average"].append((0.5 * (lc + rc)).cpu().numpy())
             outs["aligned_average"].append(aligned_average(lc, rc).cpu().numpy())
             outs["gt"].append(gc.cpu().numpy())
+            gpf, _ = canonicalize_pose_torch(g, left_hip=LEFT_HIP, right_hip=RIGHT_HIP, neck=NECK, mode="per_frame")
+            outs["gt_per_frame"].append(gpf.cpu().numpy())
             for lab, model in models.items():
-                fused, aux = model.models(lc, rc, return_components=True)
+                # Each model sees the body frame it was trained with; the
+                # non-learned baselines keep the first-frame window protocol.
+                ml, mr = model_inputs(model, l, r)
+                fused, aux = model.models(ml, mr, return_components=True)
                 outs[f"canonfuse3d[{lab}]"].append(fused.cpu().numpy())
                 outs[f"canonfuse3d_gate_only[{lab}]"].append((fused - aux["output_residual"]).cpu().numpy())
                 outs[f"alpha[{lab}]"].append(aux["alpha"].cpu().numpy())
@@ -395,6 +417,8 @@ def write_table(path: Path, metrics: Dict[str, Dict[str, float]], methods: List[
         rows.append(f"{method_label(m)} & {r['mpjpe_m']*1000:.1f} & {r['seq_aligned_mpjpe_m']*1000:.1f} & "
                     f"{r['pa_mpjpe_m']*1000:.1f} & {r['accel_m']*1000:.2f} \\\\")
     body = "\n".join(rows)
+    per_frame_note = (" Models trained with per-frame canonicalization receive and are compared in the per-frame body frame."
+                      if any(metrics[m].get("reference_frame") == "per_frame" for m in methods) else "")
     path.write_text(rf"""\begin{{table}}[!ht]
 \centering
 \caption{{{{\bf Hand-held dual-Pocket recording ({session}) against the external-camera video reference.}} Common-13 canonical-space errors in millimetres over {n_windows} non-overlapping 30-frame windows ({n_frames} frame pairs). Seq.-aligned MPJPE applies one similarity transform per window; PA-MPJPE aligns every frame; acceleration error is in mm per frame squared. Lower is better.}}
@@ -406,7 +430,7 @@ Method & MPJPE $\downarrow$ & Seq.-aligned $\downarrow$ & PA-MPJPE $\downarrow$ 
 {body}
 \bottomrule
 \end{{tabular}}
-\begin{{flushleft}}\footnotesize The reference is a COCO-17 video triangulation; the neck of the model skeleton is approximated by the shoulder midpoint, and the two eye landmarks enter canonicalization only. Both Pocket cameras are uncalibrated and hand-held; no camera parameter is used by any method. Gate only removes the learned output residual from the frozen model at inference.\end{{flushleft}}
+\begin{{flushleft}}\footnotesize The reference is a COCO-17 video triangulation; the neck of the model skeleton is approximated by the shoulder midpoint, and the two eye landmarks enter canonicalization only. Both Pocket cameras are uncalibrated and hand-held; no camera parameter is used by any method. Gate only removes the learned output residual from the frozen model at inference.{per_frame_note}\end{{flushleft}}
 \end{{table}}
 """)
 
@@ -466,22 +490,29 @@ def evaluate(args: argparse.Namespace) -> Dict:
     device = torch.device(f"cuda:{args.gpu}" if torch.cuda.is_available() and args.gpu >= 0 else "cpu")
     ckpts = parse_ckpts(args.ckpt)
     models = {lab: load_model(path, device) for lab, path in ckpts.items()}
+    for lab, model in models.items():
+        print(f"checkpoint {lab}: canonical_mode={model.canonical_mode}")
     primary = next(iter(ckpts))
     methods = BASE_METHODS + fusion_methods(list(ckpts))
     out = run_methods(L, R, G, models, device, reference=args.reference)
 
-    pfc = {k: per_frame_canonical(out[k]) for k in methods + ["gt"]}
+    # Every method is compared with the reference expressed in its own output frame.
+    ref = {m: "gt" for m in methods}
+    for lab, model in models.items():
+        ref[f"canonfuse3d[{lab}]"] = ref[f"canonfuse3d_gate_only[{lab}]"] = reference_key(model)
+    pfc = {k: per_frame_canonical(out[k]) for k in methods + ["gt", "gt_per_frame"]}
     metrics = {}
     for m in methods:
-        row = {}
+        gt_m, pf_gt = out[ref[m]], pfc[ref[m]]
+        row = {"reference_frame": "per_frame" if ref[m] == "gt_per_frame" else "first_frame"}
         for name, joints in (("", COMMON13), ("_no_neck", COMMON12_NO_NECK)):
-            mp, n_pts = masked_mpjpe(out[m], out["gt"], REL, joints)
-            sa, n_sa = sequence_aligned_mpjpe(out[m], out["gt"], REL, joints)
-            rr, _ = masked_mpjpe(root_relative(out[m]), root_relative(out["gt"]), REL, joints)
-            pf, _ = masked_mpjpe(pfc[m], pfc["gt"], REL, joints)
-            pa, n_pa_frames, n_deg = masked_pa_mpjpe(out[m], out["gt"], REL, joints)
-            ac, n_ac = masked_accel_error(out[m], out["gt"], REL, joints)
-            ac_pf, _ = masked_accel_error(pfc[m], pfc["gt"], REL, joints)
+            mp, n_pts = masked_mpjpe(out[m], gt_m, REL, joints)
+            sa, n_sa = sequence_aligned_mpjpe(out[m], gt_m, REL, joints)
+            rr, _ = masked_mpjpe(root_relative(out[m]), root_relative(gt_m), REL, joints)
+            pf, _ = masked_mpjpe(pfc[m], pf_gt, REL, joints)
+            pa, n_pa_frames, n_deg = masked_pa_mpjpe(out[m], gt_m, REL, joints)
+            ac, n_ac = masked_accel_error(out[m], gt_m, REL, joints)
+            ac_pf, _ = masked_accel_error(pfc[m], pf_gt, REL, joints)
             row.update({f"mpjpe_m{name}": mp, f"seq_aligned_mpjpe_m{name}": sa,
                         f"root_relative_mpjpe_m{name}": rr, f"per_frame_canonical_mpjpe_m{name}": pf,
                         f"pa_mpjpe_m{name}": pa, f"accel_m{name}": ac, f"per_frame_canonical_accel_m{name}": ac_pf,
@@ -496,9 +527,9 @@ def evaluate(args: argparse.Namespace) -> Dict:
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    series = {m: per_frame_mpjpe(out[m], out["gt"], REL, COMMON13).reshape(-1) for m in methods}
-    series_aligned = {m: sequence_aligned_errors(out[m], out["gt"], REL, COMMON13).reshape(-1) for m in methods}
-    series_pf = {m: per_frame_mpjpe(pfc[m], pfc["gt"], REL, COMMON13).reshape(-1) for m in methods}
+    series = {m: per_frame_mpjpe(out[m], out[ref[m]], REL, COMMON13).reshape(-1) for m in methods}
+    series_aligned = {m: sequence_aligned_errors(out[m], out[ref[m]], REL, COMMON13).reshape(-1) for m in methods}
+    series_pf = {m: per_frame_mpjpe(pfc[m], pfc[ref[m]], REL, COMMON13).reshape(-1) for m in methods}
     residual_norm = {lab: float(np.linalg.norm(out[f"canonfuse3d[{lab}]"] - out[f"canonfuse3d_gate_only[{lab}]"], axis=-1)[..., COMMON13].mean())
                      for lab in ckpts}
     alpha_mean = out[f"alpha[{primary}]"].reshape(W * T, -1).mean(axis=1)
@@ -551,6 +582,8 @@ def evaluate(args: argparse.Namespace) -> Dict:
             "anchor_rule": "first frame of a window must have reliable reference hips, neck and eyes",
             "joint_subset": "common 13 (model indices 2-14); neck := COCO shoulder midpoint",
             "primary_alignment": "per-frame body frame (each frame of prediction and reference canonicalized with its own hips, neck and eyes)",
+            "model_input_frame": {lab: model.canonical_mode for lab, model in models.items()},
+            "reference_frame_per_method": {m: metrics[m]["reference_frame"] for m in methods},
             "mask": "video_gt_reliable from the pocket-aligned reference",
             "units": "metres (reference) / SAM3D metric camera coordinates; canonicalization keeps scale",
         },
@@ -572,7 +605,8 @@ def evaluate(args: argparse.Namespace) -> Dict:
         "inputs": {
             "gt_pocket_1_md5": _md5(root / "gt" / "pocket_aligned" / f"{args.session}_pocket_1.npz"),
             "gt_pocket_2_md5": _md5(root / "gt" / "pocket_aligned" / f"{args.session}_pocket_2.npz"),
-            "checkpoints": {lab: {"path": str(path.resolve()), "md5": _md5(path)} for lab, path in ckpts.items()},
+            "checkpoints": {lab: {"path": str(path.resolve()), "md5": _md5(path),
+                                  "canonical_mode": models[lab].canonical_mode} for lab, path in ckpts.items()},
             "sam3d_manifests": sam_manifests,
         },
         "git_commit": git_commit(),
