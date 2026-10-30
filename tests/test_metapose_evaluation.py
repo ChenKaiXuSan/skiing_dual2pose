@@ -61,6 +61,11 @@ class MetaPoseEvaluationTest(unittest.TestCase):
             self.assertEqual((run/'metrics.json').read_text(), 'preserve archived metrics')
             self.assertTrue((run/'per_frame_common13_v1/metrics.json').is_file())
             with self.assertRaises(FileExistsError): evaluate(run,control_path)
+            with redirect_stdout(io.StringIO()):
+                fresh=evaluate(run,control_path,output_dir=root/'fresh',prediction_origin='fresh_training')
+            self.assertFalse(fresh['native_predictions_reused'])
+            self.assertEqual(fresh['prediction_origin'],'fresh_training')
+            self.assertEqual(fresh['metapose'],result['metapose'])
 
 
 if __name__ == '__main__':

@@ -23,7 +23,14 @@ MAIN_MLP = [512,512,'ccat',512,512,'ccat',512]
 
 
 class OfficialMetaPose:
-    def __init__(self, source, seed=42):
+    def __init__(self, source, seed=42, learning_rate=1e-4, gradient_clip_norm=None, identity_stages=False):
+        if not np.isfinite(learning_rate) or learning_rate <= 0:
+            raise ValueError('Learning rate must be finite and positive')
+        if gradient_clip_norm is not None and (not np.isfinite(gradient_clip_norm) or gradient_clip_norm <= 0):
+            raise ValueError('Gradient clip norm must be finite and positive')
+        self.learning_rate = learning_rate
+        self.gradient_clip_norm = gradient_clip_norm
+        self.identity_stages = identity_stages
         os.environ.setdefault('TF_NUM_INTRAOP_THREADS', '8')
         os.environ.setdefault('TF_NUM_INTEROP_THREADS', '2')
         os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
@@ -85,10 +92,20 @@ class OfficialMetaPose:
         stage = mp.InvariantStageModel(MAIN_MLP, 512, [256,128], SPECS)
         # Build before strict HDF5 save/load and optimizer variable creation.
         stage(tf.zeros((1,59+416+52+2), dtype=tf.float64))
+        if self.identity_stages:
+            # Preserve the previous solution when adding a residual stage.
+            # Retain the pose embedding; zero only the camera update columns
+            # and final pose update head so both heads can learn immediately.
+            head = stage.main_mlp.layers[-1]
+            kernel, bias = head.get_weights()
+            kernel[:, -10:] = 0; bias[-10:] = 0
+            head.set_weights([kernel, bias])
+            head = stage.pose_mlp.layers[-1]
+            head.set_weights([np.zeros_like(v) for v in head.get_weights()])
         self.stages.append(stage)
         self.solver = mp.DeepInverseSolver(self.stages, self.fwd_fn, self.logp_fn, 'logp', {})
         self.solver.compile(custom_loss_weights={'logp': 0.0})
-        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=1e-4)
+        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=self.learning_rate)
         optimizer._create_all_weights(stage.trainable_variables)
 
         @tf.function(reduce_retracing=True)
@@ -106,15 +123,23 @@ class OfficialMetaPose:
             gradients = tape.gradient(loss, stage.trainable_variables)
             for g in gradients:
                 tf.debugging.assert_all_finite(g, 'nonfinite MetaPose gradient')
+            norm = tf.linalg.global_norm(gradients)
+            tf.debugging.assert_all_finite(norm, 'nonfinite MetaPose gradient norm')
+            if self.gradient_clip_norm is not None:
+                gradients, _ = tf.clip_by_global_norm(gradients, self.gradient_clip_norm)
+            clipped_norm = tf.linalg.global_norm(gradients)
             optimizer.apply_gradients(zip(gradients, stage.trainable_variables))
-            return loss
+            return loss, norm, clipped_norm
         self._predict, self._train = predict, train
 
     def predict(self, x, task):
         return finite(self._predict(np.asarray(x,np.float64),np.asarray(task,np.float64))['x_opt'].numpy(), 'learned state')
 
     def train_batch(self, x, task, labels):
-        return float(self._train(np.asarray(x,np.float64),np.asarray(task,np.float64),np.asarray(labels,np.float64)).numpy())
+        loss, norm, clipped = self._train(np.asarray(x,np.float64),np.asarray(task,np.float64),np.asarray(labels,np.float64))
+        self.last_gradient_norm = float(norm.numpy())
+        self.last_clipped_gradient_norm = float(clipped.numpy())
+        return float(loss.numpy())
 
     def eval_loss(self, x, task, labels):
         out = self._predict(np.asarray(x,np.float64),np.asarray(task,np.float64))['fwd'].numpy()

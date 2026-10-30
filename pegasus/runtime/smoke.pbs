@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#PBS -A HP260146
+#PBS -q gen_S
+#PBS -l elapstim_req=01:00:00
+#PBS -N canon_smoke
+set -euo pipefail
+: "${DUAL2POSE_REPO:=/work/HP260146/chenkaixu/Skiing_Canonical_DualView_3D_Pose_PyTorch}"
+source "$DUAL2POSE_REPO/pegasus/runtime/env.sh"
+cd "$DUAL2POSE_REPO"
+RUN_DIR="$DUAL2POSE_RUNTIME/runs/smoke_$(date -u +%Y%m%dT%H%M%SZ)_${PBS_JOBID:-manual}"
+exec "$DUAL2POSE_PYTHON" "$DUAL2POSE_REPO/pegasus/runtime/smoke.py" --output "$RUN_DIR"

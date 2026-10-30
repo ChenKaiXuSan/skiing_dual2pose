@@ -25,7 +25,9 @@ def canonical_prediction_and_control(prediction, left, right, dataset):
     return prediction, (lc[:,:,-13:]+rc[:,:,-13:])/2
 
 
-def evaluate(run_dir, control_metrics=None, output_dir=None):
+def evaluate(run_dir, control_metrics=None, output_dir=None, prediction_origin="archived"):
+    if prediction_origin not in ("archived", "fresh_training"):
+        raise ValueError("Unknown prediction origin")
     run_dir = Path(run_dir)
     report = json.loads((run_dir/'report.json').read_text())
     if report['status'] != 'complete_predictions_not_yet_scored' or report['finite_coverage'] != 1.:
@@ -80,7 +82,8 @@ def evaluate(run_dir, control_metrics=None, output_dir=None):
                   coordinate_gauge='native left-camera output mapped with input left-view per-frame pelvis and axes',
                   native_prediction_sha256=report['predictions'],
                   cache_manifest_sha256=report['native_test_manifest_sha256'],
-                  native_predictions_reused=True, report_sha256=sha256(run_dir/'report.json'),
+                  native_predictions_reused=prediction_origin == 'archived',
+                  prediction_origin=prediction_origin, report_sha256=sha256(run_dir/'report.json'),
                   evaluator_sha256=sha256(__file__))
     output_dir.mkdir(parents=True,exist_ok=False)
     (output_dir/'metrics.json').write_text(json.dumps(scores,indent=2,allow_nan=False)+'\n')
@@ -93,4 +96,5 @@ if __name__ == '__main__':
     p.add_argument('--run-dir',type=Path,required=True)
     p.add_argument('--control-metrics',type=Path,help='Optional current control; archived scores are rejected')
     p.add_argument('--output-dir',type=Path,help='New destination; defaults to run-dir/per_frame_common13_v1')
+    p.add_argument("--prediction-origin", choices=("archived", "fresh_training"), default="archived")
     evaluate(**vars(p.parse_args()))

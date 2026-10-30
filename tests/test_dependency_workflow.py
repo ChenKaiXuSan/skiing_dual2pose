@@ -135,3 +135,33 @@ def test_unity_stale_last_does_not_bypass_completion_evidence(completed_unity_wi
         d['best_model_score' if damage == 'best_selection' else 'sample_count'] = .1 if damage == 'best_selection' else 1
         p.write_text(json.dumps(d))
     with pytest.raises(ValueError): verify_main(job, ctx)
+
+
+def test_worker_finishing_between_completion_probe_and_pid_probe_is_not_failed(tmp_path, monkeypatch):
+    """A worker may publish completion and exit during one scheduler poll."""
+    from dual2pose.experiments import run_dependency_workflow as flow
+    import json
+
+    output = tmp_path / 'tasks' / 'finishing'
+    output.mkdir(parents=True)
+    flow.atomic_json(tmp_path / 'manifest.json', {'jobs': [job('finishing')]})
+    flow.atomic_json(tmp_path / 'context.json', {})
+    flow.atomic_json(tmp_path / 'state.json', {
+        'jobs': {'finishing': {'status': 'running', 'pid': 123, 'gpu': 0}},
+        'metadata': {},
+    })
+    monkeypatch.setattr(flow, 'observe_external', lambda *args: {})
+    monkeypatch.setattr(flow, 'gpu_inventory', lambda: {})
+
+    def exited_after_publishing(pid, token=None):
+        flow.atomic_json(output / 'completion.json', {
+            'status': 'complete', 'metadata': {'checked': True},
+        })
+        return False
+
+    monkeypatch.setattr(flow, 'alive', exited_after_publishing)
+    flow.run(tmp_path, poll_seconds=0)
+    state = json.loads((tmp_path / 'state.json').read_text())
+    assert state['jobs']['finishing']['status'] == 'complete'
+    assert state['metadata']['finishing'] == {'checked': True}
+    assert state['status'] == 'complete'

@@ -248,7 +248,16 @@ Primary MPJPE compares the output directly with the per-frame canonical GT.
 There is no output recentering, recanonicalization or fitted rotation/scale.
 Validation and checkpoint selection use this same metric. Pocket3 exports it
 as `mpjpe_mm` during training/adaptation and `mpjpe_m` in standalone evaluation;
-Unity/Ski retain their dataset coordinate units. Pocket3 excludes unreliable
+Unity/Ski raw artifacts retain their existing coordinate-unit fields. All future
+reports and comparison tables express MPJPE, PA-MPJPE and other position errors
+in **mm**: multiply metre-valued errors by 1000 exactly once; use existing
+`*_mm` fields unchanged. Unity uses the standard scene convention
+`1 Unity unit = 1 m`; Ski reference coordinates are in metres. This reporting
+conversion leaves training, checkpoint selection and the per-frame protocol
+unchanged. Angles, ratios and training losses retain their own units;
+acceleration errors must state their time basis (`mm/frame^2` or `mm/s^2`).
+See the 2026-10-28 reporting-unit decision in
+`docs/per_frame_execution_20261028.md`. Pocket3 excludes unreliable
 reference joints from scoring. Its PA, root-relative, sequence-aligned and
 `recanonicalized_mpjpe_*` scores are auxiliary. The older
 `per_frame_canonical_mpjpe_*` fields remain aliases of the recanonicalized

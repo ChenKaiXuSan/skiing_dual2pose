@@ -355,13 +355,16 @@ def run(root, poll_seconds=10):
             key = job['id']; record = states[key]
             if record['status'] not in ('running', 'verifying'): continue
             completion = root / 'tasks' / key / 'completion.json'
-            if completion.exists() and not alive(record.get('pid'), record.get('pid_token')):
+            # Probe liveness first: a worker can publish completion and exit
+            # between an earlier file probe and a later PID probe.
+            worker_alive = alive(record.get('pid'), record.get('pid_token'))
+            if not worker_alive and completion.exists():
                 finished = json.loads(completion.read_text()); states[key] = {**record, **finished}
                 if finished['status'] == 'complete': metadata[key] = finished.get('metadata', {})
                 write_event(root, {'event': 'finished', 'job': key, 'status': finished['status']})
                 if key in handles:
                     handles.pop(key).wait()
-            elif not alive(record.get('pid'), record.get('pid_token')):
+            elif not worker_alive:
                 states[key] = {**record, 'status': 'failed', 'error': 'Worker disappeared without validated completion', 'finished_at': now()}
             elif (root / 'tasks' / key / 'process.json').exists(): record['status'] = 'verifying'
         for key, causes in dependency_blocks(jobs, states).items(): states[key] = {'status': 'blocked', 'failed_dependencies': causes}

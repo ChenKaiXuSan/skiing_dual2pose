@@ -486,10 +486,10 @@ def _collect_alpha_tensor(
 
 
 def _alpha_joint_names() -> list[str]:
-    map_module = importlib.import_module("map_config")
-    common_mapping = getattr(map_module, "UNITY_MALE_MAPPING", None)
+    map_module = importlib.import_module("dual2pose.map_config")
+    common_mapping = getattr(map_module, "FILTERED_KPTS_MAPPING", None)
     if isinstance(common_mapping, dict) and common_mapping:
-        return [common_mapping[idx] for idx in sorted(common_mapping)]
+        return list(common_mapping.values())
     return []
 
 
@@ -776,6 +776,10 @@ def init_params(config: DictConfig | None = None) -> None:
         "seed",
         "joint_subset",
         "units",
+        "canonical_mode",
+        "evaluation_protocol",
+        "output_alignment",
+        "reduction",
     ]
     with open(summary_csv, "w", encoding="utf-8", newline="") as fp:
         writer = csv.DictWriter(fp, fieldnames=fieldnames)

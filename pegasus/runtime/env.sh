@@ -1,0 +1,18 @@
+# Source this file before launching training/evaluation on Pegasus.
+export DUAL2POSE_PROJECT_BASE="${DUAL2POSE_PROJECT_BASE:-/work/HP260146/chenkaixu}"
+export DUAL2POSE_REPO="${DUAL2POSE_REPO:-$DUAL2POSE_PROJECT_BASE/Skiing_Canonical_DualView_3D_Pose_PyTorch}"
+export DUAL2POSE_DATA_ROOT="${DUAL2POSE_DATA_ROOT:-$DUAL2POSE_PROJECT_BASE/Skiing_Canonical_DualView_3D_Pose_PyTorch_data}"
+export DUAL2POSE_RUNTIME="${DUAL2POSE_RUNTIME:-$DUAL2POSE_PROJECT_BASE/Skiing_Canonical_DualView_3D_Pose_PyTorch_runtime}"
+export DUAL2POSE_UNITY_ROOT="$DUAL2POSE_DATA_ROOT/skiing_unity_dataset"
+export DUAL2POSE_SKI_ROOT="$DUAL2POSE_DATA_ROOT/Ski-PosePTZ-CameraDataset-png"
+export DUAL2POSE_POCKET3_ROOT="$DUAL2POSE_DATA_ROOT/skiing_pocket3_20261012"
+export DUAL2POSE_RAW_ROOT="$DUAL2POSE_DATA_ROOT"
+export DUAL2POSE_PYTHON="$DUAL2POSE_RUNTIME/envs/torch/bin/python"
+export DUAL2POSE_TF_PYTHON="$DUAL2POSE_RUNTIME/envs/metapose/bin/python"
+export PYTHONPATH="$DUAL2POSE_REPO${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONNOUSERSITE=1
+export MPLBACKEND=Agg
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-4}"
+export MPLCONFIGDIR="$DUAL2POSE_RUNTIME/cache/matplotlib"
+export XDG_CACHE_HOME="$DUAL2POSE_RUNTIME/cache"

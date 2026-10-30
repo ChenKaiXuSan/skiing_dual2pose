@@ -491,6 +491,10 @@ def init_params(config: DictConfig | None = None) -> None:
         "seed",
         "joint_subset",
         "units",
+        "canonical_mode",
+        "evaluation_protocol",
+        "output_alignment",
+        "reduction",
     ]
     with open(summary_csv, "w", encoding="utf-8", newline="") as fp:
         writer = csv.DictWriter(fp, fieldnames=fieldnames)

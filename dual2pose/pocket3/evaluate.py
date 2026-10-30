@@ -75,7 +75,7 @@ COMPARISON_FRAME = {
     "auxiliary_recanonicalization": "common13 hips/neck, face_sign=false",
 }
 
-DEFAULT_ROOT = Path("/home/kaixu_chen/skiing/data/skiing_pocket3_20261012")
+DEFAULT_ROOT = Path(os.environ.get("DUAL2POSE_POCKET3_ROOT", "/home/kaixu_chen/skiing/data/skiing_pocket3_20261012"))
 # Override with DUAL2POSE_CKPT.  The archived manuscript checkpoint below was
 # trained under the first-frame protocol and is rejected by the protocol check;
 # point this at a checkpoint trained with dual2pose/train_unity.py on this branch.

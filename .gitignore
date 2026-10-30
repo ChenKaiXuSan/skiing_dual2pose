@@ -136,3 +136,5 @@ ckpt/
 # Overleaf history of the conference source (its .git was renamed .git_overleaf
 # so the files can be tracked here).
 paper/
+# Local paper review/render artifacts; preserve on disk, exclude from code commits.
+reports/
