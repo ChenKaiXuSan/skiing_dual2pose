@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from dual2pose.runtime_paths import input_path
 from types import SimpleNamespace
 
 FRONTENDS = ('videopose3d', 'poseformer', 'motionbert')
@@ -337,7 +338,7 @@ def verify_frontend_assets(spec):
                 if key in seen:
                     raise ValueError('Frontend streams overlap across train/val/test')
                 seen.add(key)
-                pose_path = Path(entry['pose_path'])
+                pose_path = input_path(entry['pose_path'])
                 if not pose_path.is_absolute():
                     pose_path = path.parent / pose_path
                 with np.load(pose_path, allow_pickle=False) as arrays:

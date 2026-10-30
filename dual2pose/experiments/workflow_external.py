@@ -13,6 +13,7 @@ import json
 import math
 import os
 from pathlib import Path
+from dual2pose.runtime_paths import input_path
 import shutil
 from types import SimpleNamespace
 
@@ -83,7 +84,7 @@ def verify_raw_cache(root, datasets=None):
                 for start in range(0, len(value), 1024):
                     if not np.isfinite(value[start:start+1024]).all():
                         raise ValueError(f'Nonfinite raw cache: {directory}/{name}')
-            if sha(m['index']) != m['index_sha256']:
+            if sha(input_path(m['index'])) != m['index_sha256']:
                 raise ValueError(f'Raw index hash mismatch: {m["index"]}')
             samples = (directory/'samples.jsonl').read_text().splitlines()
             if len(samples) != m['sample_count'] or [json.loads(s)['index'] for s in samples] != list(range(len(samples))):

@@ -27,3 +27,5 @@ The job creates a unique runtime/runs directory and refuses an existing output p
 Fresh production commands must also set explicit new output directories. Preserve archived manifests and their original path/hash provenance; do not restart old workstation-specific workflow state files. Pocket3 supports `DUAL2POSE_POCKET3_ROOT` or `--dataset-root`. Hydra datasets use the Unity/Ski variables in env.sh and map archived index paths without modifying the index JSON.
 
 Do not edit or regenerate manuscript files as part of runtime setup. Do not overwrite historical results. Old migration archives and conflict copies remain available; inspect the migration conflict report before choosing a newer paper version.
+
+Full inventory and the prepared multi-node DAG are documented in `docs/pegasus_full_chain_20261030.md`. `chain.py prepare` never submits jobs; independent ready jobs may later be submitted to separate gen_S nodes. Archived input paths are relocated at read time without rewriting their manifests.

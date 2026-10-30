@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 from pathlib import Path
+from dual2pose.runtime_paths import input_path
 import subprocess
 import sys
 import time
@@ -59,7 +60,7 @@ def prepare_inputs(cache_dir, dataset_root, limit=0, workers=4):
     for name in ('left.npy','right.npy','frames.npy','samples.jsonl'):
         if sha256(cache/name) != manifest['files'][name]:
             raise ValueError(f'Cache checksum mismatch: {name}')
-    index = Path(manifest['index'])
+    index = input_path(manifest['index'])
     if sha256(index) != manifest['index_sha256']:
         raise ValueError('Source index checksum mismatch')
     samples = [json.loads(row) for row in (cache/'samples.jsonl').read_text().splitlines()]

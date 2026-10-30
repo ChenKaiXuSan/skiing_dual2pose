@@ -2,6 +2,7 @@
 import argparse
 import json
 from pathlib import Path
+from dual2pose.runtime_paths import input_path
 import numpy as np
 import torch
 from dual2pose.eval.metapose_inputs import sha256, finite
@@ -35,7 +36,7 @@ def evaluate(run_dir, control_metrics=None, output_dir=None, prediction_origin="
     output_dir = Path(output_dir) if output_dir is not None else run_dir/'per_frame_common13_v1'
     if output_dir.exists():
         raise FileExistsError('Refusing to overwrite existing evaluation directory')
-    cache = Path(report['native_test_cache'])
+    cache = input_path(report['native_test_cache'])
     m = json.loads((cache/'manifest.json').read_text())
     if sha256(cache/'manifest.json') != report['native_test_manifest_sha256'] or m['split'] != 'test':
         raise ValueError('Native test protocol manifest mismatch')

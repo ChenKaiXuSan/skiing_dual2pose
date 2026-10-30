@@ -13,6 +13,7 @@ import json
 import math
 import os
 from pathlib import Path
+from dual2pose.runtime_paths import input_path
 from typing import Any
 
 PROTOCOL = {'name': 'common13_direct_per_frame_v1', 'joint_subset': 'common13',
@@ -417,7 +418,7 @@ def _audit_manifest(manifest_path, *, rgb=False):
         if key in keys:
             raise ValueError(f'Duplicate raw stream: {key}')
         keys.add(key)
-        pose_path = Path(entry['pose_path'])
+        pose_path = input_path(entry['pose_path'])
         if not pose_path.is_absolute():
             pose_path = manifest_path.parent / pose_path
         with np.load(pose_path, allow_pickle=False) as arrays:
@@ -483,7 +484,7 @@ def _prepare_c07(args):
         p = Path(args.source) / condition / 'frontend_manifest.json'
         manifests[str(p.resolve())] = _sha(p)
         for entry in manifest['entries']:
-            files[entry['path']] = entry['sha256']
+            files[str(input_path(entry['path']).resolve())] = entry['sha256']
     for filename in ('contract.json', 'required_frames_manifest.json'):
         p = Path(args.source) / filename
         files[str(p.resolve())] = _sha(p)

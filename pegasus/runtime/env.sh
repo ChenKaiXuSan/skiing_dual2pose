@@ -16,3 +16,8 @@ export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"
 export MKL_NUM_THREADS="${MKL_NUM_THREADS:-4}"
 export MPLCONFIGDIR="$DUAL2POSE_RUNTIME/cache/matplotlib"
 export XDG_CACHE_HOME="$DUAL2POSE_RUNTIME/cache"
+# Resolve archived input references at read time; never rewrite saved manifests.
+export DUAL2POSE_INPUT_PATH_MAP="$(python3 -c 'import json,os; b="/home/kaixu_chen"; print(json.dumps({b+"/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch":os.environ["DUAL2POSE_REPO"], b+"/skiing/data":os.environ["DUAL2POSE_DATA_ROOT"], b+"/data/skiing":os.environ["DUAL2POSE_DATA_ROOT"]}))')"
+export DECIWATCH_REPO="$DUAL2POSE_REPO/.cache/external_baselines/DeciWatch"
+export STRIDE_REPO="$DUAL2POSE_REPO/.cache/external_baselines/STRIDE"
+export METAPOSE_REPO="$DUAL2POSE_REPO/.cache/external_baselines/google-research"

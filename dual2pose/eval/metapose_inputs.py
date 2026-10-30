@@ -5,6 +5,7 @@ from functools import lru_cache
 import hashlib
 import json
 from pathlib import Path
+from dual2pose.runtime_paths import input_path
 import numpy as np
 
 
@@ -111,7 +112,7 @@ class NativeInputs:
         for name in ('left.npy', 'right.npy', 'frames.npy', 'samples.jsonl'):
             if sha256(self.cache/name) != m['files'][name]:
                 raise ValueError(f'Input hash mismatch: {name}')
-        index = Path(m['index'])
+        index = input_path(m['index'])
         if sha256(index) != m['index_sha256']:
             raise ValueError('Index hash mismatch')
         samples = [json.loads(s) for s in (self.cache/'samples.jsonl').read_text().splitlines()]

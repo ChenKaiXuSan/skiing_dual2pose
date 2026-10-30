@@ -2,6 +2,7 @@
 from __future__ import annotations
 import csv
 from pathlib import Path
+from dual2pose.runtime_paths import input_path
 from types import SimpleNamespace
 import numpy as np
 import torch
@@ -140,7 +141,7 @@ def realworld(ctx):
     repo=Path(ctx['repo']);old=Path(ctx['old_root']);paper=repo/'paper/ieee_access_20261027'
     device=torch.device('cuda:0');torch.set_num_threads(4)
     frozen_ckpt=checkpoints(ctx)['unity'];frozen=ep.load_model(frozen_ckpt,device)
-    person=Path('/home/kaixu_chen/skiing/data/sam3d_body_results/person')
+    person=input_path('/home/kaixu_chen/skiing/data/sam3d_body_results/person')
     rows=[];allposes=[];images=[];input_hashes={}
     for run,prefix,fid,start in [('pro_2','a',1231,1216),('run_4','b',180,165)]:
         seqs=[];pics=[]

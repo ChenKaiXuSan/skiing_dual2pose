@@ -12,6 +12,7 @@ from collections import Counter
 import json
 import os
 from pathlib import Path
+from dual2pose.runtime_paths import input_path
 import time
 import numpy as np
 
@@ -110,7 +111,7 @@ def load_inputs(frontend, baseline):
         manifest = json.loads((frontend/name/'frontend_manifest.json').read_text())
         if manifest['status'] != 'complete' or manifest['run_signature'] != contract['run_signature']:
             raise RuntimeError(f'Incomplete/incompatible frontend: {name}')
-        expected_hashes = {entry['path']: entry['sha256'] for entry in manifest['entries']}
+        expected_hashes = {str(input_path(entry['path']).resolve()): entry['sha256'] for entry in manifest['entries']}
         if len(expected_hashes) != len(required['streams']):
             raise RuntimeError('Incomplete stream manifest')
         store = {}

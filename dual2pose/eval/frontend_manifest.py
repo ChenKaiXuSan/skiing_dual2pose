@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+from dual2pose.runtime_paths import input_path
 from typing import Any, Dict, Iterable, Mapping, Tuple
 
 import numpy as np
@@ -96,7 +97,7 @@ class FrontEndManifest:
                     str(raw_entry["action_id"]),
                     str(raw_entry["camera_id"]),
                 )
-                raw_pose_path = Path(str(raw_entry["pose_path"]))
+                raw_pose_path = input_path(str(raw_entry["pose_path"]))
             except KeyError as exc:
                 raise ValueError(f"Manifest entry is missing {exc.args[0]!r}") from exc
             if key in entries:
