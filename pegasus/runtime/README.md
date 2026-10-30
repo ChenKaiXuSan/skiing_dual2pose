@@ -19,9 +19,7 @@ Source `pegasus/runtime/env.sh` before running commands. PyTorch 2.11.0+cu126 an
 ```bash
 cd /work/HP260146/chenkaixu/Skiing_Canonical_DualView_3D_Pose_PyTorch
 source pegasus/runtime/env.sh
-qsub -A HP260146 -q gen_S \
-  -o "$DUAL2POSE_RUNTIME/setup/smoke.stdout" \
-  -e "$DUAL2POSE_RUNTIME/setup/smoke.stderr" pegasus/runtime/smoke.pbs
+bash pegasus/runtime/submit_smoke.sh
 ```
 
 The job creates a unique runtime/runs directory and refuses an existing output path. It checks CUDA backward execution, Unity and Ski training plus test entrypoints with one batch, Pocket3 training/validation/test with a one-epoch budget, and MetaPose training-frame updates plus HDF5 reload/inference. Each command has its own log and status. These are runtime diagnostics, **not scientific results**; one batch/epoch does not establish reproduction accuracy. RGB-to-SAM3D inference and every external baseline's full training are not covered by this smoke job.
