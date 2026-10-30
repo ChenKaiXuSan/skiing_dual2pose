@@ -8,7 +8,7 @@
 
 最终准备计划：
 
-`/work/HP260146/chenkaixu/Skiing_Canonical_DualView_3D_Pose_PyTorch_runtime/plans/full_chain_20261030_final/`
+`/work/HP260146/chenkaixu/Skiing_Canonical_DualView_3D_Pose_PyTorch_runtime/plans/full_chain_20261030_final_v2/`
 
 该目录包含 `plan.json`、冻结的 `source/` 与 `source_hashes.json`、各任务 `pbs/`、新输出 `main/`、`core/`、`results/`、`supplement/`，以及 `tasks/`、`submissions/`、`receipts/`。准备阶段后三者为空。v1/v2/v3 setup 与早期 plans 仅为配置诊断快照，保留作为审核记录，不作为后续正式入口。
 
@@ -25,7 +25,7 @@
 ```bash
 cd /work/HP260146/chenkaixu/Skiing_Canonical_DualView_3D_Pose_PyTorch
 source pegasus/runtime/env.sh
-plan="$DUAL2POSE_RUNTIME/plans/full_chain_20261030_final"
+plan="$DUAL2POSE_RUNTIME/plans/full_chain_20261030_final_v2"
 "$DUAL2POSE_PYTHON" -m pegasus.runtime.chain ready --plan "$plan"
 ```
 
@@ -35,7 +35,7 @@ plan="$DUAL2POSE_RUNTIME/plans/full_chain_20261030_final"
 
 旧 manifest 中的工作站路径通过只读 `DUAL2POSE_INPUT_PATH_MAP` 解析，不改写原文件及其哈希。计划命令的 Python、数据、缓存、baseline 源码和结果路径都使用 Pegasus 路径。无映射或缺失输入会报错，不静默替代。
 
-每个节点执行前验证冻结源码、上游产物与 checkpoint。完成回执原子发布且不覆盖已有回执。最终汇总重新验证全部任务的结果、训练历史与选模记录，然后输出 mm 主表；失败或缺失不能标为完整。
+每个节点执行前验证冻结源码、上游产物与 checkpoint。完成回执原子发布且不覆盖已有回执。52 项遮挡/时间偏移的 alpha CSV、正确关节标签和两类图均须验收。最终汇总重新验证全部任务的结果、训练历史与选模记录，然后输出 mm 主表；失败或缺失不能标为完整。
 
 旧结果仍保留在仓库 logs，论文仍保留原目录。新训练不会写入这些历史结果目录。直接重新运行老的工作站 manifest 不受本入口保护，不能拿它恢复本计划。
 
@@ -53,6 +53,6 @@ MetaPose Ski 重评分与既有结果数值完全一致：MPJPE 355.2573 mm，PA
 
 setup/chain_20261030_v2 的路径诊断任务 196904.nqsv 通过：31 个入口可导入；5 个 raw cache 索引哈希一致；15 份前端/RGB manifest 路径与 C07 的 2,160 个流路径可读取。官方 DeciWatch、STRIDE、google-research checkout 均无改动。196915.nqsv 对一个训练窗口的 STRIDE 串行/分片比较最大绝对差为 0。
 
-本地针对路径、调度保护、baseline 适配及协议的测试为 115 passed、2 subtests passed；有本地 GPU 故障引起的 NVML warning。审核发现的并发回执、提交失败重试、最终结果漏验证已修复，并单独复核通过。
+本地针对路径、调度保护、baseline 适配及协议的测试为 116 passed、2 subtests passed；有本地 GPU 故障引起的 NVML warning。审核发现的并发回执、提交失败重试、最终结果漏验证已修复，并单独复核通过。
 
 以上是运行兼容性和局部数值一致性证据，不代表在 Pegasus 已完成 38 套正式实验。原始 RGB 到各前端的重新推理不在此次诊断范围；本轮沿用已迁移、已核验的 raw 前端预测，重新训练/评分融合与比较方法。

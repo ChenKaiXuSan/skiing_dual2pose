@@ -7,6 +7,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -188,7 +189,31 @@ def validate_job(job,plan,plan_dir):
     if job['family']=='core':return flow.verify_core(job,ctx)
     if job['family']=='cluster':return validate_cluster(job,plan)
     if job['family']=='completion':return flow.family_module('completion').validate(job,read(Path(plan_dir)/'supplement/context.json'))
-    return flow.family_module(job['family']).validate(job,ctx)
+    metadata=flow.family_module(job['family']).validate(job,ctx)
+    if job['id'].startswith(('eval_mask_','eval_offset_')):
+        metadata.setdefault('artifacts',{}).update(alpha_artifacts(Path(job['env']['EVAL_OUTPUT_ROOT'])))
+    return metadata
+
+
+def alpha_artifacts(directory):
+    # The corrected 52 exports are required even when new training changes
+    # their values; historic rerun-equality checks do not apply to new weights.
+    from dual2pose.map_config import FILTERED_KPTS_MAPPING
+    files=list(Path(directory).rglob('alpha_summary_*.csv'))
+    if len(files)!=1:raise ValueError('Missing or ambiguous alpha export')
+    with files[0].open() as f:rows=list(csv.DictReader(f))
+    if ([r['joint_name'] for r in rows]!=list(FILTERED_KPTS_MAPPING.values()) or
+            [int(r['joint_index']) for r in rows]!=list(range(len(rows)))):
+        raise ValueError('Incorrect alpha joint labels or order')
+    for row in rows:
+        mean,std,right=(float(row[k]) for k in ('alpha_mean','alpha_std','right_mean'))
+        if not all(math.isfinite(x) for x in (mean,std,right)) or not (0<=mean<=1 and 0<=right<=1 and std>=0 and math.isclose(mean+right,1,abs_tol=1e-6)):
+            raise ValueError('Invalid alpha statistics')
+    for pattern in ('alpha_joint_bar_*.png','alpha_time_joint_heatmap_*.png'):
+        figures=list(files[0].parent.glob(pattern))
+        if len(figures)!=1 or figures[0].stat().st_size==0:raise ValueError('Missing alpha figure')
+        files.extend(figures)
+    return {str(p):sha(p) for p in files}
 
 
 def validate_cluster(job,plan):

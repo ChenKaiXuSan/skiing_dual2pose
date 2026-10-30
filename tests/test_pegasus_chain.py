@@ -85,3 +85,20 @@ def test_final_coverage_revalidates_results_before_publication(tmp_path,monkeypa
     monkeypatch.setattr(m,'validate_job',missing,raising=False)
     with pytest.raises(FileNotFoundError,match='deleted Pocket summary'):m.summarize(tmp_path)
     assert not (tmp_path/'final').exists()
+
+
+def test_alpha_export_is_required_and_included_in_receipt(tmp_path):
+    m=module()
+    with pytest.raises(ValueError,match='alpha export'):m.alpha_artifacts(tmp_path)
+    import csv
+    from dual2pose.map_config import FILTERED_KPTS_MAPPING
+    path=tmp_path/'alpha_summary_test.csv'
+    with path.open('w') as f:
+        w=csv.DictWriter(f,fieldnames=['joint_index','joint_name','alpha_mean','alpha_std','right_mean']);w.writeheader()
+        for i,name in enumerate(FILTERED_KPTS_MAPPING.values()):w.writerow(dict(joint_index=i,joint_name=name,alpha_mean=.4,alpha_std=.1,right_mean=.6))
+    with pytest.raises(ValueError,match='alpha figure'):m.alpha_artifacts(tmp_path)
+    (tmp_path/'alpha_joint_bar_test.png').write_bytes(b'figure')
+    (tmp_path/'alpha_time_joint_heatmap_test.png').write_bytes(b'figure')
+    assert len(m.alpha_artifacts(tmp_path))==3
+    path.write_text(path.read_text().replace('0.4','nan',1))
+    with pytest.raises(ValueError,match='alpha statistics'):m.alpha_artifacts(tmp_path)
