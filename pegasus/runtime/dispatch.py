@@ -120,6 +120,41 @@ def check_receipt(plan, job_id, receipt):
         return {'status': 'failed', 'error': repr(exc)}
 
 
+def imported_checks(plan, job_ids):
+    """Accept completed predecessor work only with immutable evidence and logs."""
+    path = Path(plan) / 'recovery_imports.json'
+    if not path.exists():
+        return {}
+    checks = {}
+    for job_id, entry in read(path).items():
+        if job_id not in job_ids:
+            raise ValueError('Unknown imported job: ' + job_id)
+        source = Path(entry['source_plan'])
+        receipt = Path(entry['source_receipt'])
+        if receipt.resolve() != (source / 'receipts' / (job_id + '.json')).resolve():
+            raise ValueError('Invalid import receipt path: ' + job_id)
+        if sha(source / 'plan.json') != entry['source_plan_sha256'] or sha(receipt) != entry['source_receipt_sha256']:
+            raise ValueError('Changed import provenance: ' + job_id)
+        if sha(Path(plan) / 'receipts' / (job_id + '.json')) != sha(receipt):
+            raise ValueError('Changed imported receipt: ' + job_id)
+        previous = read(source / 'dispatcher/state.json')
+        if previous['checks'].get(job_id, {}).get('status') != 'complete' or not previous['requests'].get(job_id, {}).get('final_log_check'):
+            raise ValueError('Unreviewed import: ' + job_id)
+        if (Path(plan) / 'submissions' / job_id).exists():
+            raise ValueError('Imported task also submitted: ' + job_id)
+        checked = check_receipt(source, job_id, read(receipt))
+        if checked['status'] != 'complete':
+            raise ValueError('Invalid import ' + job_id + ': ' + str(checked))
+        for artifact, digest in entry.get('artifacts', {}).items():
+            if sha(artifact) != digest:
+                raise ValueError('Changed imported output: ' + artifact)
+            destination = Path(plan) / Path(artifact).relative_to(source)
+            if not destination.is_symlink() or destination.resolve() != Path(artifact).resolve():
+                raise ValueError('Changed imported output link: ' + str(destination))
+        checks[job_id] = {**checked, 'imported_from': str(source)}
+    return checks
+
+
 def run(plan, max_inflight=64, interval=30):
     plan = Path(plan).resolve()
     control = plan / 'dispatcher'
@@ -142,6 +177,7 @@ def run(plan, max_inflight=64, interval=30):
             'attempts': {}, 'created': time.time(), 'controller_sha256': sha(__file__)}
         if state['plan_sha256'] != sha(plan / 'plan.json'):
             raise ValueError('Plan changed since controller start')
+        state['checks'].update(imported_checks(plan, set(by_id)))
 
         def event(kind, **data):
             with (control / 'events.jsonl').open('a') as f:

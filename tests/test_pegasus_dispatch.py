@@ -154,3 +154,45 @@ def test_absent_request_waits_for_staged_logs_then_blocks_late_error(tmp_path,mo
     monkeypatch.setattr(d.time,'time',lambda:1000+len(ticks)*31)
     assert d.run(tmp_path)==2
     assert d.read(tmp_path/'dispatcher/state.json')['checks']['a']['status']=='failed'
+
+
+def test_import_complete_receipts_preserves_original_evidence(tmp_path):
+    from pegasus.runtime.chain import write_new, sha
+    old=tmp_path/'old'; new=tmp_path/'new'
+    artifact=tmp_path/'metric.json';artifact.write_text('{}')
+    write_new(old/'plan.json',{'jobs':[{'id':'a'}]})
+    receipt={'status':'complete','artifacts':{str(artifact):sha(artifact)}}
+    write_new(old/'receipts/a.json',receipt);write_new(new/'receipts/a.json',receipt)
+    write_new(old/'dispatcher/state.json',{'checks':{'a':{'status':'complete'}},'requests':{'a':{'final_log_check':True}}})
+    for filename in ('tasks/a/run.log','submissions/a/stdout.log','submissions/a/stderr.log'):
+        path=old/filename;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('done')
+    write_new(new/'recovery_imports.json',{'a':{'source_plan':str(old),'source_plan_sha256':sha(old/'plan.json'),'source_receipt':str(old/'receipts/a.json'),'source_receipt_sha256':sha(old/'receipts/a.json')}})
+    assert d.imported_checks(new,{'a'})['a']['status']=='complete'
+    artifact.write_text('modified')
+    with pytest.raises(ValueError,match='import'):
+        d.imported_checks(new,{'a'})
+
+
+def test_import_rejects_unreviewed_or_unrecognized_receipt(tmp_path):
+    from pegasus.runtime.chain import write_new
+    write_new(tmp_path/'recovery_imports.json',{'unknown':{}})
+    with pytest.raises(ValueError,match='Unknown'):
+        d.imported_checks(tmp_path,{'a'})
+
+
+def test_import_rejects_repointed_supporting_output(tmp_path):
+    from pegasus.runtime.chain import write_new, sha
+    old=tmp_path/'old'; new=tmp_path/'new'
+    write_new(old/'plan.json',{'jobs':[{'id':'a'}]})
+    support=old/'results/history.json';write_new(support,{'epoch':100})
+    linked=new/'results/history.json';linked.parent.mkdir(parents=True);linked.symlink_to(support)
+    receipt={'status':'complete','artifacts':{}}
+    write_new(old/'receipts/a.json',receipt);write_new(new/'receipts/a.json',receipt)
+    write_new(old/'dispatcher/state.json',{'checks':{'a':{'status':'complete'}},'requests':{'a':{'final_log_check':True}}})
+    for filename in ('tasks/a/run.log','submissions/a/stdout.log','submissions/a/stderr.log'):
+        path=old/filename;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('done')
+    write_new(new/'recovery_imports.json',{'a':{'source_plan':str(old),'source_plan_sha256':sha(old/'plan.json'),'source_receipt':str(old/'receipts/a.json'),'source_receipt_sha256':sha(old/'receipts/a.json'),'artifacts':{str(support):sha(support)}}})
+    assert d.imported_checks(new,{'a'})['a']['status']=='complete'
+    linked.unlink();linked.write_text(support.read_text())
+    with pytest.raises(ValueError,match='link'):
+        d.imported_checks(new,{'a'})
