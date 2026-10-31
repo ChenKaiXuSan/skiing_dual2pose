@@ -36,6 +36,7 @@ from dual2pose.models.dlt_residual_baseline import (
     dlt_residual_loss,
     ski_predicted_pelvis_relative,
 )
+from dual2pose.runtime_paths import input_path
 
 
 EXPECTED = {
@@ -158,7 +159,7 @@ def _load_verified_split(root: Path, dataset: str, split: str) -> SplitInputs:
     _validate_plain_file(
         cache_dir / "samples.jsonl", cache_files["samples.jsonl"]
     )
-    if sha256(Path(cache_manifest["index"])) != cache_manifest["index_sha256"]:
+    if sha256(input_path(cache_manifest["index"])) != cache_manifest["index_sha256"]:
         raise RuntimeError(f"Current cache index differs for {dataset}/{split}")
     pose_arrays = {}
     for name in ("left", "right", "target"):
@@ -199,7 +200,7 @@ def _load_verified_split(root: Path, dataset: str, split: str) -> SplitInputs:
         raise RuntimeError(f"Geometry/cache frame hash mismatch for {dataset}/{split}")
     if geometry_manifest.get("cache_samples_sha256") != cache_files["samples.jsonl"]:
         raise RuntimeError(f"Geometry/cache sample hash mismatch for {dataset}/{split}")
-    if sha256(Path(geometry_manifest["source_index"])) != geometry_manifest["source_index_sha256"]:
+    if sha256(input_path(geometry_manifest["source_index"])) != geometry_manifest["source_index_sha256"]:
         raise RuntimeError(f"Current geometry index differs for {dataset}/{split}")
     files = geometry_manifest.get("files", {})
     hashes = geometry_manifest.get("output_sha256", {})

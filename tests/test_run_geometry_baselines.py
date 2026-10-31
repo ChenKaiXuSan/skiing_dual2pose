@@ -1,12 +1,16 @@
 from pathlib import Path
+import json
 import tempfile
 import unittest
 
 import numpy as np
+import pytest
 import torch
 
 from dual2pose.experiments.run_main_baselines import MetricAccumulator
 from dual2pose.experiments.run_geometry_baselines import (
+    EXPECTED,
+    _load_verified_split,
     _require_new_paths,
     _validate_array_file,
 )
@@ -17,6 +21,96 @@ from dual2pose.models.dlt_residual_baseline import (
     dlt_residual_loss,
     ski_predicted_pelvis_relative,
 )
+
+
+@pytest.fixture
+def geometry_inputs(tmp_path, monkeypatch):
+    """A complete on-disk export with small arrays and independent source indices."""
+    monkeypatch.setitem(EXPECTED["unity"], "test", (2, 3, 15, 3))
+    root = tmp_path / "export"
+    cache = root / "cache/unity/test"
+    geometry = root / "geometry/unity/test"
+    cache.mkdir(parents=True)
+    geometry.mkdir(parents=True)
+    indices = tmp_path / "current"
+    indices.mkdir()
+    (indices / "cache.json").write_text('{"kind": "raw"}')
+    (indices / "geometry.json").write_text('{"kind": "calibrated"}')
+    for name in ("left", "right", "target"):
+        np.save(cache / f"{name}.npy", np.ones((2, 3, 15, 3), dtype=np.float32))
+    np.save(cache / "frames.npy", np.arange(6, dtype=np.int64).reshape(2, 3))
+    (cache / "samples.jsonl").write_text('{}\n{}\n')
+    cache_hashes = {path.name: sha256(path) for path in cache.iterdir()}
+    cache_manifest = {
+        "dataset": "unity", "split": "test", "sample_count": 2,
+        "time_window": 3, "num_joints": 15,
+        "representation": "raw_pre_batch_canonicalization",
+        "files": cache_hashes, "index": str(indices / "cache.json"),
+        "index_sha256": sha256(indices / "cache.json"),
+    }
+    files = {}
+    for name in ("dlt", "robust", "dlt_valid", "robust_valid", "gate",
+                 "reprojection", "interpolated", "fallback"):
+        pose = name in {"dlt", "robust"}
+        dtype = np.float32 if pose or name == "reprojection" else np.bool_
+        np.save(geometry / f"{name}.npy", np.ones((2, 3, 15, 3) if pose else (2, 3, 15), dtype=dtype))
+        files[name] = f"{name}.npy"
+    geometry_manifest = {
+        "schema_version": 1, "dataset": "unity", "split": "test",
+        "shape": [2, 3, 15, 3], "samples": 2, "frames_per_sample": 3,
+        "joints": 15, "coordinate_space": "calibrated_world_m",
+        "estimated_2d_only": True, "gt_2d_used": False,
+        "gt_fitted_transform_used": False, "gate_threshold_px": 25.0,
+        "cache_frames_sha256": cache_hashes["frames.npy"],
+        "cache_samples_sha256": cache_hashes["samples.jsonl"],
+        "source_index": str(indices / "geometry.json"),
+        "source_index_sha256": sha256(indices / "geometry.json"),
+        "files": files,
+        "output_sha256": {name: sha256(geometry / name) for name in files.values()},
+        "counts": {"points": 90, "dlt_valid": 90, "robust_valid": 90},
+    }
+    manifests = [(cache / "manifest.json", cache_manifest, "index", "cache.json"),
+                 (geometry / "manifest.json", geometry_manifest, "source_index", "geometry.json")]
+    monkeypatch.delenv("DUAL2POSE_INPUT_PATH_MAP", raising=False)
+    return root, indices, manifests
+
+
+@pytest.mark.parametrize("relocated", [(), (0,), (1,), (0, 1)])
+def test_geometry_loader_reads_relocated_indices_without_rewriting_manifests(
+    geometry_inputs, monkeypatch, relocated,
+):
+    root, indices, manifests = geometry_inputs
+    archived = indices.parent / "archived"
+    if relocated:
+        monkeypatch.setenv("DUAL2POSE_INPUT_PATH_MAP", json.dumps({str(archived): str(indices)}))
+    before = {}
+    for number, (path, manifest, key, filename) in enumerate(manifests):
+        if number in relocated:
+            manifest[key] = str(archived / filename)
+        path.write_text(json.dumps(manifest))
+        before[path] = path.read_bytes()
+
+    result = _load_verified_split(root, "unity", "test")
+
+    np.testing.assert_array_equal(result.target, np.ones((2, 3, 15, 3)))
+    np.testing.assert_array_equal(result.dlt, np.ones((2, 3, 15, 3)))
+    assert result.cache_manifest == manifests[0][1]
+    assert result.geometry_manifest == manifests[1][1]
+    assert {path: path.read_bytes() for path in before} == before
+
+
+@pytest.mark.parametrize("corrupted, message", [(0, "cache index differs"), (1, "geometry index differs")])
+def test_geometry_loader_rejects_tampered_relocated_index(geometry_inputs, monkeypatch, corrupted, message):
+    root, indices, manifests = geometry_inputs
+    archived = indices.parent / "archived"
+    monkeypatch.setenv("DUAL2POSE_INPUT_PATH_MAP", json.dumps({str(archived): str(indices)}))
+    for path, manifest, key, filename in manifests:
+        manifest[key] = str(archived / filename)
+        path.write_text(json.dumps(manifest))
+    (indices / manifests[corrupted][3]).write_text("changed after export")
+
+    with pytest.raises(RuntimeError, match=message):
+        _load_verified_split(root, "unity", "test")
 
 
 class DLTResidualModelTests(unittest.TestCase):
