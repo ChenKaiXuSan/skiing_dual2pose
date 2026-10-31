@@ -50,6 +50,14 @@ from dual2pose.eval.multiseed_metrics import summarize_test_outputs_by_action
 logger = logging.getLogger(__name__)
 
 
+def build_data_module(config):
+    """Opt in to verified raw storage without changing the training protocol."""
+    if getattr(config.data.unity, "raw_cache_root", None):
+        from dual2pose.dataloader.unity_cached_data import VerifiedCacheUnityDataModule
+        return VerifiedCacheUnityDataModule(config)
+    return UnityDataModule(config)
+
+
 @hydra.main(
     version_base=None,
     config_path="../configs",  # * the config_path is relative to location of the python script
@@ -72,7 +80,7 @@ def init_params(config: DictConfig):
     monitor_mode = "min"
     ckpt_filename = "{epoch}-{val/loss:.4f}-{val/mpjpe:.4f}"
 
-    unity_data_module = UnityDataModule(config)
+    unity_data_module = build_data_module(config)
 
     # for the tensorboard
     tb_logger = TensorBoardLogger(
@@ -126,6 +134,11 @@ def init_params(config: DictConfig):
     )
 
     trainer.fit(classification_module, unity_data_module)
+
+    if hasattr(unity_data_module, "cache_provenance"):
+        provenance = Path(config.log_path) / "data_cache_provenance.json"
+        with provenance.open("x") as handle:
+            json.dump(unity_data_module.cache_provenance, handle, indent=2)
 
     # save_last may stay at the last top-k improvement in some Lightning
     # versions. Persist the terminal fit state before test reloads best weights.
