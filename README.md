@@ -15,6 +15,15 @@
 
 ## TL;DR
 
+### Choosing a branch
+
+| Branch | Purpose |
+| --- | --- |
+| [`master`](https://github.com/ChenKaiXuSan/skiing_dual2pose/tree/master) | Preserved pre-migration code baseline; remains the GitHub default branch. |
+| [`per-frame-canonicalization`](https://github.com/ChenKaiXuSan/skiing_dual2pose/tree/per-frame-canonicalization) | Current training, evaluation, and experiment orchestration with the per-frame protocol. |
+
+Use `per-frame-canonicalization` for current experiments. Record the exact commit with each run; legacy checkpoints and results require their original protocol. Manuscripts, author photos, logs, and checkpoints are stored separately and are not included in these code branches. See [branch roles and cleanup inventory](docs/branch_management.md).
+
 This repository implements a research pipeline for reconstructing stable 3D human poses from synchronized dual-view skiing videos. The current default model is `crossview_fusion`: it takes per-view 3D keypoints from SAM 3D Body, aligns them in a human-centric canonical coordinate system, exchanges information across views with attention, and fuses joints with an adaptive reliability gate.
 
 The main goal is to avoid explicit camera calibration while still using complementary information from two views.
