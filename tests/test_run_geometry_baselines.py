@@ -57,6 +57,7 @@ def geometry_inputs(tmp_path, monkeypatch):
         files[name] = f"{name}.npy"
     geometry_manifest = {
         "schema_version": 1, "dataset": "unity", "split": "test",
+        "camera_projection_convention": "unity_viewport_w_minus_1_v2",
         "shape": [2, 3, 15, 3], "samples": 2, "frames_per_sample": 3,
         "joints": 15, "coordinate_space": "calibrated_world_m",
         "estimated_2d_only": True, "gt_2d_used": False,
@@ -256,3 +257,12 @@ class GeometryRunnerSafetyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_geometry_loader_rejects_pre_correction_unity_cache(geometry_inputs):
+    root, _, manifests = geometry_inputs
+    for path, manifest, _, _ in manifests:
+        manifest.pop('camera_projection_convention', None)
+        path.write_text(json.dumps(manifest))
+    with pytest.raises(RuntimeError, match='camera_projection_convention'):
+        _load_verified_split(root, 'unity', 'test')

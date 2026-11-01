@@ -279,20 +279,39 @@ def build_dlt_residual_features(
     return ResidualFeatures(values=values, valid_mask=valid, feature_names=names)
 
 
+UNITY_PROJECTION_CONVENTION = "unity_viewport_w_minus_1_v2"
+
+
+def unity_intrinsic_matrix(intrinsic: Mapping[str, Any]) -> np.ndarray:
+    """Match viewport-derived annotations; repair only the known legacy exporter.
+
+    Unversioned exports used H/(2*tan(vertical_fov/2)) for fy and erroneously
+    multiplied fx by W/H. Annotations use (W-1, H-1), not (W, H). Versioned
+    exports already contain the effective focal lengths and must not be repaired
+    a second time. Never rewrite the archived camera JSON files.
+    """
+    width, height = float(intrinsic["width"]), float(intrinsic["height"])
+    fx, fy = float(intrinsic["fx"]), float(intrinsic["fy"])
+    cx, cy = float(intrinsic["cx"]), float(intrinsic["cy"])
+    if not np.isfinite([width, height, fx, fy, cx, cy]).all() or min(width, height) <= 1 or min(fx, fy) <= 0:
+        raise ValueError("Invalid Unity camera dimensions or focal lengths")
+    convention = intrinsic.get("projection_convention")
+    if convention is None:
+        if not np.isclose(fx, fy * width / height, rtol=1e-5, atol=1e-5):
+            raise ValueError("Unversioned Unity intrinsics do not match the known legacy exporter")
+        fx, fy = fy * (width - 1) / width, fy * (height - 1) / height
+    elif convention != UNITY_PROJECTION_CONVENTION:
+        raise ValueError(f"Unknown Unity projection convention: {convention}")
+    return np.array([[fx, 0., cx], [0., fy, cy], [0., 0., 1.]], dtype=np.float64)
+
+
 def unity_projection_matrix(root: Path, person_id: str, camera_id: str) -> np.ndarray:
-    """Array-submission Unity projection matrix, including Unity axis flips."""
+    """Annotation-consistent Unity projection, including Unity axis flips."""
     camera = camera_id.removeprefix("capture_")
     camera_dir = root / "data_pole_ski" / person_id / "cameras" / camera
     intrinsic = json.loads((camera_dir / "intrinsics.json").read_text(encoding="utf-8-sig"))
     extrinsic = json.loads((camera_dir / "extrinsics.json").read_text(encoding="utf-8-sig"))
-    k = np.array(
-        [
-            [float(intrinsic["fx"]), 0.0, float(intrinsic["cx"])],
-            [0.0, float(intrinsic["fy"]), float(intrinsic["cy"])],
-            [0.0, 0.0, 1.0],
-        ],
-        dtype=np.float64,
-    )
+    k = unity_intrinsic_matrix(intrinsic)
     world_to_camera = np.asarray(
         extrinsic["t_world_cam_4x4"], dtype=np.float64
     ).reshape(4, 4)
@@ -573,6 +592,7 @@ def export_split(
         "cache_frames_sha256": _sha256(frames_path),
         "cache_samples_sha256": _sha256(samples_path),
         "exporter_source_sha256": _sha256(Path(__file__)),
+        "camera_projection_convention": UNITY_PROJECTION_CONVENTION if dataset == "unity" else "ski_normalized_intrinsics_v1",
     }
     final_exists = [(output_dir / value).exists() for value in final_names.values()]
     partial_exists = [path.exists() for path in partials.values()]
@@ -677,6 +697,7 @@ def export_split(
         "cache_frames_sha256": expected_manifest["cache_frames_sha256"],
         "cache_samples_sha256": expected_manifest["cache_samples_sha256"],
         "exporter_source_sha256": expected_manifest["exporter_source_sha256"],
+        "camera_projection_convention": expected_manifest["camera_projection_convention"],
         "output_sha256": output_sha256,
         "array_geometry_provenance": "Array submission evaluate_large_unity_benchmark.py camera_projection_matrix/triangulate_point/project_points/reprojection_gated_triangulate_sequence; locally batched with explicit coverage and temporal fill",
         "ski_limitation": (

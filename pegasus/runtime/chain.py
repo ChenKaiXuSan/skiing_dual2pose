@@ -218,7 +218,17 @@ def alpha_artifacts(directory):
 
 def validate_cluster(job,plan):
     v=job['validation'];p=Path(v['path'])
-    if v['kind'] in ('stride_prepared','stride_shard'):
+    if v['kind']=='verified_artifacts':
+        report=read(p)
+        if report.get('all_required_results_available') is not True or not report.get('artifacts'):
+            raise ValueError('Incomplete artifact verification report')
+        files=[p]
+        for name,digest in report['artifacts'].items():
+            path=Path(name)
+            if not path.is_file() or sha(path)!=digest:
+                raise ValueError('Changed verified artifact: '+name)
+            files.append(path)
+    elif v['kind'] in ('stride_prepared','stride_shard'):
         import numpy as np
         r=read(p/'report.json')
         if v['kind']=='stride_prepared':

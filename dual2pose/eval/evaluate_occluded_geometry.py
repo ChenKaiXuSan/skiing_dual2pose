@@ -16,7 +16,7 @@ from dual2pose.runtime_paths import input_path
 import time
 import numpy as np
 
-from dual2pose.eval.main_baseline_geometry import triangulate_sequence, gate_dlt_result, unity_projection_matrix
+from dual2pose.eval.main_baseline_geometry import triangulate_sequence, gate_dlt_result, unity_projection_matrix, unity_intrinsic_matrix, UNITY_PROJECTION_CONVENTION
 from dual2pose.eval.run_matched_occlusion_frontend import (
     CONDITIONS, DEFAULT_DATA_ROOT, REPO_ROOT, validate_matched_stream, stream_output_path,
 )
@@ -139,8 +139,7 @@ def camera_matrices(data_root, pairs):
                 continue
             folder = data_root/'data_pole_ski'/key[0]/'cameras'/camera.removeprefix('capture_')
             intrinsic = json.loads((folder/'intrinsics.json').read_text(encoding='utf-8-sig'))
-            intrinsics[key] = np.array([[intrinsic['fx'], 0, intrinsic['cx']],
-                [0, intrinsic['fy'], intrinsic['cy']], [0, 0, 1]], np.float64)
+            intrinsics[key] = unity_intrinsic_matrix(intrinsic)
             projections[key] = unity_projection_matrix(data_root, *key)
             for name in ('intrinsics.json', 'extrinsics.json'):
                 hashes[str(folder/name)] = sha256(folder/name)
@@ -185,6 +184,7 @@ def run(args):
     records = {name: json.loads((args.baseline/f'results/unity/{name}.json').read_text())
                for name in ('canonfuse3d', 'dlt_mlp')}
     provenance = {'canonical_mode': 'per_frame', 'evaluation_protocol': dict(EVALUATION_PROTOCOL),
+        'camera_projection_convention': UNITY_PROJECTION_CONVENTION,
         'frontend_contract': contract, 'original_cache': cached,
         'frontend_manifest_sha256': {name: sha256(args.frontend/name/'frontend_manifest.json') for name in CONDITIONS},
         'frozen_models': {name: {key: record[key] for key in ('checkpoint', 'checkpoint_sha256')}

@@ -55,6 +55,7 @@ namespace PoseRecord.Data
     [Serializable]
     public class CameraIntrinsicsData
     {
+        public string projection_convention;
         public int width;
         public int height;
         public float fx;
@@ -1290,11 +1291,15 @@ public class OneCameraCaptureFrame : MonoBehaviour
     void WriteCameraIntrinsics(string path)
     {
         float fovRad = cam.fieldOfView * Mathf.Deg2Rad;
-        float fy = 0.5f * captureHeight / Mathf.Tan(0.5f * fovRad);
-        float fx = fy * (captureWidth / (float)captureHeight);
+        // Match WorldToViewportPoint annotations scaled by (width-1, height-1).
+        float fy = 0.5f * (captureHeight - 1) / Mathf.Tan(0.5f * fovRad);
+        // Shared metadata may be written before cam.aspect is configured for capture.
+        float captureAspect = captureWidth / (float)captureHeight;
+        float fx = 0.5f * (captureWidth - 1) / (captureAspect * Mathf.Tan(0.5f * fovRad));
 
         var intr = new PoseRecord.Data.CameraIntrinsicsData
         {
+            projection_convention = "unity_viewport_w_minus_1_v2",
             width = captureWidth,
             height = captureHeight,
             fx = fx,

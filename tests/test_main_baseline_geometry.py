@@ -56,7 +56,7 @@ class MainBaselineGeometryTest(unittest.TestCase):
             camera_dir = Path(tmp) / "data_pole_ski/male/cameras/L0_A000"
             camera_dir.mkdir(parents=True)
             (camera_dir / "intrinsics.json").write_text(
-                json.dumps({"fx": 10, "fy": 11, "cx": 2, "cy": 3}),
+                json.dumps({"width": 200, "height": 100, "fx": 100, "fy": 50, "cx": 99.5, "cy": 49.5}),
                 encoding="utf-8-sig",
             )
             (camera_dir / "extrinsics.json").write_text(

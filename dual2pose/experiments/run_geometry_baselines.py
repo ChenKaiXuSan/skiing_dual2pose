@@ -37,6 +37,7 @@ from dual2pose.models.dlt_residual_baseline import (
     ski_predicted_pelvis_relative,
 )
 from dual2pose.runtime_paths import input_path
+from dual2pose.eval.main_baseline_geometry import UNITY_PROJECTION_CONVENTION
 
 
 EXPECTED = {
@@ -190,6 +191,8 @@ def _load_verified_split(root: Path, dataset: str, split: str) -> SplitInputs:
         "gt_fitted_transform_used": False,
         "gate_threshold_px": 25.0,
     }
+    if dataset == "unity":
+        geometry_expected["camera_projection_convention"] = UNITY_PROJECTION_CONVENTION
     for key, expected in geometry_expected.items():
         if geometry_manifest.get(key) != expected:
             raise RuntimeError(
