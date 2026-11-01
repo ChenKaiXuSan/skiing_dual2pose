@@ -196,3 +196,45 @@ def test_import_rejects_repointed_supporting_output(tmp_path):
     linked.unlink();linked.write_text(support.read_text())
     with pytest.raises(ValueError,match='link'):
         d.imported_checks(new,{'a'})
+
+
+def make_import_chain(tmp_path):
+    from pegasus.runtime.chain import write_new,sha
+    roots=[tmp_path/name for name in ('original','first','second')]
+    origin=roots[0];asset=origin/'results/history.json';write_new(asset,{'epoch':100})
+    receipt={'status':'complete','artifacts':{str(asset):sha(asset)}}
+    for root in roots:
+        write_new(root/'plan.json',{'jobs':[{'id':'a'}]})
+        write_new(root/'receipts/a.json',receipt)
+    for filename in ('tasks/a/run.log','submissions/a/stdout.log','submissions/a/stderr.log'):
+        path=origin/filename;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('done')
+    write_new(origin/'dispatcher/state.json',{'checks':{'a':{'status':'complete'}},'requests':{'a':{'final_log_check':True}}})
+    for source,target in zip(roots,roots[1:]):
+        alias=target/'results/history.json';alias.parent.mkdir(parents=True);alias.symlink_to(source/'results/history.json')
+        write_new(target/'recovery_imports.json',{'a':{'source_plan':str(source),'source_plan_sha256':sha(source/'plan.json'),'source_receipt':str(source/'receipts/a.json'),'source_receipt_sha256':sha(source/'receipts/a.json'),'artifacts':{str(source/'results/history.json'):sha(asset)}}})
+        write_new(target/'dispatcher/state.json',{'checks':{'a':{'status':'complete','imported_from':str(source)}},'requests':{}})
+    return roots
+
+
+def test_imported_completion_can_be_reused_through_verified_ancestor_chain(tmp_path):
+    roots=make_import_chain(tmp_path)
+    assert d.imported_checks(roots[-1],{'a'})['a']['status']=='complete'
+
+
+@pytest.mark.parametrize('damage',['artifact','origin_log','alias','receipt'])
+def test_recursive_import_rejects_damaged_ancestor(tmp_path,damage):
+    roots=make_import_chain(tmp_path);origin,first,last=roots
+    if damage=='artifact':(origin/'results/history.json').write_text('changed')
+    elif damage=='origin_log':(origin/'submissions/a/stderr.log').write_text('Traceback (most recent call last):\n')
+    elif damage=='alias':
+        alias=first/'results/history.json';alias.unlink();alias.write_text('{}')
+    else:(origin/'receipts/a.json').write_text('{}')
+    with pytest.raises(ValueError):d.imported_checks(last,{'a'})
+
+
+def test_recursive_import_refuses_cycle(tmp_path):
+    from pegasus.runtime.chain import sha
+    roots=make_import_chain(tmp_path);root=roots[-1]
+    entry=d.read(root/'recovery_imports.json');entry['a'].update(source_plan=str(root),source_plan_sha256=sha(root/'plan.json'),source_receipt=str(root/'receipts/a.json'),source_receipt_sha256=sha(root/'receipts/a.json'))
+    d.atomic(root/'recovery_imports.json',entry)
+    with pytest.raises(ValueError,match='cycle'):d.imported_checks(root,{'a'})

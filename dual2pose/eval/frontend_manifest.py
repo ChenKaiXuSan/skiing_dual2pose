@@ -132,18 +132,8 @@ class FrontEndManifest:
                 f"Front-end manifest is missing {len(missing)} required streams: {preview}"
             )
 
-    def load_pose(
-        self,
-        meta: Mapping[str, Any],
-        camera_id: str,
-        target_length: int,
-        expected_joint_count: int,
-        target_frame_indices: torch.Tensor | None = None,
-    ) -> torch.Tensor:
-        key = _sample_key(meta, camera_id)
-        if key not in self.entries:
-            raise KeyError(f"Front-end manifest has no entry for {key}")
-        pose_path = self.entries[key]
+    def _load_pose_arrays(self, pose_path: Path) -> tuple[np.ndarray, np.ndarray | None]:
+        """Read a source stream; cache builders may reuse these immutable arrays."""
         source_frame_indices: np.ndarray | None = None
         if pose_path.suffix.lower() == ".npy":
             array = np.load(pose_path, allow_pickle=False)
@@ -156,6 +146,21 @@ class FrontEndManifest:
                     source_frame_indices = np.asarray(archive["frame_indices"])
         else:
             raise ValueError(f"Front-end pose must be .npy or .npz: {pose_path}")
+        return array, source_frame_indices
+
+    def load_pose(
+        self,
+        meta: Mapping[str, Any],
+        camera_id: str,
+        target_length: int,
+        expected_joint_count: int,
+        target_frame_indices: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        key = _sample_key(meta, camera_id)
+        if key not in self.entries:
+            raise KeyError(f"Front-end manifest has no entry for {key}")
+        pose_path = self.entries[key]
+        array, source_frame_indices = self._load_pose_arrays(pose_path)
         array = np.asarray(array)
         if array.ndim != 3 or array.shape[-1] != 3:
             raise ValueError(

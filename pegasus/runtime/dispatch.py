@@ -121,38 +121,66 @@ def check_receipt(plan, job_id, receipt):
 
 
 def imported_checks(plan, job_ids):
-    """Accept completed predecessor work only with immutable evidence and logs."""
-    path = Path(plan) / 'recovery_imports.json'
-    if not path.exists():
-        return {}
-    checks = {}
-    for job_id, entry in read(path).items():
-        if job_id not in job_ids:
-            raise ValueError('Unknown imported job: ' + job_id)
-        source = Path(entry['source_plan'])
+    """Verify every import edge back to original execution, including file links."""
+    plan = Path(plan).resolve()
+    verified, hashes = {}, {}
+
+    def digest(path):
+        path = Path(path)
+        if path not in hashes:
+            hashes[path] = sha(path)
+        return hashes[path]
+
+    def entries(root):
+        path = root / 'recovery_imports.json'
+        return read(path) if path.exists() else {}
+
+    def verify(root, job_id, visiting):
+        key = (root, job_id)
+        if key in visiting:
+            raise ValueError('Import provenance cycle: ' + str(root) + '/' + job_id)
+        if key in verified:
+            return verified[key]
+        entry = entries(root)[job_id]
+        source = Path(entry['source_plan']).resolve()
         receipt = Path(entry['source_receipt'])
         if receipt.resolve() != (source / 'receipts' / (job_id + '.json')).resolve():
             raise ValueError('Invalid import receipt path: ' + job_id)
-        if sha(source / 'plan.json') != entry['source_plan_sha256'] or sha(receipt) != entry['source_receipt_sha256']:
+        if digest(source / 'plan.json') != entry['source_plan_sha256'] or digest(receipt) != entry['source_receipt_sha256']:
             raise ValueError('Changed import provenance: ' + job_id)
-        if sha(Path(plan) / 'receipts' / (job_id + '.json')) != sha(receipt):
+        if digest(root / 'receipts' / (job_id + '.json')) != digest(receipt):
             raise ValueError('Changed imported receipt: ' + job_id)
         previous = read(source / 'dispatcher/state.json')
-        if previous['checks'].get(job_id, {}).get('status') != 'complete' or not previous['requests'].get(job_id, {}).get('final_log_check'):
+        if previous.get('plan_sha256', entry['source_plan_sha256']) != entry['source_plan_sha256']:
+            raise ValueError('Changed import state identity: ' + job_id)
+        if previous['checks'].get(job_id, {}).get('status') != 'complete':
             raise ValueError('Unreviewed import: ' + job_id)
-        if (Path(plan) / 'submissions' / job_id).exists():
+        if (root / 'submissions' / job_id).exists():
             raise ValueError('Imported task also submitted: ' + job_id)
-        checked = check_receipt(source, job_id, read(receipt))
-        if checked['status'] != 'complete':
-            raise ValueError('Invalid import ' + job_id + ': ' + str(checked))
-        for artifact, digest in entry.get('artifacts', {}).items():
-            if sha(artifact) != digest:
+        if job_id in entries(source):
+            checked = verify(source, job_id, visiting | {key})
+        else:
+            if not previous['requests'].get(job_id, {}).get('final_log_check'):
+                raise ValueError('Unreviewed origin logs: ' + job_id)
+            if not all((source / 'submissions' / job_id / name).is_file()
+                       for name in ('stdout.log', 'stderr.log')):
+                raise ValueError('Missing original staged logs: ' + job_id)
+            checked = check_receipt(source, job_id, read(receipt))
+            if checked['status'] != 'complete':
+                raise ValueError('Invalid import ' + job_id + ': ' + str(checked))
+        for artifact, expected in entry.get('artifacts', {}).items():
+            if digest(artifact) != expected:
                 raise ValueError('Changed imported output: ' + artifact)
-            destination = Path(plan) / Path(artifact).relative_to(source)
+            destination = root / Path(artifact).relative_to(source)
             if not destination.is_symlink() or destination.resolve() != Path(artifact).resolve():
                 raise ValueError('Changed imported output link: ' + str(destination))
-        checks[job_id] = {**checked, 'imported_from': str(source)}
-    return checks
+        verified[key] = {**checked, 'imported_from': str(source)}
+        return verified[key]
+
+    imports = entries(plan)
+    if not set(imports) <= set(job_ids):
+        raise ValueError('Unknown imported jobs: ' + str(sorted(set(imports) - set(job_ids))))
+    return {job_id: verify(plan, job_id, set()) for job_id in imports}
 
 
 def run(plan, max_inflight=64, interval=30):

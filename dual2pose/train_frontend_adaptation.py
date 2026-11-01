@@ -82,31 +82,28 @@ def _manifest_path(config: DictConfig, frontend: str, split: str) -> Path:
     return path
 
 
-@hydra.main(version_base=None, config_path="../configs", config_name="frontend_adaptation.yaml")
-def main(config: DictConfig) -> None:
-    seed_everything(int(config.train.seed), workers=True)
-    data_root = Path(str(config.data.unity.root_path))
-    fold_path = resolve_fold_index_path(data_root, int(config.train.fold))
-    validate_fold_metadata(fold_path, int(config.train.fold))
-    config.data.unity.index_mapping_path = str(fold_path)
-    config.model.optim.lr = float(config.adaptation.learning_rate)
-    output_root = Path(str(config.log_path)).resolve()
-    output_root.mkdir(parents=True, exist_ok=True)
-
-    if config.adaptation.source_checkpoint is None:
-        raise ValueError("Set adaptation.source_checkpoint to the retrained Unity model")
-    source_checkpoint = Path(str(config.adaptation.source_checkpoint))
-    source_model = load_fusion_checkpoint(source_checkpoint)
-    if (source_model.left_hip_idx, source_model.right_hip_idx, source_model.neck_idx, source_model.face_sign) != (6, 7, 14, True):
-        raise ValueError("Frontend adaptation requires a Unity skeleton checkpoint")
-    model = FrontendAdaptationTrainer(config)
-    del source_model
-    CrossViewFusionTrainer.check_checkpoint_protocol(
-        torch.load(source_checkpoint, map_location="cpu", weights_only=False),
-        source=str(source_checkpoint),
-    )
-    load_report = load_model_weights_only(model, source_checkpoint)
-    scope_report = configure_trainable_scope(model, str(config.adaptation.scope))
+def build_data_module(config: DictConfig):
+    """Optional verified storage; retain frontend ordering and training policies."""
+    cache_root = getattr(config.adaptation, "cache_root", None)
+    raw_root = getattr(config.data.unity, "raw_cache_root", None)
+    if bool(cache_root) != bool(raw_root):
+        raise ValueError("Frontend cache_root and raw_cache_root must be supplied together")
+    frontend = str(config.adaptation.frontend).lower()
+    if cache_root:
+        from dual2pose.dataloader.unity_cached_data import VerifiedCacheUnityDataModule
+        from dual2pose.dataloader.frontend_cached_data import VerifiedFrontendDataModule
+        base_dm = VerifiedCacheUnityDataModule(config)
+        if frontend == "mixed":
+            names = ("videopose3d", "poseformer", "motionbert")
+            train_sources = [None] + [_manifest_path(config, name, "train") for name in names]
+            val_sources = [None] + [_manifest_path(config, name, "val") for name in names]
+        elif frontend in {"videopose3d", "poseformer", "motionbert"}:
+            train_sources = [_manifest_path(config, frontend, "train")]
+            val_sources = [_manifest_path(config, frontend, "val")]
+        else:
+            raise ValueError(f"Unsupported adaptation front end: {frontend}")
+        return VerifiedFrontendDataModule(base_dm, cache_root,
+            train_sources=train_sources, val_sources=val_sources)
     frontend = str(config.adaptation.frontend).lower()
     base_dm = UnityDataModule(config)
     if frontend == "mixed":
@@ -136,6 +133,36 @@ def main(config: DictConfig) -> None:
     else:
         raise ValueError(f"Unsupported adaptation front end: {frontend}")
 
+    return datamodule
+
+
+@hydra.main(version_base=None, config_path="../configs", config_name="frontend_adaptation.yaml")
+def main(config: DictConfig) -> None:
+    seed_everything(int(config.train.seed), workers=True)
+    data_root = Path(str(config.data.unity.root_path))
+    fold_path = resolve_fold_index_path(data_root, int(config.train.fold))
+    validate_fold_metadata(fold_path, int(config.train.fold))
+    config.data.unity.index_mapping_path = str(fold_path)
+    config.model.optim.lr = float(config.adaptation.learning_rate)
+    output_root = Path(str(config.log_path)).resolve()
+    output_root.mkdir(parents=True, exist_ok=True)
+
+    if config.adaptation.source_checkpoint is None:
+        raise ValueError("Set adaptation.source_checkpoint to the retrained Unity model")
+    source_checkpoint = Path(str(config.adaptation.source_checkpoint))
+    source_model = load_fusion_checkpoint(source_checkpoint)
+    if (source_model.left_hip_idx, source_model.right_hip_idx, source_model.neck_idx, source_model.face_sign) != (6, 7, 14, True):
+        raise ValueError("Frontend adaptation requires a Unity skeleton checkpoint")
+    model = FrontendAdaptationTrainer(config)
+    del source_model
+    CrossViewFusionTrainer.check_checkpoint_protocol(
+        torch.load(source_checkpoint, map_location="cpu", weights_only=False),
+        source=str(source_checkpoint),
+    )
+    load_report = load_model_weights_only(model, source_checkpoint)
+    scope_report = configure_trainable_scope(model, str(config.adaptation.scope))
+    datamodule = build_data_module(config)
+
     checkpoint = ModelCheckpoint(
         dirpath=output_root / "checkpoints",
         filename="{epoch:02d}-{val/common13_mpjpe:.6f}",
@@ -159,7 +186,7 @@ def main(config: DictConfig) -> None:
         json.dumps(
             {
                 "evaluation_protocol": dict(EVALUATION_PROTOCOL),
-                "frontend": frontend,
+                "frontend": str(config.adaptation.frontend).lower(),
                 "scope": str(config.adaptation.scope),
                 "seed": int(config.train.seed),
                 "fold": int(config.train.fold),
@@ -173,6 +200,9 @@ def main(config: DictConfig) -> None:
         encoding="utf-8",
     )
     trainer.fit(model, datamodule=datamodule)
+    if hasattr(datamodule, "cache_provenance"):
+        with (output_root / "data_cache_provenance.json").open("x") as handle:
+            json.dump(datamodule.cache_provenance, handle, indent=2)
     # Preserve the terminal optimizer/epoch state even without a final top-k
     # improvement; best_model_path still controls downstream evaluation.
     trainer.save_checkpoint(str(output_root / "checkpoints/last.ckpt"))

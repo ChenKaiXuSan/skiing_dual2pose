@@ -44,6 +44,9 @@ def _owned_paths(job, plan):
         return paths
     if family == 'external' and spec['kind'] == 'local':
         return [Path(spec['path']) / f'{method}.json' for method in spec['methods']]
+    if family == 'external' and spec['kind'] == 'tables':
+        path = Path(spec['path'])
+        return [path.with_suffix(suffix) for suffix in ('.json', '.csv', '.md')]
     if family == 'training' and spec['kind'] in ('geometry', 'residual'):
         root, ds = Path(spec['root']), spec['dataset']
         methods = ('dlt', 'robust_dlt') if spec['kind'] == 'geometry' else ('dlt_mlp',)
@@ -52,25 +55,33 @@ def _owned_paths(job, plan):
             name = 'dlt_mlp' if ds == 'unity' else 'dlt_mlp_root_relative'
             paths.append(root / 'training' / ds / name)
         return paths
+    if family == 'evaluations' and job['id'] == 'eval_prepare_c07':
+        asset = Path(spec['path'])
+        return [asset, *(asset.parent / 'results/unity' / (name + '.json')
+                         for name in ('canonfuse3d', 'dlt_mlp'))]
     value = spec.get('path', spec.get('output'))
     if not value:
         raise ValueError('No bounded output ownership for ' + job['id'])
     path = Path(value)
+    output = job.get('env', {}).get('EVAL_OUTPUT_ROOT')
+    if family == 'evaluations' and output and path.is_relative_to(Path(output)):
+        # Evaluation validators often name one table but also require sibling
+        # provenance, per-pair exports and figures in their dedicated job root.
+        return [Path(output)]
     if any(c in str(path) for c in '*?['):
         # Evaluation exports put figures beside their metric CSV. The dedicated
         # output root is explicit in the job, rather than inferred from a glob.
-        output = job.get('env', {}).get('EVAL_OUTPUT_ROOT')
         if not output:
             raise ValueError('Unbounded glob output for ' + job['id'])
         return [Path(output)]
     return [path]
 
 
-def _files(path, old):
+def _files(path, old, *, preserve_main_unity=False, verified_targets=()):
     relative = path.relative_to(old)
     if relative.parts[0] not in ('main', 'core', 'results', 'supplement'):
         raise ValueError('Output outside permitted result trees: ' + str(path))
-    if len(relative.parts) < 2 or relative.is_relative_to('main/unity'):
+    if len(relative.parts) < 2 or (not preserve_main_unity and relative.is_relative_to('main/unity')):
         raise ValueError('Shared or active output tree: ' + str(path))
     if path.is_symlink() and path.is_dir():
         raise ValueError('Refusing output directory symlink: ' + str(path))
@@ -88,12 +99,72 @@ def _files(path, old):
     for candidate in candidates:
         if candidate.name in ('state.json', 'context.json'):
             continue
-        if not candidate.resolve().is_relative_to(old):
+        if not candidate.resolve().is_relative_to(old) and candidate.resolve() not in verified_targets:
             raise ValueError('Output escaped predecessor: ' + str(candidate))
         yield candidate
 
 
-def _verify_source(old, plan, excluded):
+def _execution_origin(root, job_id):
+    """Follow an import chain already checked by dispatch.imported_checks."""
+    visited = set()
+    while (root / 'recovery_imports.json').is_file():
+        if root in visited:
+            raise ValueError('Import provenance cycle: ' + job_id)
+        visited.add(root)
+        entry = chain.read(root / 'recovery_imports.json').get(job_id)
+        if not entry:
+            break
+        root = Path(entry['source_plan']).resolve()
+    return root
+
+
+def _reference_origin(job, plan, old, complete, previous_checks, metadata):
+    """Repair only legacy Ski reference omissions using receipt-pinned copies.
+
+    The original reference receipt did not hash the three simple baselines.
+    Its completed collector copied their bytes and did hash all four records.
+    Require both verified import lineages and that independent historical hash
+    evidence before importing the reference directly from its execution root.
+    """
+    collector_id = 'external_reference_ski'
+    by_id = {candidate['id']: candidate for candidate in plan['jobs']}
+    collector = by_id.get(collector_id, {})
+    if (job['family'] != 'core' or job['validation'].get('kind') != 'reference' or
+            job['validation'].get('dataset') != 'ski' or
+            job['id'] not in previous_checks or collector_id not in previous_checks or
+            collector_id not in complete or job['id'] not in collector.get('deps', [])):
+        raise ValueError('Missing verified reference collector evidence: ' + job['id'])
+    origin = _execution_origin(old, job['id'])
+    if origin == old or _execution_origin(old, collector_id) != origin:
+        raise ValueError('Reference and collector execution origins differ')
+    origin_plan = chain.read(origin / 'plan.json')
+    origin_jobs = {candidate['id']: candidate for candidate in origin_plan['jobs']}
+    for candidate in (job, collector):
+        if chain.remap(origin_jobs[candidate['id']], {str(origin): str(old)}) != candidate:
+            raise ValueError('Reference ancestor job identity changed: ' + candidate['id'])
+    source_job, source_collector = origin_jobs[job['id']], origin_jobs[collector_id]
+    spec = source_collector['validation']
+    methods = {'left_canonical', 'right_canonical', 'canonical_avg', 'canonfuse3d'}
+    if (source_collector['family'] != 'external' or spec.get('kind') != 'local' or
+            spec.get('dataset') != 'ski' or set(spec.get('methods', [])) != methods or spec.get('pa') is not False):
+        raise ValueError('Unexpected reference collector output contract')
+    _validate_job(source_collector, origin_plan, origin, metadata)
+    receipt_path = origin / 'receipts' / (collector_id + '.json')
+    receipt = chain.read(receipt_path)
+    copies = {}
+    for path in _owned_paths(source_job, origin_plan):
+        copy_path = Path(spec['path']) / path.name
+        expected = receipt.get('artifacts', {}).get(str(copy_path))
+        if (not expected or not path.is_file() or path.resolve() != path or
+                chain.sha(path) != expected or chain.sha(copy_path) != expected):
+            raise ValueError('Reference companion lacks matching receipt-pinned copy: ' + str(path))
+        copies[str(copy_path)] = expected
+    proof = dict(job=collector_id, source_receipt=str(receipt_path),
+                 source_receipt_sha256=chain.sha(receipt_path), artifacts=copies)
+    return origin, origin_plan, source_job, proof
+
+
+def _verify_source(old, plan, excluded, *, preserve_main_unity=False):
     state = chain.read(old / 'dispatcher/state.json')
     digest = chain.sha(old / 'plan.json')
     if state['plan_sha256'] != digest or Path(plan['root']) != old:
@@ -102,39 +173,69 @@ def _verify_source(old, plan, excluded):
     if len(jobs) != len(plan['jobs']):
         raise ValueError('Duplicate job identity')
     excluded = set(excluded)
+    if excluded - jobs.keys():
+        raise ValueError('Unknown excluded jobs: ' + ', '.join(sorted(excluded - jobs.keys())))
     while True:
         descendants = {j['id'] for j in jobs.values() if set(j['deps']) & excluded}
         if descendants <= excluded:
             break
         excluded |= descendants
     complete = {key for key, check in state['checks'].items() if check['status'] == 'complete'} - excluded
+    # Recovered jobs have no scheduler logs here: their evidence remains at the
+    # original execution root. Verify every predecessor edge before trusting a
+    # symlink that resolves outside this plan's own output tree.
+    previous_checks = dispatch.imported_checks(old, set(jobs))
+    previous_imports = chain.read(old / 'recovery_imports.json') if previous_checks else {}
+    verified_files = {}
+    for job_id in complete & previous_checks.keys():
+        entry = previous_imports[job_id]
+        for artifact, artifact_digest in entry['artifacts'].items():
+            destination = old / Path(artifact).relative_to(entry['source_plan'])
+            verified_files[destination] = artifact_digest
+    verified_targets = {path.resolve() for path in verified_files}
     receipts = {key: chain.read(old / 'receipts' / (key + '.json')) for key in complete}
     dependency_metadata = {key: receipt.get('metadata', {}) for key, receipt in receipts.items()}
-    imports, all_files, owned_paths = {}, {}, {}
+    imports, all_files, owned_paths, source_roots = {}, {}, {}, {}
     for job_id in sorted(complete):
         if job_id not in jobs or not set(jobs[job_id]['deps']) <= complete:
             raise ValueError('Completed imports are not dependency closed: ' + job_id)
-        if not state['requests'].get(job_id, {}).get('final_log_check'):
-            raise ValueError('Missing final scheduler log review: ' + job_id)
-        for name in ('stdout.log', 'stderr.log'):
-            if not (old / 'submissions' / job_id / name).is_file():
-                raise ValueError('Missing staged scheduler log: ' + job_id)
+        if job_id not in previous_checks:
+            if not state['requests'].get(job_id, {}).get('final_log_check'):
+                raise ValueError('Missing final scheduler log review: ' + job_id)
+            for name in ('stdout.log', 'stderr.log'):
+                if not (old / 'submissions' / job_id / name).is_file():
+                    raise ValueError('Missing staged scheduler log: ' + job_id)
         receipt_path = old / 'receipts' / (job_id + '.json')
         receipt = receipts[job_id]
-        checked = dispatch.check_receipt(old, job_id, receipt)
+        checked = previous_checks.get(job_id) or dispatch.check_receipt(old, job_id, receipt)
         if checked['status'] != 'complete':
             raise ValueError('Invalid completed receipt ' + job_id + ': ' + str(checked))
-        metadata = _validate_job(jobs[job_id], plan, old, dependency_metadata)
+        source_root, source_plan, source_job = old, plan, jobs[job_id]
+        roots = _owned_paths(source_job, source_plan)
+        proof = None
+        if (job_id in previous_checks and source_job['family'] == 'core' and
+                source_job['validation'].get('kind') == 'reference' and
+                any(not path.exists() for path in roots)):
+            source_root, source_plan, source_job, proof = _reference_origin(
+                source_job, plan, old, complete, previous_checks, dependency_metadata)
+            roots = _owned_paths(source_job, source_plan)
+        source_roots[job_id] = source_root
+        metadata = _validate_job(source_job, source_plan, source_root, dependency_metadata)
         for key, value in receipt.get('metadata', {}).items():
             if key.endswith('_sha256') and metadata.get(key) != value:
                 raise ValueError('Completed metadata hash changed: ' + job_id + '/' + key)
         owned_paths[job_id] = set()
-        for root in _owned_paths(jobs[job_id], plan):
-            owned_paths[job_id].update(_files(root, old))
+        for root in roots:
+            owned_paths[job_id].update(_files(root, source_root,
+                preserve_main_unity=preserve_main_unity, verified_targets=verified_targets))
         if not owned_paths[job_id]:
             raise ValueError('Completed task has no output files: ' + job_id)
-        imports[job_id] = dict(source_plan=str(old), source_plan_sha256=digest,
+        receipt_path = source_root / 'receipts' / (job_id + '.json')
+        imports[job_id] = dict(source_plan=str(source_root),
+            source_plan_sha256=digest if source_root == old else chain.sha(source_root / 'plan.json'),
             source_receipt=str(receipt_path), source_receipt_sha256=chain.sha(receipt_path))
+        if proof:
+            imports[job_id]['verified_companion_copies'] = proof
     # STRIDE and collector outputs legitimately alias completed dependencies.
     # Check ownership only after every completed task's real files are known;
     # never follow an alias into an unfinished task or an external location.
@@ -146,15 +247,19 @@ def _verify_source(old, plan, excluded):
             if dependency not in ancestors:
                 ancestors.add(dependency)
                 pending.extend(jobs[dependency]['deps'])
-        allowed = {path for owner in ancestors for path in owned_paths[owner]
-                   if path.resolve() == path}
+        allowed = {path.resolve() for owner in ancestors for path in owned_paths[owner]
+                   if path.resolve() == path or path in verified_files}
         owned = {}
         for path in paths:
             if path.resolve() not in allowed:
                 raise ValueError('Output alias is not owned by a completed dependency: ' + str(path))
             owned[str(path)] = chain.sha(path)
+            destination = str(old / path.relative_to(source_roots[job_id]))
+            value = dict(source=str(path), sha256=owned[str(path)])
+            if destination in all_files and all_files[destination] != value:
+                raise ValueError('Conflicting imported output ownership: ' + destination)
+            all_files[destination] = value
         imports[job_id]['artifacts'] = owned
-        all_files.update(owned)
     return imports, all_files, excluded, dependency_metadata
 
 
@@ -186,6 +291,19 @@ def _geometry_aliases(plan, imported, old, out):
     return aliases
 
 
+def _c07_cache_aliases(plan, imported, old, out):
+    aliases = {}
+    for job in plan['jobs']:
+        if job['id'] != 'eval_prepare_c07' or job['id'] not in imported:
+            continue
+        previous = Path(job['validation']['path']).parent / 'cache'
+        source = Path(plan['context']['raw_cache']).resolve()
+        if not source.is_dir() or previous.resolve() != source or source.is_relative_to(old):
+            raise ValueError('C07 raw cache input alias changed or is mutable')
+        aliases[out / previous.relative_to(old)] = source
+    return aliases
+
+
 def _pbs(job, plan, out):
     frozen = out / 'source'
     lines = ['#!/bin/bash', '#PBS -A HP260146', '#PBS -q gen_S',
@@ -198,7 +316,8 @@ def _pbs(job, plan, out):
     (out / 'pbs' / (job['id'] + '.pbs')).write_text('\n'.join(lines) + '\n')
 
 
-def prepare(old, out, *, code_root=None, exclude=()):
+def prepare(old, out, *, code_root=None, exclude=(), preserve_main_unity=False,
+            command_overrides=None):
     old, out = Path(old).resolve(), Path(out).absolute()
     if out.exists() or out.is_symlink():
         raise FileExistsError(out)
@@ -211,15 +330,27 @@ def prepare(old, out, *, code_root=None, exclude=()):
     if original['protocol'] != 'common13_direct_per_frame_v1':
         raise ValueError('Unexpected recovery protocol')
     imports, files, excluded, dependency_metadata = _verify_source(
-        old, original, {'main_unity', *exclude})
+        old, original, set(exclude) | (set() if preserve_main_unity else {'main_unity'}),
+        preserve_main_unity=preserve_main_unity)
+    command_overrides = command_overrides or {}
+    if not isinstance(command_overrides, dict) or set(command_overrides) - excluded:
+        raise ValueError('Command overrides require explicitly excluded jobs or their descendants')
+    for job_id, commands in command_overrides.items():
+        if (not isinstance(commands, list) or not commands or
+                any(not isinstance(command, list) or not command or
+                    any(not isinstance(arg, str) for arg in command) for command in commands)):
+            raise ValueError('Invalid command override: ' + job_id)
     geometry_aliases = _geometry_aliases(original, imports, old, out)
+    geometry_aliases.update(_c07_cache_aliases(original, imports, old, out))
     mapping = {str(old): str(out)}
     plan = chain.remap(copy.deepcopy(original), mapping)
     plan.update(root=str(out), submitted_jobs=[], created=time.time(), status='prepared_not_submitted',
                 recovery=dict(source_plan=str(old), source_plan_sha256=chain.sha(old / 'plan.json'),
                               imported_jobs=sorted(imports), excluded_jobs=sorted(excluded)))
     for job in plan['jobs']:
-        if job['id'] == 'main_unity':
+        if job['id'] in command_overrides:
+            job['commands'] = chain.remap(copy.deepcopy(command_overrides[job['id']]), mapping)
+        if job['id'] == 'main_unity' and not preserve_main_unity:
             override = '+data.unity.raw_cache_root=' + str(Path(plan['context']['raw_cache']) / 'unity')
             job['commands'][0] = [arg for arg in job['commands'][0]
                                   if not arg.lstrip('+').startswith('data.unity.raw_cache_root=')]
@@ -239,11 +370,11 @@ def prepare(old, out, *, code_root=None, exclude=()):
     for dest, source in geometry_aliases.items():
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.symlink_to(source, target_is_directory=True)
-    for source, digest in files.items():
-        path = Path(source)
-        if chain.sha(path) != digest:
-            raise ValueError('Completed file changed during preparation: ' + source)
-        dest = out / path.relative_to(old)
+    for destination, artifact in files.items():
+        path = Path(artifact['source'])
+        if chain.sha(path) != artifact['sha256']:
+            raise ValueError('Completed file changed during preparation: ' + str(path))
+        dest = out / Path(destination).relative_to(old)
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.symlink_to(path)
     chain.write_new(out / 'results/context.json', plan['context'])
@@ -273,8 +404,14 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--code-root', type=Path)
     parser.add_argument('--exclude', action='append', default=[])
+    parser.add_argument('--preserve-main-unity', action='store_true',
+                        help='Import verified completed Unity instead of forcing its rerun')
+    parser.add_argument('--command-overrides', type=Path,
+                        help='JSON mapping excluded job IDs to replacement command argument lists')
     args = parser.parse_args()
-    plan = prepare(args.source_plan, args.output, code_root=args.code_root, exclude=args.exclude)
+    overrides = chain.read(args.command_overrides) if args.command_overrides else None
+    plan = prepare(args.source_plan, args.output, code_root=args.code_root, exclude=args.exclude,
+                   preserve_main_unity=args.preserve_main_unity, command_overrides=overrides)
     print(json.dumps(dict(root=plan['root'], status=plan['status'], **plan['recovery']), indent=2))
 
 
