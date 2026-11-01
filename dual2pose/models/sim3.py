@@ -138,7 +138,8 @@ def invert_sim3(
 	translation: torch.Tensor,
 	eps: float = 1e-8,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-	"""Compute inverse Sim(3) under y = s * (x @ R^T) + t."""
+	"""Compute inverse Sim(3), preserving an explicit batch (including B=1)."""
+	squeeze_back = scale.ndim == 0 and rotation.ndim == 2 and translation.ndim == 1
 	if scale.ndim == 0:
 		scale = scale.view(1)
 	if rotation.ndim == 2:
@@ -161,9 +162,11 @@ def invert_sim3(
 	inv_s = 1.0 / torch.clamp(scale, min=eps)
 	inv_r = rotation.transpose(-1, -2)
 	# x = (1/s) * (y - t) @ R
-	inv_t = -inv_s.view(-1, 1) * (translation @ rotation)
+	inv_t = -inv_s.view(-1, 1) * torch.bmm(translation.unsqueeze(1), rotation).squeeze(1)
 
-	return inv_s.squeeze(0), inv_r.squeeze(0), inv_t.squeeze(0)
+	if squeeze_back:
+		return inv_s[0], inv_r[0], inv_t[0]
+	return inv_s, inv_r, inv_t
 
 
 def estimate_sim3(

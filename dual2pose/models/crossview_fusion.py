@@ -34,33 +34,42 @@ from .sim3 import align_points_sim3
 
 
 def rotation_matrix_to_rotvec(R):
+    """Principal rotation vectors for proper rotations of shape (B,3,3).
+
+    Recover the best-conditioned quaternion component instead of dividing
+    the skew part by sin(theta), which vanishes at both zero and pi. At pi
+    the axis sign is inherently ambiguous; the dominant component fixes it.
     """
-    R: (B,3,3)
-
-    return:
-        rotvec: (B,3)
-    """
-
-    eps = 1e-8
-
-    trace = R[:, 0, 0] + R[:, 1, 1] + R[:, 2, 2]
-
-    cos_theta = (trace - 1.0) * 0.5
-    cos_theta = torch.clamp(cos_theta, -1.0 + eps, 1.0 - eps)
-
-    theta = torch.acos(cos_theta)
-
-    rx = R[:, 2, 1] - R[:, 1, 2]
-    ry = R[:, 0, 2] - R[:, 2, 0]
-    rz = R[:, 1, 0] - R[:, 0, 1]
-
-    axis = torch.stack([rx, ry, rz], dim=-1)
-
-    axis = F.normalize(axis, dim=-1)
-
-    rotvec = axis * theta[:, None]
-
-    return rotvec
+    r00, r11, r22 = R[:, 0, 0], R[:, 1, 1], R[:, 2, 2]
+    terms = torch.stack([
+        1 + r00 + r11 + r22,
+        1 + r00 - r11 - r22,
+        1 - r00 + r11 - r22,
+        1 - r00 - r11 + r22,
+    ], dim=-1)  # four times the squared quaternion components
+    x = R[:, 2, 1] - R[:, 1, 2]
+    y = R[:, 0, 2] - R[:, 2, 0]
+    z = R[:, 1, 0] - R[:, 0, 1]
+    xy = R[:, 0, 1] + R[:, 1, 0]
+    xz = R[:, 0, 2] + R[:, 2, 0]
+    yz = R[:, 1, 2] + R[:, 2, 1]
+    candidates = torch.stack([
+        torch.stack([terms[:, 0], x, y, z], dim=-1),
+        torch.stack([x, terms[:, 1], xy, xz], dim=-1),
+        torch.stack([y, xy, terms[:, 2], yz], dim=-1),
+        torch.stack([z, xz, yz, terms[:, 3]], dim=-1),
+    ], dim=1)
+    choice = terms.argmax(dim=-1)
+    # For a proper rotation the chosen term is >= 1. Gather before sqrt
+    # so unused zero components cannot introduce infinite gradients.
+    selected = terms.gather(1, choice[:, None])
+    quaternion = candidates.gather(1, choice[:, None, None].expand(-1, 1, 4))[:, 0]
+    quaternion = F.normalize(quaternion / (2 * selected.sqrt()), dim=-1)
+    quaternion = torch.where(quaternion[:, :1] < 0, -quaternion, quaternion)
+    vector = quaternion[:, 1:]
+    angle = 2 * torch.atan2(torch.linalg.vector_norm(vector, dim=-1), quaternion[:, 0])
+    # sin(angle/2)/(angle/2) has a finite, differentiable limit at zero.
+    return vector * (2 / torch.sinc(angle / (2 * torch.pi)))[:, None]
 
 
 def compute_velocity(x):
