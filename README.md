@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](#)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-orange.svg)](#)
 [![PyTorch Lightning](https://img.shields.io/badge/Lightning-2.x-purple.svg)](#)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](#license)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 
 </div>
 
@@ -22,7 +22,15 @@
 | [`master`](https://github.com/ChenKaiXuSan/skiing_dual2pose/tree/master) | Preserved pre-migration code baseline; remains the GitHub default branch. |
 | [`per-frame-canonicalization`](https://github.com/ChenKaiXuSan/skiing_dual2pose/tree/per-frame-canonicalization) | Current training, evaluation, and experiment orchestration with the per-frame protocol. |
 
-Use `per-frame-canonicalization` for current experiments. Record the exact commit with each run; legacy checkpoints and results require their original protocol. Manuscripts, author photos, logs, and checkpoints are stored separately and are not included in these code branches. See [branch roles and cleanup inventory](docs/branch_management.md).
+Use `per-frame-canonicalization` for current experiments. Record the exact commit and any working-tree changes with each run; legacy checkpoints and results require their original protocol. Current Access drafts, logs, and checkpoints are workspace artifacts, but older manuscript files and Unity assets are still tracked in Git. Ignoring a directory does not remove its history. See [branch roles and cleanup inventory](docs/branch_management.md).
+
+### Reproduction and release status
+
+Start with the [documentation index](docs/README.md), [reproduction inventory](docs/reproducibility/README.md), and [Table 2 audit](docs/reproducibility/table2_audit_20261101.md). The primary protocol is per-frame canonicalization, common-13 direct MPJPE in **mm**, with PA-MPJPE separately labelled and acceleration in **mm per sampled-frame squared**.
+
+**Correction completed, 2026-11-01:** Unity geometry now uses annotation-consistent, versioned camera intrinsics and rejects pre-repair caches. The additive plan `unity_geometry_v2_20261101T062040Z` completed all 18 tasks: regenerated geometry, DLT/gated-DLT evaluation, DLT-residual retraining, native-15/common-13 rescoring, the full matched occlusion/calibration matrix, and both stable MetaPose timing scopes. Its 86 artifacts and 332 frozen source hashes were verified. See the [repair record](docs/experiments/unity_geometry_repair_20261101.md) for results, selection and remaining limitations. Original results and frozen run sources are retained.
+
+This checkout is being prepared for release; it is not yet a self-contained public reproduction package. Frozen Pegasus runs retain their exact source snapshots and hashes; the consolidated development branch does not replace that run provenance. Read the [release checklist](docs/reproducibility/release_readiness.md) before publishing or attempting to reproduce the full experiment matrix from a clean clone.
 
 This repository implements a research pipeline for reconstructing stable 3D human poses from synchronized dual-view skiing videos. The current default model is `crossview_fusion`: it takes per-view 3D keypoints from SAM 3D Body, aligns them in a human-centric canonical coordinate system, exchanges information across views with attention, and fuses joints with an adaptive reliability gate.
 
@@ -78,7 +86,7 @@ Each pose is transformed into a canonical coordinate system using anatomical lan
 
 This makes left/right predictions more comparable without using camera extrinsics.
 
-The training protocol is fixed to per-frame canonicalization: every frame of both input streams and of the supervision target is centred at its own pelvis and rotated into its own body frame, so the representation does not depend on batch composition and carries no global motion. That body frame is orthonormal: the hip line is the first axis and the spine is projected onto its orthogonal complement, so the transform is rigid and bone lengths are preserved; frames whose landmarks cannot define a frame (failed detections) reuse the rotation of a neighbouring frame and their share is logged as `degenerate_input_frames`. The eye pair that fixes the sign of the forward axis is configurable (`data.left_eye_idx`, `data.right_eye_idx`, `data.face_sign`); the Ski-PosePTZ scripts disable it because the 13-joint skeleton has no eyes. The archived `first_frame` construction keeps the manuscript's non-orthogonalised axes. Checkpoints record this protocol and the trainer rejects checkpoints of the manuscript's batch-referenced first-frame protocol. `canonicalize_pose_torch(mode="first_frame")` remains only for the archived baseline and native-output analyses.
+The training protocol is fixed to per-frame canonicalization: every frame of both input streams and of the supervision target is centred at its own pelvis and rotated into its own body frame, so the representation carries no global motion. The Unity loader also has an upstream batch-dependent facing convention; independent rescoring must preserve its recorded evaluation batch size (256 in the current benchmark). That body frame is orthonormal: the hip line is the first axis and the spine is projected onto its orthogonal complement, so the transform is rigid and bone lengths are preserved; frames whose landmarks cannot define a frame (failed detections) reuse the rotation of a neighbouring frame and their share is logged as `degenerate_input_frames`. The eye pair that fixes the sign of the forward axis is configurable (`data.left_eye_idx`, `data.right_eye_idx`, `data.face_sign`); the Ski-PosePTZ scripts disable it because the 13-joint skeleton has no eyes. The archived `first_frame` construction keeps the manuscript's non-orthogonalised axes. Checkpoints record this protocol and the trainer rejects checkpoints of the manuscript's batch-referenced first-frame protocol. `canonicalize_pose_torch(mode="first_frame")` remains only for the archived baseline and native-output analyses.
 
 ### 3. Cross-view canonical fusion
 
@@ -147,7 +155,7 @@ Camera-pair folds are generated by:
 python cross_validation/main.py
 ```
 
-The camera-pair index generator supports `by_action` and `by_camera_pair`. The training entry point uses the two precomputed action-disjoint folds.
+The camera-pair index generator supports `by_action` and `by_camera_pair`, and the training code supports two precomputed action-disjoint folds. The current reported Unity benchmark uses one fixed fold (`fold_0`); its results are not a two-fold average or multi-seed estimate.
 
 ---
 
@@ -322,8 +330,9 @@ Skiing_Canonical_DualView_3D_Pose_PyTorch/
 
 ## Paper Writing Guide
 
-The local `paper/` manuscript, figures, and evidence are intentionally excluded
-from Git. Experiment code and tests can be used without that directory. Run the
+The current Access workspace is ignored, but historical `paper/` files remain
+tracked in Git. They need a separate publication review; `.gitignore` does not
+remove them. Experiment code and tests can be used without that directory. Run the
 test suite from the repository root:
 
 ```bash
@@ -371,12 +380,13 @@ The central claim is:
 
 ## Citation
 
-If you find this useful, please cite our work:
+The final bibliographic record will be added when the manuscript details are
+confirmed. No placeholder author list is intended for citation.
 
-```bibtex
-@article{chen2026canonfuse3d,
-  title = {CanonFuse3D: Human-Centric Canonical Fusion for Calibration-Free Dual-View 3D Pose Estimation in Skiing Videos},
-  author = {Chen, Kaixu and ...},
-  year = {2026}
-}
-```
+## License
+
+The repository's root license is [Apache-2.0](LICENSE). Third-party software,
+model weights, datasets, and Unity assets retain their own terms. In particular,
+see [SAM3Dbody provenance](SAM3Dbody/UPSTREAM.md); the root license does not grant
+redistribution rights for all external materials. The release checklist records
+the remaining notice and asset review.

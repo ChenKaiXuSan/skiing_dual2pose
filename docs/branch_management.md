@@ -59,7 +59,9 @@ Current experiments use independent per-frame body-coordinate construction for i
 
 Record the exact commit alongside the experiment configuration, checkpoint, evaluation indices, and result artifacts. A branch name alone is insufficient because its tip changes. A documentation-only commit does not require rerunning completed experiments or relabeling their code provenance.
 
-The repository ignores `paper/`, `reports/`, `logs/`, and `ckpt/`. Current manuscript edits and author photos therefore do not appear in a code-branch diff or get uploaded by pushing this branch. Preserve these workspace artifacts separately. Branch cleanup does not remove them, change existing experiment outputs, or interrupt running jobs.
+The repository ignores `paper/`, `reports/`, `logs/`, and `ckpt/`, but ignore rules do not untrack existing files. The 2026-11-01 inventory found 256 historical manuscript files still tracked under `paper/`; current Access drafts are ignored separately. Review tracked content and history before publishing. Preserve workspace artifacts separately. Branch cleanup does not remove them, change existing experiment outputs, or interrupt running jobs.
+
+The [2026-11-01 release checklist](reproducibility/release_readiness.md) supersedes older claims that all manuscript files are absent from Git. Earlier branch tips and clean-tree observations above are historical snapshots, not current status.
 
 ## Cleanup candidates
 
@@ -72,3 +74,21 @@ The repository ignores `paper/`, `reports/`, `logs/`, and `ckpt/`. Current manus
 | Ignored manuscript and experiment artifacts | Kept outside code commits | Preserve; do not use `git clean -fdx` as branch cleanup. |
 
 Future branch removal should first check unique commits, open pull requests, registered worktrees, and job dependencies. This review does not authorize merging the active branch into `master`, changing repository visibility, or deleting the retained worktree.
+
+
+## Consolidation of the latest fixes — 2026-11-01
+
+The active branch consolidates frontend cache/recovery, MetaPose Unity stability,
+and Unity geometry corrections in functional commits, followed by current status
+documentation. The sync procedure backs up the Pegasus development HEAD and
+changed/untracked files before applying the consolidated code. It compares
+tracked code paths, commit IDs and executable modes while excluding protected
+manuscript/result/data/checkpoint paths. It preserves the baseline `master`,
+frozen runtime plans and all experiment outputs; the prior development history is retained through a backup reference, and no
+force push is used. The new Unity capture-aspect guard is a development change, not an
+edit to frozen experiment source.
+
+Machine-readable before/after manifests, test output and synchronization receipts
+are retained separately in the workspace's `reports/branch_sync_20261101/` and
+Pegasus runtime `development_sync/20261101_pending_fixes/`. These operational
+records are not bundled data or a clean-clone reproduction certificate.

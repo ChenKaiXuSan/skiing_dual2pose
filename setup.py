@@ -28,7 +28,7 @@ setup(
     author="Kaixu Chen",
     author_email="kaixu_chen@example.com",
     url="https://github.com/ChenKaiXuSan/Skiing_Canonical_DualView_3D_Pose_PyTorch",
-    license="MIT",
+    license="Apache-2.0",
     packages=find_packages(exclude=["tests", "tests.*"]),
     long_description=README,
     long_description_content_type="text/markdown",
