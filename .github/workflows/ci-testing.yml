@@ -1,7 +1,7 @@
 name: CPU tests
 on:
   push:
-    branches: [master, per-frame-canonicalization, 'codex/**']
+    branches: [master]
   pull_request:
 jobs:
   tests:

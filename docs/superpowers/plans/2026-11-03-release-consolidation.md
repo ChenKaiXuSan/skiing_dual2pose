@@ -1,5 +1,7 @@
 # Per-frame consolidation and release preparation
 
+> Historical snapshot: branch names and preservation instructions below apply to the recorded operation. Since 2026-11-03, only `master` is retained; see `docs/branch_management.md` for the current policy.
+
 Approved scope: repair the public-readiness findings, validate integration, and merge the current per-frame method into master. Keep the per-frame branch, immutable experiment code/results and manuscript files. Do not make the repository public or rewrite existing history.
 
 1. Reproduce distribution-config failure and clean-checkout DAG preparation failure; package configs and version the non-data plan seeds with provenance.

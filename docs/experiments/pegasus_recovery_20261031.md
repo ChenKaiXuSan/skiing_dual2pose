@@ -1,5 +1,7 @@
 # Pegasus recovery status, 2026-10-31
 
+> Historical snapshot: branch names and preservation instructions below apply to the recorded operation. Since 2026-11-03, only `master` is retained; see `docs/branch_management.md` for the current policy.
+
 The full successor DAG is running under HP260146 / gen_S in
 `/work/HP260146/chenkaixu/Skiing_Canonical_DualView_3D_Pose_PyTorch_runtime/plans/recovery_20261031_v2`.
 Its frozen source is the deployment-time copy of the `per-frame-canonicalization` worktree; source hashes are recorded. Later branch commits do not update that deployed copy. Existing results and paper files were not modified. Master remains `f3ab2bc8d7f43097495e62c504458fa9c34195b0`. Running-job statements below describe the recovery-launch snapshot, not a live status query.

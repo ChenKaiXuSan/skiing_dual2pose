@@ -1,5 +1,7 @@
 # 当前完整实验清单（2026-10-30，北京时间）
 
+> Historical snapshot: branch names and preservation instructions below apply to the recorded operation. Since 2026-11-03, only `master` is retained; see `docs/branch_management.md` for the current policy.
+
 本清单统一 IEEE Access 主文、补充材料、逐帧重跑主队列、补跑与 MetaPose 恢复记录。论文组织保持不变；本文不修改论文、不启动重跑、不覆盖结果。旧计划中的“36 次训练”不再代表最终范围。
 
 ## Material Passport

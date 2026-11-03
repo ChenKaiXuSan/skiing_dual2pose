@@ -1,5 +1,7 @@
 # Pegasus runtime and branch preservation plan
 
+> Historical snapshot: branch names and preservation instructions below apply to the recorded operation. Since 2026-11-03, only `master` is retained; see `docs/branch_management.md` for the current policy.
+
 Scope: preserve the current per-frame branch on GitHub, organize this project's Pegasus paths, and prove training/evaluation work in fresh output directories. The user has authorized execution. No master update, force push, manuscript edit, result replacement, or full experimental rerun.
 
 - [x] Inventory remote queue/account/environment and local branch divergence. Preserve before-state hashes.

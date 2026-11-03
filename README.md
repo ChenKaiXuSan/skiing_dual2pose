@@ -2,7 +2,7 @@
 
 Post-estimation fusion of uncalibrated dual-view 3D pose streams, with per-frame body coordinates, joint-wise reliability gating and a residual correction.
 
-The consolidated method lives on `master`; `per-frame-canonicalization` is retained at the same integration revision. The pre-integration baseline is preserved as `archive/master-before-per-frame-20261103`. Each experiment must record its exact frozen code and checkpoint hashes rather than relying on a moving branch name.
+`master` is the sole maintained branch and contains the consolidated per-frame method. The former `per-frame-canonicalization` and temporary integration branches have been retired after merging. Pre-integration snapshots remain available through archive tags; see [release guidance](docs/reproducibility/release_readiness.md). Each experiment must record its exact frozen code and checkpoint hashes rather than relying on a moving branch name.
 
 ## Final experimental protocol
 
@@ -72,7 +72,7 @@ Use the supplied fixed split/index metadata; generating a different split does n
 python tools/export_source.py --output /absolute/new/canonfuse3d-source.tar.gz
 ```
 
-The exporter refuses existing output paths and includes a SHA-256 manifest. It excludes Git history, manuscripts, Unity assets, vendored SAM3D frontend code, private results, datasets and weights. A clean source export does not clean the original repository's history. The historical repository remains private pending a separate publication decision; see [release readiness](docs/reproducibility/release_readiness.md).
+The exporter refuses existing output paths and includes a SHA-256 manifest. It excludes Git history, manuscripts, Unity assets, vendored SAM3D frontend code, private results, datasets and weights. A clean source export does not clean the original repository's history. The historical repository remains private: it still tracks old manuscripts and third-party assets whose publication/redistribution status is unresolved. Keeping only `master` does not remove their history, including history reachable through backup tags. Use the clean source export as the release candidate; see the [public-readiness audit and remaining items](docs/reproducibility/release_readiness.md).
 
 No fresh full-GPU replication is implied by the CPU tests or packaging checks. Reproduce published numbers using the exact recorded inputs, selected checkpoints, configurations and frozen source hashes.
 

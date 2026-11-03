@@ -1,6 +1,10 @@
 # Documentation index
 
-## Current protocol and audit
+## Current release guidance
+
+`master` is the only retained development branch. Start with the [project README](../README.md), [branch policy](branch_management.md), [clean installation](reproducibility/clean_install.md), [final result registry](reproducibility/final_20261103/README.md), and [public-readiness audit](reproducibility/release_readiness.md).
+
+## Historical protocol and experiment audits
 
 - [Unity geometry repair and additive rerun](experiments/unity_geometry_repair_20261101.md)
 
@@ -10,8 +14,7 @@
 - [Branch roles and historical cleanup observations](branch_management.md)
 - [Per-frame experiment plan](per_frame_rerun_plan_20261028.md)
 
-The current audit takes precedence over older claims of completeness or geometry
-correctness. Dated runbooks describe the snapshots they inspected; a completed
+The current release guidance and final result registry take precedence over these dated inventories. Dated runbooks describe the snapshots they inspected; a completed
 task or a passing synthetic test is not proof that the scientific protocol is
 correct.
 

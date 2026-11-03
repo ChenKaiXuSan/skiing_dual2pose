@@ -8,3 +8,5 @@ The root Apache-2.0 license covers this project's code, not every resource in th
 - Ski-PTZ-Pose and author-collected data: datasets are not redistributed with this code. Obtain Ski-PTZ-Pose from its provider and request the permitted derived research data and checkpoints from the corresponding author. Raw author-collected videos are not shared.
 
 A source export is not a claim that all historical files are cleared for publication. No existing history has been removed or relicensed by merging the per-frame branch.
+
+The 2026-11-03 tracked-file audit found no license/notice/copyright-named files under `SAM3Dbody/` or `unity/`. Provenance alone does not settle redistribution terms. See [public-readiness audit](docs/reproducibility/release_readiness.md) for the exact release boundary and outstanding work.

@@ -1,5 +1,7 @@
 # Pegasus runtime verification — 2026-10-30
 
+> Historical snapshot: branch names and preservation instructions below apply to the recorded operation. Since 2026-11-03, only `master` is retained; see `docs/branch_management.md` for the current policy.
+
 Account **HP260146**, NQSV queue **gen_S**. GPU smoke job **195112.nqsv** completed successfully on an NVIDIA H100 PCIe. Scheduler elapsed time was 241 seconds. The diagnostic ran against code commit `ba98aad9362596abc55b68392372e3ccc76da119` on `per-frame-canonicalization`.
 
 ## Workspace

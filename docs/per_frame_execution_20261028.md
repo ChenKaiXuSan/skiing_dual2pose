@@ -1,5 +1,7 @@
 # Execution ledger — plan: docs/per_frame_rerun_plan_20261028.md
 
+> Historical snapshot: branch names and preservation instructions below apply to the recorded operation. Since 2026-11-03, only `master` is retained; see `docs/branch_management.md` for the current policy.
+
 User authorized all method/Pocket3 repairs, verification, then training on 2026-10-28.
 
 - Workspace: existing dirty `per-frame-canonicalization` branch; preserve prior user/session edits, do not move to clean worktree and lose them. No commit requested.
