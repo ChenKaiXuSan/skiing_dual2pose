@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from setuptools import find_packages, setup
+from setuptools import find_namespace_packages, setup
 
 PATH_ROOT = Path(__file__).parent
 
@@ -26,16 +26,17 @@ setup(
     version="0.1.0",
     description="Canonical-aligned dual-view 3D pose fusion for skiing videos.",
     author="Kaixu Chen",
-    author_email="kaixu_chen@example.com",
-    url="https://github.com/ChenKaiXuSan/Skiing_Canonical_DualView_3D_Pose_PyTorch",
+    author_email="chenkaixusan@gmail.com",
+    url="https://github.com/ChenKaiXuSan/skiing_dual2pose",
     license="Apache-2.0",
-    packages=find_packages(exclude=["tests", "tests.*"]),
+    packages=find_namespace_packages(include=["dual2pose", "dual2pose.*", "configs", "configs.*", "cross_validation", "cross_validation.*", "pegasus", "pegasus.*"]),
+    package_data={"configs": ["*.yaml", "model/*.yaml"], "pegasus.runtime": ["manifests/*.json", "requirements-*.txt", "*.sh"]},
     long_description=README,
     long_description_content_type="text/markdown",
     include_package_data=True,
     zip_safe=False,
     keywords=["deep learning", "pytorch", "3d pose", "multi-view"],
-    python_requires=">=3.10",
+    python_requires=">=3.11",
     install_requires=load_requirements(PATH_ROOT),
     classifiers=[
         "Environment :: Console",

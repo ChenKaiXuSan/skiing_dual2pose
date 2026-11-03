@@ -1,53 +1,21 @@
-# Public release readiness — 2026-11-01
+# Release readiness — 2026-11-03
 
-Status: **internal preparation; not ready to publish as a complete reproduction**.
-The development tree and all existing experiment paths are preserved.
+The current change repairs the core distribution and clean-checkout plan preparation. `master` may be fast-forwarded to the validated per-frame branch while preserving both branches and backup refs. This does not make the repository public.
 
-## Completed preparation
+## Corrected for the consolidated source
 
-- Added a documentation index, dated reproduction inventory and Table 2 audit.
-- Corrected README claims about ignored versus tracked manuscripts, fixed-fold
-  reporting and release completeness.
-- Aligned the README badge and package license metadata with the existing root
-  Apache-2.0 license; this does not change third-party licensing.
-- Removed the placeholder citation with an incomplete author list.
-- Prepared a separate working-tree source candidate with file hashes and explicit
-  exclusions. It is an internal review archive, not a tag, commit or publication.
+- Hydra configuration/model YAML is packaged in wheel and sdist; configuration loading is exercised outside the checkout.
+- Base-chain recipes are versioned with provenance hashes, with archived recipes retaining precedence. Preparation no longer requires private log manifests and does not submit work.
+- CPU CI targets the supported Python 3.11 environment and current test/package entrypoints, including the active branches.
+- Final numerical CSVs and checkpoint registry replace the obsolete main/C07 mixed-checkpoint explanation. Legacy observations remain clearly dated.
+- A portable core environment, data/weight acquisition contract and source-export command are documented.
+- The source export excludes paper, history, Unity assets, vendored frontend code, logs, weights and datasets. The root license does not relicense excluded third-party materials.
 
-## Items to finish before public release
+## Still separate from code integration
 
-| Item | Current finding | Needed before release |
-| --- | --- | --- |
-| Scientific validity | Unity geometry repaired; 18/18 successor tasks and artifact/source verification complete | Preserve versioned evidence; do not reuse pre-repair caches or generalize single-run findings |
-| Consolidated source | Frontend recovery, MetaPose stability and geometry fixes are grouped on the active branch | Use the consolidated branch for new work and original frozen hashes for past runs |
-| Public data contract | Full DAG relies on workspace-only manifests, prepared inputs and weights | Publish shareable split/index/schema manifests and obtain/download instructions; validate on a clean clone |
-| Environment portability | Runtime environments depend on an account-home Python installation | Provide portable environment creation and test CUDA/framework compatibility from scratch |
-| Historical manuscripts | 256 tracked files under `paper/`, about 66.8 MB, despite ignore rules | Review contents and full Git history before changing visibility; a clean export alone does not clean history |
-| Unity assets | 1,295 tracked files under `unity/`, about 1.53 GB | Review asset redistribution rights; separate optional assets from core pose code |
-| Third-party notices | Patched SAM3D tree and gated weights have separate provenance/terms | Verify applicable notices and permitted redistribution; do not imply root Apache-2.0 covers them |
-| CI / packaging | Legacy workflows reference an old template/Python 3.7; `MANIFEST.in` contains template paths | Replace and validate a supported clean-clone CI/build before publishing packages |
-| Numeric evidence | Corrected geometry and MetaPose timings adopted; unrelated paper rows retain original runs | Keep explicit row/checkpoint provenance; distinguish C07 control and mixed timing hardware |
-| Backup | Local text summaries complete; selected Pegasus binaries are not fully mirrored | Back up the missing artifact list and preserve predecessor plans, caches, external assets and source snapshots |
+- Public visibility: the existing repository still includes old manuscript/Unity assets and their history. Review permissions and history before making that repository public, or use the clean source export for a separately approved public repository.
+- Frontends, datasets and weights: acquire them under their applicable terms. The author has approved the listed derived data and checkpoints being supplied upon request; no raw personal videos are included.
+- Exact final-result reproduction: use immutable frozen sources, selected weights, data partitions and successor receipts described in data_and_runs.md. A successful base DAG preparation or CPU test is not a fresh replication of all GPU experiments.
+- GitHub CI: local validation and remote workflow results are distinct; inspect the workflow run for the final commit before declaring hosted CI green.
 
-Counts above are the current tracked-file snapshot, not Git-history sizes. No
-repository visibility, default branch, master tip, Git history or remote content
-was changed by this preparation. Do not run `git clean -fdx` or delete historical
-plans to make the repository appear clean.
-
-## Candidate archive boundaries
-
-The workspace archive under `reports/public_release_preparation_20261101/`
-contains current core source, tests, configuration, Pegasus scripts, selected
-documentation, patched frontend source and Unity C# capture scripts. Its manifest
-records the working-tree state and hashes, including relevant uncommitted source.
-It omits `.git`, manuscripts, results, datasets, checkpoints, external downloaded
-repositories/environments, Unity binary assets, editor settings and obsolete CI.
-
-This archive is for review only. It does not contain the data/weights or complete
-portable DAG needed to reproduce every experiment, and third-party notices still
-need review. Validate source export separately from environment and full-pipeline
-reproduction. The source candidate archive is not a public release. Pushing development commits to the existing repository does not change its visibility or publish a reproduction package.
-
-## Consolidation validation boundary
-
-The latest source check adds a regression for Unity metadata exported before the camera aspect is configured: focal lengths use the requested capture dimensions. This affects future captures; completed experiments used repaired legacy intrinsics and are not rewritten. Unity Editor compilation has not been performed. Existing geometry caches do not hash every source calibration/estimated-2D file; use fresh output directories when those inputs change. CI/package modernization and a clean-clone full pipeline check remain open.
+The internal source candidate from 2026-11-01 is historical and superseded by a new allowlisted export. No historical run, checkpoint or manuscript is replaced by this code integration.

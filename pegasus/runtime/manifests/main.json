@@ -1,0 +1,41 @@
+{
+  "jobs": {
+    "unity": {
+      "command": [
+        "/home/kaixu_chen/miniforge3/envs/dual2pose/bin/python",
+        "dual2pose/train_unity.py",
+        "train.max_epochs=100",
+        "train.seed=42",
+        "train.fold=0",
+        "train.gpu=0",
+        "data.batch_size=4096",
+        "data.num_workers=16",
+        "log_path=/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/per_frame_common13_v1/main_20261028T053836Z/unity"
+      ],
+      "gpu": 0,
+      "selection": "val/common13_mpjpe",
+      "status": "pending"
+    },
+    "ski": {
+      "command": [
+        "/home/kaixu_chen/miniforge3/envs/dual2pose/bin/python",
+        "dual2pose/train_ski_poseptz.py",
+        "--output-dir",
+        "/home/kaixu_chen/skiing/Skiing_Canonical_DualView_3D_Pose_PyTorch/logs/per_frame_common13_v1/main_20261028T053836Z/ski",
+        "--max-epochs",
+        "100",
+        "--seed",
+        "42",
+        "--batch-size",
+        "4",
+        "--num-workers",
+        "4",
+        "--gpu",
+        "0"
+      ],
+      "gpu": 1,
+      "selection": "fixed_final_epoch_99",
+      "status": "pending"
+    }
+  }
+}

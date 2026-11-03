@@ -1,5 +1,13 @@
 # Branch roles and cleanup inventory
 
+## Current decision — 2026-11-03
+
+The user has authorized consolidation into master after validation. Both master and per-frame-canonicalization will retain the final per-frame method. Preserve pre-merge master at archive/master-before-per-frame-20261103 and pre-release per-frame at archive/per-frame-before-release-20261103. No force push, visibility change, branch deletion, experiment modification or history rewrite is authorized by this operation.
+
+The sections below record earlier preservation decisions and snapshots; their prohibition on merging master has been superseded by this explicit request.
+
+## Historical records
+
 Reviewed on 2026-10-31. The agreed arrangement keeps both existing branches and preserves `master` as the old code baseline.
 
 ## Branch roles

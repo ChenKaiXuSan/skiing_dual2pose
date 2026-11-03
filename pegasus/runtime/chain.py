@@ -67,14 +67,26 @@ def dependencies(job,plan_dir):
     return metadata
 
 
+def plan_seed(repo, archived_path, bundled_name):
+    """Preserve archived recipes when supplied; clean clones use pinned seeds."""
+    path = Path(repo) / archived_path
+    if path.is_file():
+        return read(path)
+    bundled = Path(__file__).parent / 'manifests' / bundled_name
+    provenance = read(bundled.parent / 'provenance.json')
+    if sha(bundled) != provenance[bundled_name]['recipe_sha256']:
+        raise RuntimeError('Bundled plan recipe changed: ' + bundled_name)
+    return read(bundled)
+
+
 def prepare(repo,out,runtime):
     repo=Path(repo).resolve();out=Path(out).resolve();runtime=Path(runtime).resolve()
     out.mkdir(parents=True,exist_ok=False)
     root=out/'results';main=out/'main';core=out/'core';supp=out/'supplement'
     py=str(runtime/'envs/torch/bin/python');tf=str(runtime/'envs/metapose/bin/python')
     mapping={OLD+'/'+AUTO:str(root),OLD+'/'+MAIN:str(main),OLD+'/'+CORE:str(core),OLD+'/'+SUPP:str(supp),OLD+'/.cache/external_baselines/metapose_env':str(runtime/'envs/metapose'),'/home/kaixu_chen/miniforge3/envs/dual2pose/bin/python':py,OLD:str(repo),'/home/kaixu_chen/skiing/data':str(repo.parent/(repo.name+'_data')),'/home/kaixu_chen/data/skiing':str(repo.parent/(repo.name+'_data'))}
-    jobs=remap(read(repo/AUTO/'manifest.json')['jobs'],mapping)
-    by={j['id']:j for j in jobs};launch=read(repo/MAIN/'launch_manifest.json')['jobs']
+    jobs=remap(plan_seed(repo,Path(AUTO)/'manifest.json','auto.json')['jobs'],mapping)
+    by={j['id']:j for j in jobs};launch=plan_seed(repo,Path(MAIN)/'launch_manifest.json','main.json')['jobs']
     for ds in ('unity','ski'):
         j=by['main_'+ds];j.update(commands=[remap(launch[ds]['command'],mapping)],resource='gpu',scientific_training=True)
         # Module entrypoints work from the frozen source directory.
@@ -96,7 +108,7 @@ def prepare(repo,out,runtime):
     # Replace archived MetaPose reuse with the two approved current recipes.
     data=repo/'logs/ivc_mmsports_extension/external_baselines/20260911/metapose_data'
     source=repo/'.cache/external_baselines/google-research'
-    prior={j['id']:j for j in remap(read(repo/SUPP/'manifest.json')['jobs'],mapping)}
+    prior={j['id']:j for j in remap(plan_seed(repo,Path(SUPP)/'manifest.json','completion.json')['jobs'],mapping)}
     unity=prior['metapose_unity_train'];unity['validation']['path']=str(root/'metapose/unity')
     unity['commands']=remap(unity['commands'],{str(supp/'metapose/unity'):str(root/'metapose/unity')})
     unity.update(scientific_training=True,deps=['external_prepare_metapose_env']);jobs.append(unity)

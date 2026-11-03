@@ -102,3 +102,22 @@ def test_alpha_export_is_required_and_included_in_receipt(tmp_path):
     assert len(m.alpha_artifacts(tmp_path))==3
     path.write_text(path.read_text().replace('0.4','nan',1))
     with pytest.raises(ValueError,match='alpha statistics'):m.alpha_artifacts(tmp_path)
+
+
+def test_archived_seed_keeps_precedence(tmp_path):
+    m = module()
+    archived = tmp_path / 'old' / 'manifest.json'
+    archived.parent.mkdir()
+    m.write_new(archived, {'jobs': ['historical-recipe']})
+    assert m.plan_seed(tmp_path, Path('old/manifest.json'), 'auto.json')['jobs'] == ['historical-recipe']
+
+
+def test_bundled_seed_hash_mismatch_is_rejected(tmp_path, monkeypatch):
+    m = module()
+    seeds = tmp_path / 'manifests'
+    seeds.mkdir()
+    m.write_new(seeds / 'auto.json', {'jobs': []})
+    m.write_new(seeds / 'provenance.json', {'auto.json': {'recipe_sha256': 'bad'}})
+    monkeypatch.setattr(m, '__file__', str(tmp_path / 'chain.py'))
+    with pytest.raises(RuntimeError, match='Bundled plan recipe changed'):
+        m.plan_seed(tmp_path / 'empty', Path('missing/manifest.json'), 'auto.json')

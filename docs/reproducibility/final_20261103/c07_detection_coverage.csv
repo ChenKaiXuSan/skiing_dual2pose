@@ -1,0 +1,8 @@
+condition,left_failed_frame_positions,right_failed_frame_positions,either_failed_frame_positions,both_failed_frame_positions,frame_positions,sample_count
+clean,0,178,178,0,1933200,64440
+random_0p5_left,73202,178,73363,17,1933200,64440
+random_0p5_right,0,55191,55191,0,1933200,64440
+random_0p5_both,73202,55191,124855,3538,1933200,64440
+random_1_left,783049,178,783139,88,1933200,64440
+random_1_right,0,622875,622875,0,1933200,64440
+random_1_both,783049,622875,1060383,345541,1933200,64440

@@ -1,392 +1,83 @@
-<div align="center">
-
 # CanonFuse3D
 
-**CanonFuse3D: Human-Centric Canonical Fusion for Calibration-Free Dual-View 3D Pose Estimation in Skiing Videos**
+Post-estimation fusion of uncalibrated dual-view 3D pose streams, with per-frame body coordinates, joint-wise reliability gating and a residual correction.
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](#)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.x-orange.svg)](#)
-[![PyTorch Lightning](https://img.shields.io/badge/Lightning-2.x-purple.svg)](#)
-[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+The consolidated method lives on `master`; `per-frame-canonicalization` is retained at the same integration revision. The pre-integration baseline is preserved as `archive/master-before-per-frame-20261103`. Each experiment must record its exact frozen code and checkpoint hashes rather than relying on a moving branch name.
 
-</div>
+## Final experimental protocol
 
----
+- Canonicalize each input stream and target independently for every frame. The orthonormal body frame preserves scale and bone lengths while removing global orientation and translation.
+- Score the predicted output directly against the canonical target on the common 13 joints. Do not fit, recenter or recanonicalize predictions for the primary metric.
+- Report position errors in **mm**. PA-MPJPE is an auxiliary alignment metric; acceleration is **mm per sampled-frame squared**.
+- Main Unity and matched C07 evaluations use the same selected fusion and DLT+MLP weights; differing observation cohorts explain their different clean scores.
+- Independently trained ablations and adapted models retain their own checkpoint identities. The final Unity/Ski comparisons are fixed-partition, single-training-run results, not multi-seed generalization estimates.
 
-## TL;DR
+| Primary CanonFuse3D result | Unity | Ski-PTZ-Pose |
+| --- | ---: | ---: |
+| MPJPE (mm) | 50.91 | 124.33 |
+| PA-MPJPE (mm) | 41.07 | 91.49 |
 
-### Choosing a branch
+See the [final numerical and checkpoint registry](docs/reproducibility/final_20261103/README.md) for full-precision results and provenance. Historical manuscript outputs in the private repository are not current result sources.
 
-| Branch | Purpose |
-| --- | --- |
-| [`master`](https://github.com/ChenKaiXuSan/skiing_dual2pose/tree/master) | Preserved pre-migration code baseline; remains the GitHub default branch. |
-| [`per-frame-canonicalization`](https://github.com/ChenKaiXuSan/skiing_dual2pose/tree/per-frame-canonicalization) | Current training, evaluation, and experiment orchestration with the per-frame protocol. |
+## Install and check
 
-Use `per-frame-canonicalization` for current experiments. Record the exact commit and any working-tree changes with each run; legacy checkpoints and results require their original protocol. Current Access drafts, logs, and checkpoints are workspace artifacts, but older manuscript files and Unity assets are still tracked in Git. Ignoring a directory does not remove its history. See [branch roles and cleanup inventory](docs/branch_management.md).
-
-### Reproduction and release status
-
-Start with the [documentation index](docs/README.md), [reproduction inventory](docs/reproducibility/README.md), and [Table 2 audit](docs/reproducibility/table2_audit_20261101.md). The primary protocol is per-frame canonicalization, common-13 direct MPJPE in **mm**, with PA-MPJPE separately labelled and acceleration in **mm per sampled-frame squared**.
-
-**Correction completed, 2026-11-01:** Unity geometry now uses annotation-consistent, versioned camera intrinsics and rejects pre-repair caches. The additive plan `unity_geometry_v2_20261101T062040Z` completed all 18 tasks: regenerated geometry, DLT/gated-DLT evaluation, DLT-residual retraining, native-15/common-13 rescoring, the full matched occlusion/calibration matrix, and both stable MetaPose timing scopes. Its 86 artifacts and 332 frozen source hashes were verified. See the [repair record](docs/experiments/unity_geometry_repair_20261101.md) for results, selection and remaining limitations. Original results and frozen run sources are retained.
-
-This checkout is being prepared for release; it is not yet a self-contained public reproduction package. Frozen Pegasus runs retain their exact source snapshots and hashes; the consolidated development branch does not replace that run provenance. Read the [release checklist](docs/reproducibility/release_readiness.md) before publishing or attempting to reproduce the full experiment matrix from a clean clone.
-
-This repository implements a research pipeline for reconstructing stable 3D human poses from synchronized dual-view skiing videos. The current default model is `crossview_fusion`: it takes per-view 3D keypoints from SAM 3D Body, aligns them in a human-centric canonical coordinate system, exchanges information across views with attention, and fuses joints with an adaptive reliability gate.
-
-The main goal is to avoid explicit camera calibration while still using complementary information from two views.
-
-```text
-dual-view videos
-    -> SAM 3D Body per-view 3D keypoints
-    -> human-centric canonicalization
-    -> Sim3 cross-view pose alignment
-    -> cross-view attention + temporal refinement
-    -> joint-wise gated fusion + residual correction
-    -> stable fused 3D pose sequence
-```
-
----
-
-## Motivation
-
-Skiing videos are difficult for standard 3D pose estimation because they often contain:
-
-- unknown or unreliable camera extrinsics,
-- fast motion and motion blur,
-- frequent self-occlusion,
-- strong view-dependent errors from monocular 3D estimators.
-
-Instead of recovering camera poses, this project fuses the two monocular 3D predictions directly after transforming them into a comparable human-centric canonical space.
-
----
-
-## Method Overview
-
-### 1. Per-view 3D lifting
-
-The project uses external SAM 3D Body utilities to estimate 3D keypoints independently for each camera:
-
-- `P_L`: left-camera 3D pose sequence
-- `P_R`: right-camera 3D pose sequence
-
-The SAM 3D Body utilities live in `SAM3Dbody/`, and the training/evaluation dataloaders consume the exported `.npy` or `.npz` keypoint results.
-
-### 2. Human-centric canonical alignment
-
-Implemented in `dual2pose/trainer/canonicalize.py`.
-
-Each pose is transformed into a canonical coordinate system using anatomical landmarks:
-
-- pelvis origin: midpoint of left and right hips,
-- body x-axis: right hip minus left hip,
-- body y-axis: neck minus pelvis,
-- body z-axis: cross product of body x/y axes,
-- optional face-direction sign correction.
-
-This makes left/right predictions more comparable without using camera extrinsics.
-
-The training protocol is fixed to per-frame canonicalization: every frame of both input streams and of the supervision target is centred at its own pelvis and rotated into its own body frame, so the representation carries no global motion. The Unity loader also has an upstream batch-dependent facing convention; independent rescoring must preserve its recorded evaluation batch size (256 in the current benchmark). That body frame is orthonormal: the hip line is the first axis and the spine is projected onto its orthogonal complement, so the transform is rigid and bone lengths are preserved; frames whose landmarks cannot define a frame (failed detections) reuse the rotation of a neighbouring frame and their share is logged as `degenerate_input_frames`. The eye pair that fixes the sign of the forward axis is configurable (`data.left_eye_idx`, `data.right_eye_idx`, `data.face_sign`); the Ski-PosePTZ scripts disable it because the 13-joint skeleton has no eyes. The archived `first_frame` construction keeps the manuscript's non-orthogonalised axes. Checkpoints record this protocol and the trainer rejects checkpoints of the manuscript's batch-referenced first-frame protocol. `canonicalize_pose_torch(mode="first_frame")` remains only for the archived baseline and native-output analyses.
-
-### 3. Cross-view canonical fusion
-
-Implemented in `dual2pose/models/crossview_fusion.py`.
-
-The default model, `CrossViewCanonicalFusion`, contains:
-
-- **Sim3 alignment**: sequence-level similarity alignment between left and right canonical poses.
-- **Motion features**: per-joint velocity features from each view.
-- **Cross-view residual features**: discrepancy after aligning one view to the other.
-- **Rotation features**: rotation vectors from the estimated Sim3 transforms.
-- **Joint encoder**: MLP-based per-joint feature encoding.
-- **Cross-view attention**: left-to-right and right-to-left multi-head attention over joints.
-- **Temporal refiner**: lightweight depthwise temporal convolution for sequence smoothing.
-- **Joint-wise gate**: predicts `alpha` for each joint and frame to combine the two views.
-- **Residual head**: predicts a final 3D correction to the fused pose.
-
-Fusion is performed as:
-
-```text
-base_l = 0.5 * (left_canon + right_to_left_canon)
-base_r = 0.5 * (right_canon + left_to_right_canon)
-fused = alpha * base_l + (1 - alpha) * base_r + residual
-```
-
----
-
-## Data
-
-### Unity synthetic skiing data
-
-Used for supervised training and evaluation.
-
-Typical modalities:
-
-- synchronized dual-view RGB frames,
-- Unity 2D ground-truth keypoints,
-- Unity 3D ground-truth keypoints,
-- SAM 3D Body per-view 2D/3D predictions,
-- camera-pair split metadata.
-
-Loader:
-
-- `dual2pose/dataloader/unity_dataset_dual_view.py`
-
-### Ski-PosePTZ / real skiing data
-
-Used for pseudo-GT training, real-world inference, and qualitative evaluation.
-
-Typical modalities:
-
-- synchronized dual-view frames,
-- SAM 3D Body predictions,
-- pseudo-GT 3D pose exports when available,
-- split/index mapping JSON files.
-
-Loader:
-
-- `dual2pose/dataloader/ski_poseptz_dataset_dual_view.py`
-
-### Cross-validation
-
-Camera-pair folds are generated by:
+Python 3.11 is the tested release environment. Start in a new environment:
 
 ```bash
-python cross_validation/main.py
+python3.11 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+# CPU checks; use a compatible torch/torchvision CUDA build for GPU training.
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements.txt -r tests/requirements.txt
+python -m pytest -q
+python -m build
 ```
 
-The camera-pair index generator supports `by_action` and `by_camera_pair`, and the training code supports two precomputed action-disjoint folds. The current reported Unity benchmark uses one fixed fold (`fold_0`); its results are not a two-fold average or multi-seed estimate.
+The wheel and source distribution include the Hydra YAML and model configuration groups. See [clean installation](docs/reproducibility/clean_install.md) for installation outside the source checkout. Optional raw-image frontends and the TensorFlow MetaPose environment are installed separately.
 
----
+## Data and training
 
-## Training Objective
+The code consumes prepared 3D pose streams; it does not include private datasets or gated model weights. The author has confirmed that the Unity dataset, selected checkpoints, derived laboratory poses/reference/synchronization information and evaluation outputs are available upon reasonable request. Raw author-collected videos are not shared. Contact: chenkaixusan@gmail.com.
 
-The default `CrossViewFusionTrainer` is implemented in:
-
-- `dual2pose/trainer/train_crossview_fusion.py`
-
-For labeled Unity or pseudo-GT training, the main supervised term is L1 error in canonical space. The trainer also adds auxiliary constraints:
-
-- **view reconstruction loss**: reconstruct left/right canonical poses from the fused pose and gate,
-- **alpha balance loss**: discourages collapse to only one view,
-- **alpha entropy loss**: encourages non-degenerate reliability weights,
-- **temporal smoothness loss**: penalizes second-order acceleration of the fused sequence.
-
-During testing, the trainer reports:
-
-- fused MPJPE,
-- SAM3D left/right MPJPE,
-- canonical baseline MPJPE,
-- simple average baseline MPJPE,
-- acceleration error,
-- per-joint MPJPE.
-
----
-
-## Quick Start
-
-> This is a research codebase. Dataset paths in `configs/dual2pose.yaml` should be edited for your local machine before training.
-
-### 1. Install
+Set the dataset roots before running:
 
 ```bash
-conda create -n canonfuse3d python=3.10 -y
-conda activate canonfuse3d
-pip install -r requirements.txt
+export DUAL2POSE_UNITY_ROOT=/your/data/skiing_unity_dataset
+export DUAL2POSE_SKI_ROOT=/your/data/Ski-PosePTZ-CameraDataset-png
+export DUAL2POSE_POCKET3_ROOT=/your/data/skiing_pocket3_20261012
+export DUAL2POSE_RAW_ROOT=/your/data
+python -m dual2pose.train_unity
+python -m dual2pose.train_ski_poseptz --help
+python -m dual2pose.pocket3.evaluate --help
 ```
 
-Dataset locations default to the paths this project was developed on. Point them
-at your own copies with these environment variables, or edit `configs/dual2pose.yaml`:
+Use the supplied fixed split/index metadata; generating a different split does not reproduce the paper. Unity supports two action-disjoint folds, with the reported result using fold 0. Preserve the recorded Unity evaluation batch size (256). Active loaders reject untagged and first-frame checkpoints instead of treating them as per-frame results.
 
-| Variable | Default | Holds |
-|---|---|---|
-| `DUAL2POSE_UNITY_ROOT` | `/home/kaixu_chen/skiing/data/skiing_unity_dataset` | Unity synthetic dataset |
-| `DUAL2POSE_SKI_ROOT` | `/home/kaixu_chen/skiing/data/Ski-PosePTZ-CameraDataset-png` | Ski-PosePTZ dataset |
-| `DUAL2POSE_RAW_ROOT` | `/home/kaixu_chen/data/skiing` | raw videos and SAM 3D Body results |
-| `DUAL2POSE_REPO` | this checkout | repository root, for archived checkpoint paths |
+[Data and run requirements](docs/reproducibility/data_and_runs.md) describe the interfaces, external baseline revisions, and immutable archives needed for full reproduction. The bundled Pegasus recipes allow preparing the original base plan without private log manifests; they do not replace later recovery, stable MetaPose, geometry correction and unified reevaluation records. Preparing a plan never submits GPU jobs.
 
-The `index_path_rewrite_from` entries in the config are deliberately *not*
-configurable: they record the data root stored inside the archived index files,
-which `dual2pose/path_rewrite.py` maps onto the roots above.
+## Repository layout
 
-### 2. Train on Unity
+- `dual2pose/`: model, canonicalization, training, evaluation and baseline adapters.
+- `configs/`: packaged Hydra configuration and model groups.
+- `cross_validation/`: index generation and split support.
+- `pegasus/`: NQSV orchestration, verified receipts and versioned base recipes.
+- `tests/`: CPU regression and distribution tests.
+- `tools/export_source.py`: allowlisted, history-free core source exporter.
+- `docs/reproducibility/`: current installation, data contract and final result registry.
 
-Training uses the fixed CanonFuse3D protocol (per-frame body frame, supervised L1 on the Unity ground truth, two action-disjoint folds):
+## Release boundary
 
 ```bash
-python dual2pose/train_unity.py
+python tools/export_source.py --output /absolute/new/canonfuse3d-source.tar.gz
 ```
 
-Useful overrides:
+The exporter refuses existing output paths and includes a SHA-256 manifest. It excludes Git history, manuscripts, Unity assets, vendored SAM3D frontend code, private results, datasets and weights. A clean source export does not clean the original repository's history. The historical repository remains private pending a separate publication decision; see [release readiness](docs/reproducibility/release_readiness.md).
 
-```bash
-python dual2pose/train_unity.py train.fold=1 train.seed=13
+No fresh full-GPU replication is implied by the CPU tests or packaging checks. Reproduce published numbers using the exact recorded inputs, selected checkpoints, configurations and frozen source hashes.
 
-# Every model hyperparameter lives in configs/model/<group>.yaml and can be
-# overridden on the command line:
-python dual2pose/train_unity.py model.optim.lr=5e-4 model.arch.hidden_dim=256
-```
+## License and citation
 
-### 3. Train on Ski-PosePTZ pseudo GT
+This project's core code uses [Apache-2.0](LICENSE). External software, model weights, datasets and Unity assets retain their own terms; see [third-party boundaries](THIRD_PARTY.md). The root license does not authorize redistributing all materials in the historical repository.
 
-```bash
-python dual2pose/train_ski_poseptz.py \
-  --batch-size 4 \
-  --num-workers 4 \
-  --time-window 30 \
-  --max-epochs 100
-```
-
-### 4. Hand-held dual-Pocket recording
-
-```bash
-python -m dual2pose.pocket3.evaluate --ckpt Unity=<per-frame checkpoint>   # frozen evaluation
-python -m dual2pose.pocket3.adapt    --ckpt <per-frame checkpoint>         # front-end style adaptation
-python -m dual2pose.pocket3.train    --ckpt <per-frame checkpoint> --gpu 1 # chronological in-domain training
-```
-
-All Pocket3 baselines and learned models use per-frame canonicalization; the old
-`--reference window` / `batch` modes are no longer accepted. Add `--save-weights`
-to export the selected models with their protocol and configuration for reuse
-with `pocket3.evaluate --ckpt label=<saved .pt file>`. Untagged and first-frame
-weights are rejected by the active checkpoint loaders. The shared canonicalizer
-also defaults to `per_frame`; archived manuscript code requests `first_frame`
-explicitly. Training uses AdamW with cosine decay updated at every optimizer step.
-
-### Evaluation contract across datasets
-
-Active Unity, Ski-PosePTZ and Pocket3 evaluation uses `common13_direct_per_frame_v1`:
-the common-13 joints (shoulders, elbows, hips, knees, ankles, wrists and neck),
-in the order defined in `dual2pose/map_config.py`. Eye landmarks may establish
-the body frame but do not contribute to the primary error. Model input/output
-skeletons and the native supervised training loss are unchanged.
-
-Primary MPJPE compares the output directly with the per-frame canonical GT.
-There is no output recentering, recanonicalization or fitted rotation/scale.
-Validation and checkpoint selection use this same metric. Pocket3 exports it
-as `mpjpe_mm` during training/adaptation and `mpjpe_m` in standalone evaluation;
-Unity/Ski raw artifacts retain their existing coordinate-unit fields. All future
-reports and comparison tables express MPJPE, PA-MPJPE and other position errors
-in **mm**: multiply metre-valued errors by 1000 exactly once; use existing
-`*_mm` fields unchanged. Unity uses the standard scene convention
-`1 Unity unit = 1 m`; Ski reference coordinates are in metres. This reporting
-conversion leaves training, checkpoint selection and the per-frame protocol
-unchanged. Angles, ratios and training losses retain their own units;
-acceleration errors must state their time basis (`mm/frame^2` or `mm/s^2`).
-See the 2026-10-28 reporting-unit decision in
-`docs/per_frame_execution_20261028.md`. Pocket3 excludes unreliable
-reference joints from scoring. Its PA, root-relative, sequence-aligned and
-`recanonicalized_mpjpe_*` scores are auxiliary. The older
-`per_frame_canonical_mpjpe_*` fields remain aliases of the recanonicalized
-diagnostic, not the primary score. Any `all15_*` front-end scores are auxiliary.
-
-Reports and new checkpoints record the evaluation protocol. Historical results
-were not recomputed; compare results only after rescoring under the same protocol.
-Multiseed aggregation rejects mixed protocol tags, including new versus untagged
-historical scores. Image/pose occlusion comparisons require matching tagged scores.
-
-### 5. Real-world inference
-
-```bash
-python -m dual2pose.realworld.direct --help
-python -m dual2pose.realworld.inference --help
-```
-
-The script loads real-world SAM3D-body outputs, builds left/right temporal windows, runs the trained `crossview_fusion` model, and exports summary/visualization files.
-
----
-
-## Repository Structure
-
-```text
-Skiing_Canonical_DualView_3D_Pose_PyTorch/
-├── dual2pose/
-│   ├── config.py, map_config.py, path_rewrite.py   # Hydra config loading, skeleton maps, data-root rewriting
-│   ├── training_protocol.py     # the two action-disjoint Unity folds
-│   ├── train_unity.py           # the training entry point (fixed CanonFuse3D protocol)
-│   ├── train_ski_poseptz.py     # same protocol on the Ski-PosePTZ reference
-│   ├── train_frontend_adaptation.py, frontend_adaptation.py   # fine-tuning on other pose front ends
-│   ├── dataloader/              # Unity, Ski-PosePTZ and front-end pose datasets
-│   ├── models/                  # CanonFuse3D (crossview_fusion), Sim3, pose-only and geometric baselines
-│   ├── trainer/                 # canonicalization and the Lightning trainer
-│   ├── pocket3/                 # hand-held dual-Pocket pipeline: evaluate / adapt / train
-│   ├── realworld/               # inference on real-world SAM 3D Body results
-│   ├── eval/                    # evaluation; see dual2pose/eval/README.md for the index
-│   └── experiments/             # archived manuscript runners (external baselines, multi-seed matrix)
-├── configs/                     # Hydra configuration files
-│   └── model/cross_view_fusion.yaml   # model hyperparameters (arch / optim / loss)
-├── cross_validation/            # camera-pair split generation
-├── SAM3Dbody/                   # SAM 3D Body helper utilities
-├── analysis/                    # data checks, notebooks, export scripts
-├── pegasus/                     # cluster job scripts
-├── unity/                       # Unity project/assets and analysis helpers
-├── tests/                       # unit tests
-├── docs/                        # runbooks, audits and archived design notes
-├── requirements.txt
-└── environment.yaml
-```
-
----
-
-## Paper Writing Guide
-
-The current Access workspace is ignored, but historical `paper/` files remain
-tracked in Git. They need a separate publication review; `.gitignore` does not
-remove them. Experiment code and tests can be used without that directory. Run the
-test suite from the repository root:
-
-```bash
-python -m unittest discover -s tests -q
-```
-
-Tests that require the private manuscript report a skip when
-`paper/ivc_draft_20260821/` is absent. When it is present, those tests run normally
-and missing manuscript files still fail. E4/E5 rendering uses the tracked style
-module `dual2pose/eval/journal_figure_style.py`.
-
-The IVC baseline implementation includes pose-only and calibrated geometry
-baselines, full-index MPJPE and acceleration evaluation, and per-frame
-PA-MPJPE evaluation. Entry points are:
-
-```bash
-python -m dual2pose.eval.main_baseline_data --help
-python -m dual2pose.eval.main_baseline_geometry --help
-python -m dual2pose.experiments.run_main_baselines --help
-python -m dual2pose.experiments.run_geometry_baselines --help
-python -m dual2pose.eval.evaluate_main_baseline_pa --help
-python -m dual2pose.eval.render_main_baseline_tables --help
-```
-
-Datasets, selected checkpoints, and generated experiment outputs are supplied
-separately; run plans under `docs/superpowers/plans/` record the local protocols.
-
-A paper based on this codebase can be structured around the following method pipeline:
-
-1. **Problem formulation**: calibration-free dual-view 3D pose fusion for skiing.
-2. **Per-view lifting**: use SAM 3D Body to obtain noisy monocular 3D pose sequences.
-3. **Canonical alignment**: transform poses into a pelvis-centered anatomical coordinate system.
-4. **Cross-view alignment**: estimate Sim3 transforms between canonical left/right predictions.
-5. **Feature construction**: concatenate pose, aligned pose, residual, velocity, and rotation features.
-6. **Cross-view reasoning**: exchange joint-level information via bidirectional attention.
-7. **Temporal refinement**: smooth and refine features over time with temporal convolution.
-8. **Adaptive fusion**: predict per-joint reliability gates and residual 3D corrections.
-9. **Evaluation**: compare against single-view SAM3D, simple average fusion, canonical average fusion, and the proposed learned fusion.
-
-The central claim is:
-
-> A human-centric canonical representation enables calibration-free dual-view 3D pose fusion, and joint-wise learned fusion improves robustness under skiing-specific motion, occlusion, and view-dependent pose noise.
-
----
-
-## Citation
-
-The final bibliographic record will be added when the manuscript details are
-confirmed. No placeholder author list is intended for citation.
-
-## License
-
-The repository's root license is [Apache-2.0](LICENSE). Third-party software,
-model weights, datasets, and Unity assets retain their own terms. In particular,
-see [SAM3Dbody provenance](SAM3Dbody/UPSTREAM.md); the root license does not grant
-redistribution rights for all external materials. The release checklist records
-the remaining notice and asset review.
+The IEEE Access manuscript is titled *Post-Estimation Fusion of Uncalibrated Dual-View 3D Pose Streams: Reliability Gating, Robustness, and Front-End Generalization*. Publication identifiers will be added when available; no DOI or publication status is assumed here.

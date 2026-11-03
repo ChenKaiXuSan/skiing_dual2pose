@@ -1,19 +1,19 @@
-pytorch-lightning 
-torch
-torchvision
-
-# config hydra 
-hydra-core
-
-# for cross validation
-scikit-learn
-
-opencv-python
-
-pytorchvideo
-seaborn
-matplotlib
-
-tensorboard
-rich
-transformers>=4.56.0
+# Core pose training/evaluation. Install a matching torch/torchvision build first.
+torch>=2.1
+torchvision>=0.16
+pytorch-lightning>=2.2,<3
+hydra-core>=1.3,<2
+numpy>=1.24
+scipy>=1.10
+pandas>=2
+scikit-learn>=1.3
+opencv-python-headless>=4.8
+matplotlib>=3.7
+seaborn>=0.12
+tensorboard>=2.14
+rich>=13
+h5py>=3.9
+einops>=0.7
+tqdm>=4.65
+PyYAML>=6
+# External monocular frontends / TensorFlow baselines are installed separately.

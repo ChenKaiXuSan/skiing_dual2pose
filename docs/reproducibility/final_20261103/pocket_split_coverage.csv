@@ -1,0 +1,17 @@
+run,train_windows,test_windows,valid_test_points,selection,epochs_run,best_epoch,val_windows
+pocket_adapt_reverse_full,11,6,2340,fixed_final_epoch,20,20,
+pocket_reverse_random_seed0,40,2,780,minimum_validation_common13,65,25,3
+pocket_reverse_random_seed2,40,2,780,minimum_validation_common13,115,75,3
+pocket_forward_random_seed1,42,5,1950,minimum_validation_common13,113,73,3
+pocket_reverse_unity_seed1,40,2,780,minimum_validation_common13,95,55,3
+pocket_adapt_forward_full,9,8,3120,fixed_final_epoch,20,20,
+pocket_reverse_unity_seed0,40,2,780,minimum_validation_common13,95,55,3
+pocket_forward_unity_seed0,42,5,1950,minimum_validation_common13,81,41,3
+pocket_forward_random_seed2,42,5,1950,minimum_validation_common13,57,17,3
+pocket_forward_random_seed0,42,5,1950,minimum_validation_common13,53,13,3
+pocket_forward_unity_seed2,42,5,1950,minimum_validation_common13,54,14,3
+pocket_adapt_forward_heads_only,9,8,3120,fixed_final_epoch,20,20,
+pocket_reverse_unity_seed2,40,2,780,minimum_validation_common13,121,81,3
+pocket_reverse_random_seed1,40,2,780,minimum_validation_common13,76,36,3
+pocket_adapt_reverse_heads_only,11,6,2340,fixed_final_epoch,20,20,
+pocket_forward_unity_seed1,42,5,1950,minimum_validation_common13,68,28,3

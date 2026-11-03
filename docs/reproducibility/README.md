@@ -1,4 +1,6 @@
-# Reproduction inventory — 2026-11-01
+# Reproduction inventory
+
+Current result and release guidance (2026-11-03): [final registry](final_20261103/README.md), [clean installation](clean_install.md), [data and run contract](data_and_runs.md). The dated inventory below is historical; it does not override those sources.
 
 This is a dated, read-only audit of the completed Pegasus run, not a claim that
 a fresh public clone reproduces every conclusion. The [original geometry audit](table2_audit_20261101.md) is retained; its required reruns are now complete, as recorded in the [repair report](../experiments/unity_geometry_repair_20261101.md).
@@ -82,7 +84,7 @@ The development branch now consolidates the frontend cache/recovery, MetaPose st
 
 The corrected Unity geometry plan `unity_geometry_v2_20261101T062040Z` completed 18/18 tasks. Its 86 artifacts and 332 source hashes passed verification. Both new MetaPose Unity timing scopes are available (2.915 ms learned solver; 10.070 ms including adapters, on H100 PCIe). These are method-specific timings and must not be ranked directly against timings measured on RTX A6000.
 
-The current local/Pegasus Access manuscript was synchronized separately: the new Unity geometry rows, matched corruption/calibration matrix and MetaPose timing were adopted. Other benchmark numbers intentionally retain their original runs. The C07 fusion control uses an independently retrained checkpoint (clean 50.967 mm), while the primary table retains 50.827 mm. Run identifiers and hashes, rather than matching rounded numbers, establish provenance.
+The 2026-11-03 final manuscript supersedes the earlier mixed-run snapshot: main Unity MPJPE is 50.907143 mm, Ski is 124.328372 mm. Main Unity and C07 share the same fusion and DLT+MLP weights. C07 clean MPJPE is 50.966558 mm because its matched observations differ. Checkpoint hashes are recorded in final_20261103/checkpoint_registry.json; rounded metric equality is not an identity check.
 
 The earlier 47-file local binary-backup gap above has not been re-audited by code synchronization. A full public reproduction still needs portable data/weight acquisition, environment setup, licensing review and clean-clone validation; see [release readiness](release_readiness.md).
 

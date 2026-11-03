@@ -1,0 +1,20 @@
+{
+  "auto.json": {
+    "archived_source": "logs/per_frame_common13_v1/auto_20261028T061053Z/manifest.json",
+    "archived_source_sha256": "7e863ea4bb89211d6b401cdf486b6b0098aecd50b676d4d65cf71ba753b8a42c",
+    "recipe_sha256": "5af51905e67ee01d432567c0a62dae27a0fb8208c51813f90bcbaff6ed50f4b0",
+    "scope": "2026-10-30 base plan seed; final corrections and final result registry are documented separately"
+  },
+  "main.json": {
+    "archived_source": "logs/per_frame_common13_v1/main_20261028T053836Z/launch_manifest.json",
+    "archived_source_sha256": "14c2762497e1fb8cc6c76451128355b3246dc33211e9caf20c281a3514180e62",
+    "recipe_sha256": "a0489b2ea917bddec46f5a1e7bc5672417af4a4683f1ae08f3afa2eef234d9bf",
+    "scope": "2026-10-30 base plan seed; final corrections and final result registry are documented separately"
+  },
+  "completion.json": {
+    "archived_source": "logs/per_frame_common13_v1/completion_20261029T042127Z/manifest.json",
+    "archived_source_sha256": "2650136b7ea92309244fdeb342f5a4b7f1880133127f123da67880a166216f7f",
+    "recipe_sha256": "f5bbd33c7592c918dfb043c31dbeceaf665851b41fb438bdd426095e0a38996b",
+    "scope": "2026-10-30 base plan seed; final corrections and final result registry are documented separately"
+  }
+}
