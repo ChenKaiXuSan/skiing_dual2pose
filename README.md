@@ -1,8 +1,8 @@
-# CanonFuse3D
+# Post-Estimation Fusion of Uncalibrated Dual-View 3D Pose Streams
 
 Post-estimation fusion of uncalibrated dual-view 3D pose streams, with per-frame body coordinates, joint-wise reliability gating and a residual correction.
 
-`master` is the sole maintained branch and contains the consolidated per-frame method. The former `per-frame-canonicalization` and temporary integration branches have been retired after merging. Pre-integration snapshots remain available through archive tags; see [release guidance](docs/reproducibility/release_readiness.md). Each experiment must record its exact frozen code and checkpoint hashes rather than relying on a moving branch name.
+This repository is public. `master` is the sole maintained branch and contains the consolidated per-frame method. The former `per-frame-canonicalization` and temporary integration branches have been retired after merging. Pre-integration snapshots remain available through archive tags. Each experiment must record its exact frozen code and checkpoint hashes rather than relying on a moving branch name.
 
 ## Final experimental protocol
 
@@ -12,12 +12,12 @@ Post-estimation fusion of uncalibrated dual-view 3D pose streams, with per-frame
 - Main Unity and matched C07 evaluations use the same selected fusion and DLT+MLP weights; differing observation cohorts explain their different clean scores.
 - Independently trained ablations and adapted models retain their own checkpoint identities. The final Unity/Ski comparisons are fixed-partition, single-training-run results, not multi-seed generalization estimates.
 
-| Primary CanonFuse3D result | Unity | Ski-PTZ-Pose |
+| Proposed method | Unity | Ski-PTZ-Pose |
 | --- | ---: | ---: |
 | MPJPE (mm) | 50.91 | 124.33 |
 | PA-MPJPE (mm) | 41.07 | 91.49 |
 
-See the [final numerical and checkpoint registry](docs/reproducibility/final_20261103/README.md) for full-precision results and provenance. Historical manuscript outputs in the private repository are not current result sources.
+The final numerical and checkpoint registry is preserved separately from the public code checkout and is available upon reasonable request. It records full-precision results and provenance. Historical manuscript outputs in Git history are not current result sources.
 
 ## Install and check
 
@@ -34,7 +34,7 @@ python -m pytest -q
 python -m build
 ```
 
-The wheel and source distribution include the Hydra YAML and model configuration groups. See [clean installation](docs/reproducibility/clean_install.md) for installation outside the source checkout. Optional raw-image frontends and the TensorFlow MetaPose environment are installed separately.
+The wheel and source distribution include the Hydra YAML and model configuration groups. Optional raw-image frontends and the TensorFlow MetaPose environment are installed separately. Some legacy manuscript integration tests depend on separately archived paper files; the public checkout does not include those files.
 
 ## Data and training
 
@@ -54,7 +54,7 @@ python -m dual2pose.pocket3.evaluate --help
 
 Use the supplied fixed split/index metadata; generating a different split does not reproduce the paper. Unity supports two action-disjoint folds, with the reported result using fold 0. Preserve the recorded Unity evaluation batch size (256). Active loaders reject untagged and first-frame checkpoints instead of treating them as per-frame results.
 
-[Data and run requirements](docs/reproducibility/data_and_runs.md) describe the interfaces, external baseline revisions, and immutable archives needed for full reproduction. The bundled Pegasus recipes allow preparing the original base plan without private log manifests; they do not replace later recovery, stable MetaPose, geometry correction and unified reevaluation records. Preparing a plan never submits GPU jobs.
+Full reproduction also requires the separately preserved data contracts, external baseline revisions, final run manifests and immutable experiment archives. Request these materials together with the data and checkpoints. The bundled Pegasus recipes allow preparing the original base plan without private log manifests; they do not replace later recovery, stable MetaPose, geometry correction and unified reevaluation records. Preparing a plan never submits GPU jobs.
 
 ## Repository layout
 
@@ -64,15 +64,18 @@ Use the supplied fixed split/index metadata; generating a different split does n
 - `pegasus/`: NQSV orchestration, verified receipts and versioned base recipes.
 - `tests/`: CPU regression and distribution tests.
 - `tools/export_source.py`: allowlisted, history-free core source exporter.
-- `docs/reproducibility/`: current installation, data contract and final result registry.
+
+Manuscripts (`paper/`) and supporting documentation (`docs/`) are maintained separately and are no longer tracked in the current branch. Existing local copies are preserved; a fresh clone does not include these directories.
 
 ## Release boundary
 
 ```bash
-python tools/export_source.py --output /absolute/new/canonfuse3d-source.tar.gz
+python tools/export_source.py --output /absolute/new/dual-view-pose-source.tar.gz
 ```
 
-The exporter refuses existing output paths and includes a SHA-256 manifest. It excludes Git history, manuscripts, Unity assets, vendored SAM3D frontend code, private results, datasets and weights. A clean source export does not clean the original repository's history. The historical repository remains private: it still tracks old manuscripts and third-party assets whose publication/redistribution status is unresolved. Keeping only `master` does not remove their history, including history reachable through backup tags. Use the clean source export as the release candidate; see the [public-readiness audit and remaining items](docs/reproducibility/release_readiness.md).
+The exporter refuses existing output paths and includes a SHA-256 manifest. It excludes Git history, manuscripts, Unity assets, vendored SAM3D frontend code, private results, datasets and weights. This produces a core source archive, not a complete experiment archive.
+
+The public repository retains its existing Git history, including historical manuscripts and documentation. Untracking `paper/` and `docs/` removes them from the current checkout, not from earlier commits or archive tags. Unity assets and vendored frontend code remain in the repository and retain their applicable third-party terms.
 
 No fresh full-GPU replication is implied by the CPU tests or packaging checks. Reproduce published numbers using the exact recorded inputs, selected checkpoints, configurations and frozen source hashes.
 
@@ -80,4 +83,4 @@ No fresh full-GPU replication is implied by the CPU tests or packaging checks. R
 
 This project's core code uses [Apache-2.0](LICENSE). External software, model weights, datasets and Unity assets retain their own terms; see [third-party boundaries](THIRD_PARTY.md). The root license does not authorize redistributing all materials in the historical repository.
 
-The IEEE Access manuscript is titled *Post-Estimation Fusion of Uncalibrated Dual-View 3D Pose Streams: Reliability Gating, Robustness, and Front-End Generalization*. Publication identifiers will be added when available; no DOI or publication status is assumed here.
+The manuscript, *Post-Estimation Fusion of Uncalibrated Dual-View 3D Pose Streams*, has been submitted to IEEE Access. Publication identifiers will be added when available; submission does not imply acceptance or publication.
