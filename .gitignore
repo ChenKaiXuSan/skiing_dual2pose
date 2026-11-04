@@ -133,5 +133,7 @@ ckpt/
 # Manuscripts and author photos are preserved in the migrated workspace,
 # separately from the code branch and GitHub commits.
 paper/
+# Keep documentation locally without tracking it in the code repository.
+/docs/
 # Local paper review/render artifacts; preserve on disk, exclude from code commits.
 reports/

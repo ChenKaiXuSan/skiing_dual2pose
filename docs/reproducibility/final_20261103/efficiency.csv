@@ -1,9 +1,0 @@
-method,scope,median_ms_per_30_frames,parameters,weight_bytes,partial_matrix_convolution_MACs,gpu,status,version,warmup,repeats,source
-canonfuse3d,prepared GPU inputs; forward only,3.6246535019017756,235524,942096,123979680.0,NVIDIA H100 PCIe,verified_previous_run_unchanged,,,,
-tcn,prepared GPU inputs; forward only,0.1541030069347471,168621,674484,5049600.0,NVIDIA H100 PCIe,verified_previous_run_unchanged,,,,
-smoothnet,prepared GPU inputs; forward only,0.4267799959052354,689822,2759288,30873600.0,NVIDIA H100 PCIe,verified_previous_run_unchanged,,,,
-stride,forward_only,11.311456502880901,42466317,169865268,,NVIDIA H100 PCIe,verified_previous_run_unchanged,,,,
-stride,total_with_ttt,794.4855424866546,42466317,169865268,,NVIDIA H100 PCIe,verified_previous_run_unchanged,,,,
-deciwatch,forward_only,5.940789502346888,1697102,6788408,,NVIDIA H100 PCIe,verified_previous_run_unchanged,,,,
-metapose,learned_solver,2.914984492235817,8835987,70687896,,NVIDIA H100 PCIe,measured_updated_unity_checkpoint,stable_20261031T222817_v3,20,100,reports/paper_geometry_sync_20261101T201129/sources/results/metapose_efficiency.json
-metapose,total_with_adapters,10.070463496958837,8835987,70687896,,NVIDIA H100 PCIe,measured_updated_unity_checkpoint,stable_20261031T222817_v3,20,100,reports/paper_geometry_sync_20261101T201129/sources/results/metapose_efficiency.json
